@@ -8,6 +8,9 @@ const SUBJECTS_COLLECTION_ID = import.meta.env
 
 const SYLLABUS_BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID;
 
+// ---------------- SUBJECT CACHE ----------------
+const subjectCache = new Map(); // key: subjectId, value: subject doc
+
 /**
  * Create subject
  */
@@ -41,6 +44,9 @@ export const createSubject = async (data, currentUser) => {
     });
   }
 
+  // 🔁 invalidate subject cache
+  subjectCache.clear();
+
   return subject;
 };
 
@@ -71,6 +77,8 @@ export const deleteSubject = async (id, currentUser, entityName) => {
       entityName,
     });
   }
+
+  subjectCache.delete(id); // or clear() for simplicity
 };
 
 /* ---------------- ACTIVITY HELPER ---------------- */
@@ -110,6 +118,8 @@ export const updateSubjectPdf = async (subjectId, newFile) => {
     await storage.deleteFile(SYLLABUS_BUCKET_ID, existing.pdfFileId);
   }
 
+  subjectCache.delete(subjectId);
+
   return databases.updateDocument(
     DATABASE_ID,
     SUBJECTS_COLLECTION_ID,
@@ -144,3 +154,19 @@ async function getSubjectsBySemester({ programId, branch, semester }) {
 
   return res.documents;
 }
+
+export const getSubjectsByIds = async (subjectIds = []) => {
+  if (!subjectIds.length) return [];
+
+  const missingIds = subjectIds.filter((id) => !subjectCache.has(id));
+  if (missingIds.length) {
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      SUBJECTS_COLLECTION_ID,
+      [Query.equal("$id", missingIds)],
+    );
+    res.documents.forEach((sub) => subjectCache.set(sub.$id, sub));
+  }
+
+  return subjectIds.map((id) => subjectCache.get(id)).filter(Boolean);
+};

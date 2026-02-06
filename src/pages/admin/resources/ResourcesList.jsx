@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 
 import { getPrograms } from "@/services/programService"
-import { getSyllabusByProgram } from "@/services/syllabusService"
+
 import { getUnitsBySubject } from "@/services/unitService"
 
 import { deleteResource } from "@/services/resourceService"
@@ -13,6 +13,16 @@ import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
 import { useAuth } from "@/context/AuthContext"
+
+
+import { databases } from "@/lib/appwrite"
+import { Query } from "appwrite"
+import { DATABASE_ID } from "@/config/appwrite"
+
+import { getSubjectsByIds } from "@/services/subjectService"
+
+const SUBJECTS_COLLECTION_ID =
+    import.meta.env.VITE_APPWRITE_SUBJECTS_COLLECTION_ID
 
 export default function ResourcesList({ resources, setResources, onEdit }) {
 
@@ -110,20 +120,21 @@ export default function ResourcesList({ resources, setResources, onEdit }) {
             const unitMapTemp = {}
 
             // 1️⃣ Get unique programIds & subjectIds from resources
-            const programIds = [...new Set(resources.map(r => r.programId))]
             const subjectIds = [...new Set(resources.map(r => r.subjectId))]
 
-            // 2️⃣ Fetch subjects per program
-            for (const programId of programIds) {
+            // 2️⃣ Fetch subjects by subjectId (CORRECT)
+            // 1️⃣ Fetch subjects in ONE batched call (cached)
+            if (subjectIds.length) {
                 try {
-                    const subjects = await getSyllabusByProgram(programId)
+                    const subjects = await getSubjectsByIds(subjectIds);
                     subjects.forEach(sub => {
-                        subjectMapTemp[sub.$id] = sub.title
-                    })
+                        subjectMapTemp[sub.$id] = sub.subjectName;
+                    });
                 } catch (err) {
-                    console.error("Failed to load subjects", err)
+                    console.error("Failed to load subjects", err);
                 }
             }
+
 
             // 3️⃣ Fetch units per subject
             for (const subjectId of subjectIds) {

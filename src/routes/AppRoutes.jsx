@@ -89,6 +89,10 @@ const AppRoutes = () => {
         element={<SyllabusUserView />}
       />
 
+      <Route
+        path="/programs/:programId/branches/:branchName/resources"
+        element={<ResourcesUserView />}
+      />
 
       <Route path="/forum" element={<Forum />} />
       <Route path="/forum/:threadId" element={<ThreadDetail />} />

@@ -15,6 +15,7 @@ import { databases } from "@/lib/appwrite"
 import { DATABASE_ID, RESOURCES_COLLECTION_ID } from "@/config/appwrite"
 
 import { useAuth } from "@/context/AuthContext"
+import { getSubjectsBySyllabusIds } from "@/services/subjectService"
 
 
 export default function ResourcesUpload() {
@@ -52,6 +53,31 @@ export default function ResourcesUpload() {
     const { user, role } = useAuth()
     const canUpload = role === "admin" || role === "mod"
 
+    const [subjects, setSubjects] = useState([])
+    const [syllabusIds, setSyllabusIds] = useState([])
+
+
+    useEffect(() => {
+        if (!syllabusIds.length) {
+            setSubjects([])
+            setSubjectId("")
+            return
+        }
+
+        const fetchSubjects = async () => {
+            try {
+                const list = await getSubjectsBySyllabusIds(syllabusIds)
+                setSubjects(list)
+            } catch (err) {
+                console.error("Failed to load subjects", err)
+            }
+        }
+
+        fetchSubjects()
+    }, [syllabusIds])
+
+
+
 
     useEffect(() => {
         if (!programId || !semester) {
@@ -69,6 +95,10 @@ export default function ResourcesUpload() {
                 )
 
                 setSyllabusList(filtered)
+
+                const ids = filtered.map(s => s.$id)
+                setSyllabusIds(ids)
+
             } catch (err) {
                 console.error("Failed to load syllabus", err)
             }
@@ -152,12 +182,6 @@ export default function ResourcesUpload() {
         setUnitId("")
         setUnits([])
     }, [branch])
-
-
-
-    const subjects = syllabusList.filter(
-        (s) => !branch || s.branch === branch
-    )
 
     const resetForm = () => {
         setProgramId("")
@@ -319,14 +343,14 @@ export default function ResourcesUpload() {
         if (!editingResource) return
         if (!branch) return
 
-        const subjectExists = syllabusList.some(
+        const subjectExists = subjects.some(
             (s) => s.$id === editingResource.subjectId
         )
 
         if (subjectExists) {
             setSubjectId(editingResource.subjectId)
         }
-    }, [branch, syllabusList, editingResource])
+    }, [branch, subjects, editingResource])
 
 
     useEffect(() => {
@@ -368,190 +392,190 @@ export default function ResourcesUpload() {
 
                 {/* Upload Form */}
                 {canUpload && (
-                <Card className="max-w-3xl mx-auto">
-                    <CardHeader>
-                        <CardTitle>{isEditMode ? "Edit Resource" : "Upload Resource"}</CardTitle>
-                    </CardHeader>
+                    <Card className="max-w-3xl mx-auto">
+                        <CardHeader>
+                            <CardTitle>{isEditMode ? "Edit Resource" : "Upload Resource"}</CardTitle>
+                        </CardHeader>
 
-                    <CardContent className="space-y-4">
-                        {/* 🔽 EVERYTHING YOU ALREADY HAVE STAYS EXACTLY THE SAME */}
+                        <CardContent className="space-y-4">
+                            {/* 🔽 EVERYTHING YOU ALREADY HAVE STAYS EXACTLY THE SAME */}
 
-                        {/* Program */}
-                        <Select modal={false} value={programId} onValueChange={setProgramId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Program" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {programs.map((prog) => (
-                                    <SelectItem key={prog.$id} value={prog.$id}>
-                                        {prog.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        {/* Semester */}
-                        <Select modal={false} value={semester} onValueChange={setSemester}>
-                            <SelectTrigger
-                                className={!programId ? "opacity-50 pointer-events-none" : ""}
-                            >
-                                <SelectValue placeholder="Select Semester" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {semesters.map((sem) => (
-                                    <SelectItem key={sem} value={String(sem)}>
-                                        Semester {sem}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        {/* Branch */}
-                        <Select
-                            modal={false}
-                            value={branch}
-                            onValueChange={setBranch}
-                            disabled={!syllabusList.length}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Branch" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableBranches.map((b) => (
-                                    <SelectItem key={b} value={b}>
-                                        {b}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        {/* Subject */}
-                        <Select
-                            modal={false}
-                            value={subjectId}
-                            onValueChange={setSubjectId}
-                            disabled={!subjects.length}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Subject" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {subjects.map((sub) => (
-                                    <SelectItem key={sub.$id} value={sub.$id}>
-                                        {sub.title}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        {/* Unit */}
-                        <Select
-                            modal={false}
-                            value={unitId}
-                            onValueChange={setUnitId}
-                            disabled={!subjectId || units.length === 0}
-                        >
-                            <SelectTrigger
-                                className={
-                                    !subjectId || units.length === 0
-                                        ? "opacity-50 pointer-events-none"
-                                        : ""
-                                }
-                            >
-                                <SelectValue
-                                    placeholder={
-                                        !subjectId
-                                            ? "Select Subject first"
-                                            : units.length === 0
-                                                ? "No units added yet"
-                                                : "Select Unit"
-                                    }
-                                />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {units
-                                    .sort((a, b) => a.order - b.order)
-                                    .map((unit) => (
-                                        <SelectItem key={unit.$id} value={unit.$id}>
-                                            Unit {unit.order}: {unit.title}
+                            {/* Program */}
+                            <Select modal={false} value={programId} onValueChange={setProgramId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Program" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {programs.map((prog) => (
+                                        <SelectItem key={prog.$id} value={prog.$id}>
+                                            {prog.name}
                                         </SelectItem>
                                     ))}
-                            </SelectContent>
-                        </Select>
+                                </SelectContent>
+                            </Select>
 
-                        {/* Resource Type */}
-                        <Select modal={false} value={resourceType} onValueChange={setResourceType}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Resource Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="pdf">PDF</SelectItem>
-                                <SelectItem value="video">Video</SelectItem>
-                                <SelectItem value="link">Link</SelectItem>
-                                <SelectItem value="notes">Notes</SelectItem>
-                            </SelectContent>
-                        </Select>
+                            {/* Semester */}
+                            <Select modal={false} value={semester} onValueChange={setSemester}>
+                                <SelectTrigger
+                                    className={!programId ? "opacity-50 pointer-events-none" : ""}
+                                >
+                                    <SelectValue placeholder="Select Semester" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {semesters.map((sem) => (
+                                        <SelectItem key={sem} value={String(sem)}>
+                                            Semester {sem}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                        {/* Title */}
-                        <Input
-                            placeholder="Resource Title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                        />
-
-                        {/* Description */}
-                        <Textarea
-                            placeholder="Description (optional)"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                        />
-
-                        {/* File / URL */}
-                        <Input
-                            type="file"
-                            ref={fileInputRef}
-                            disabled={resourceType === "link"}
-                            onChange={(e) => setFile(e.target.files[0] || null)}
-                        />
-
-                        <Input
-                            placeholder="Or paste URL"
-                            disabled={resourceType !== "link"}
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                        />
-
-                        <div className="flex gap-3">
-                            <Button
-                                className="flex-1"
-                                onClick={handleSubmit}
-                                disabled={isUploading}
+                            {/* Branch */}
+                            <Select
+                                modal={false}
+                                value={branch}
+                                onValueChange={setBranch}
+                                disabled={!syllabusList.length}
                             >
-                                {isUploading ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        {editingResource ? "Updating..." : "Uploading..."}
-                                    </span>
-                                ) : (
-                                    editingResource ? "Update Resource" : "Upload Resource"
-                                )}
-                            </Button>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Branch" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableBranches.map((b) => (
+                                        <SelectItem key={b} value={b}>
+                                            {b}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                            {editingResource && (
+                            {/* Subject */}
+                            <Select
+                                modal={false}
+                                value={subjectId}
+                                onValueChange={setSubjectId}
+                                disabled={!subjects.length}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Subject" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {subjects.map((sub) => (
+                                        <SelectItem key={sub.$id} value={sub.$id}>
+                                            {sub.subjectName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            {/* Unit */}
+                            <Select
+                                modal={false}
+                                value={unitId}
+                                onValueChange={setUnitId}
+                                disabled={!subjectId || units.length === 0}
+                            >
+                                <SelectTrigger
+                                    className={
+                                        !subjectId || units.length === 0
+                                            ? "opacity-50 pointer-events-none"
+                                            : ""
+                                    }
+                                >
+                                    <SelectValue
+                                        placeholder={
+                                            !subjectId
+                                                ? "Select Subject first"
+                                                : units.length === 0
+                                                    ? "No units added yet"
+                                                    : "Select Unit"
+                                        }
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {units
+                                        .sort((a, b) => a.order - b.order)
+                                        .map((unit) => (
+                                            <SelectItem key={unit.$id} value={unit.$id}>
+                                                Unit {unit.order}: {unit.title}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
+
+                            {/* Resource Type */}
+                            <Select modal={false} value={resourceType} onValueChange={setResourceType}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Resource Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pdf">PDF</SelectItem>
+                                    <SelectItem value="video">Video</SelectItem>
+                                    <SelectItem value="link">Link</SelectItem>
+                                    <SelectItem value="notes">Notes</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Title */}
+                            <Input
+                                placeholder="Resource Title"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                            />
+
+                            {/* Description */}
+                            <Textarea
+                                placeholder="Description (optional)"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                            />
+
+                            {/* File / URL */}
+                            <Input
+                                type="file"
+                                ref={fileInputRef}
+                                disabled={resourceType === "link"}
+                                onChange={(e) => setFile(e.target.files[0] || null)}
+                            />
+
+                            <Input
+                                placeholder="Or paste URL"
+                                disabled={resourceType !== "link"}
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                            />
+
+                            <div className="flex gap-3">
                                 <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleCancelEdit}
+                                    className="flex-1"
+                                    onClick={handleSubmit}
                                     disabled={isUploading}
                                 >
-                                    Cancel
+                                    {isUploading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            {editingResource ? "Updating..." : "Uploading..."}
+                                        </span>
+                                    ) : (
+                                        editingResource ? "Update Resource" : "Upload Resource"
+                                    )}
                                 </Button>
-                            )}
-                        </div>
+
+                                {editingResource && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleCancelEdit}
+                                        disabled={isUploading}
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                            </div>
 
 
-                    </CardContent>
-                </Card>)}
+                        </CardContent>
+                    </Card>)}
 
                 {/* 🔽 Resources List (below upload) */}
                 <div className="max-w-3xl mx-auto">
