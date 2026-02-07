@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { getSyllabusByContext } from "@/services/syllabusService"
-import { getSubjectsBySyllabusIds } from "@/services/subjectService"
 
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getPdfViewUrl } from "@/services/storageService"
 
-import { databases, storage } from "@/lib/appwrite";
+import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -146,19 +145,15 @@ export default function SyllabusUserView() {
             {/* 🧾 Header */}
             <div className="space-y-1">
                 <h1 className="text-3xl font-bold">
-                    {decodedBranch}
+                    Syllabus
                 </h1>
+
                 <p className="text-muted-foreground">
-                    Semester {semester} · B.Tech ·{" "}
-                    {semester <= 2
-                        ? "1st Year"
-                        : semester <= 4
-                            ? "2nd Year"
-                            : semester <= 6
-                                ? "3rd Year"
-                                : "4th Year"}
+                    {decodedBranch}
                 </p>
+                
             </div>
+
 
             {/* 📘 Subjects */}
             {subjects.length === 0 ? (

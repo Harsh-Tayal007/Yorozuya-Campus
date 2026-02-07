@@ -22,15 +22,17 @@ export default function ResourcesUpload() {
 
     // selection states
     const [programId, setProgramId] = useState("")
-    const [semester, setSemester] = useState("")
     const [branch, setBranch] = useState("")
+    const [semester, setSemester] = useState("")
+    const [syllabusList, setSyllabusList] = useState([])
+    const [syllabusIds, setSyllabusIds] = useState([])
     const [subjectId, setSubjectId] = useState("")
     const [unitId, setUnitId] = useState("")
 
-    const [syllabusList, setSyllabusList] = useState([])
     const [units, setUnits] = useState([])
     const [resourceType, setResourceType] = useState("")
 
+    const [subjects, setSubjects] = useState([])
     // resource data
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
@@ -53,8 +55,6 @@ export default function ResourcesUpload() {
     const { user, role } = useAuth()
     const canUpload = role === "admin" || role === "mod"
 
-    const [subjects, setSubjects] = useState([])
-    const [syllabusIds, setSyllabusIds] = useState([])
 
 
     useEffect(() => {
