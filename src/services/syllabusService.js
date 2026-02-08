@@ -85,9 +85,14 @@ export const deleteSyllabus = async (id, currentUser, entityName) => {
 };
 
 /* ---------------- ACTIVITY HELPER ---------------- */
-export const logActivity = async ({ actor, action, entityType, entityName }) => {
+export const logActivity = async ({
+  actor,
+  action,
+  entityType,
+  entityName,
+}) => {
   if (!actor || !actor.$id) return; // ✅ HARD GUARD
-  
+
   return databases.createDocument(
     DATABASE_ID,
     ACTIVITIES_COLLECTION_ID,
@@ -119,3 +124,34 @@ export const getSyllabusByContext = async ({ programId, branch, semester }) => {
   // Expecting ONE syllabus per context
   return res.documents[0] || null;
 };
+
+// For PYQs service
+export const getSyllabusIdsForPyqs = async ({ programId, semester }) => {
+  const res = await databases.listDocuments(
+    DATABASE_ID,
+    SYLLABUS_COLLECTION_ID,
+    [
+      Query.equal("programId", programId),
+      Query.equal("semester", Number(semester)), // 👈 FIX
+      Query.limit(10),
+    ],
+  );
+
+  return res.documents.map((doc) => doc.$id);
+};
+
+export async function getAvailableSyllabusSemesters({ programId, branch }) {
+  if (!programId || !branch) return [];
+
+  const res = await databases.listDocuments(
+    DATABASE_ID,
+    SYLLABUS_COLLECTION_ID,
+    [Query.equal("programId", programId), Query.equal("branch", branch)],
+  );
+
+  // extract unique semesters
+  const semesters = [...new Set(res.documents.map((doc) => doc.semester))];
+
+  // sort numerically (important)
+  return semesters.sort((a, b) => a - b);
+}

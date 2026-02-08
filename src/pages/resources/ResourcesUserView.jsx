@@ -9,8 +9,10 @@ import {
 
 import { Query } from "appwrite"
 import { databases } from "@/lib/appwrite"
-import { getSyllabusByContext } from "@/services/syllabusService"
+
 import { getPdfViewUrl } from "@/services/storageService"
+import { getAvailableResourceSemesters } from "@/services/resourceAvailabilityService"
+
 
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
@@ -18,6 +20,7 @@ const SYLLABUS_COLLECTION = import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID
 const SUBJECTS_COLLECTION = import.meta.env.VITE_APPWRITE_SUBJECTS_COLLECTION_ID
 const UNITS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID
 const RESOURCES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_RESOURCES_COLLECTION_ID
+
 
 
 export default function ResourcesUserView() {
@@ -34,6 +37,8 @@ export default function ResourcesUserView() {
   const [currentSubject, setCurrentSubject] = useState(null)
   const [currentUnit, setCurrentUnit] = useState(null)
 
+  const [availableSemesters, setAvailableSemesters] = useState([])
+  const [loadingSemesters, setLoadingSemesters] = useState(true)
 
 
   const decodedBranch = decodeURIComponent(branchName)
@@ -188,7 +193,30 @@ export default function ResourcesUserView() {
     }
   }, [unitId])
 
+  // for semesters fetch fikter
 
+  useEffect(() => {
+    if (semester) return
+
+    const fetchSemesters = async () => {
+      setLoadingSemesters(true)
+
+      try {
+        const data = await getAvailableResourceSemesters({
+          programId,
+          branch: decodeURIComponent(branchName),
+        })
+
+        setAvailableSemesters(data)
+      } catch (err) {
+        console.error("Failed to fetch resource semesters", err)
+      } finally {
+        setLoadingSemesters(false)
+      }
+    }
+
+    fetchSemesters()
+  }, [programId, branchName, semester])
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
@@ -215,29 +243,42 @@ export default function ResourcesUserView() {
 
       {/* 📦 Semester Cards */}
       {!semester && (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-            <Card
-              key={sem}
-              className="cursor-pointer hover:shadow-lg transition"
-              onClick={() =>
-                navigate(
-                  `/programs/${programId}/branches/${branchName}/resources/${sem}`
-                )
-              }
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Semester {sem}
-                </CardTitle>
-                <CardDescription>
-                  View resources
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <>
+          {loadingSemesters ? (
+            <p className="text-muted-foreground">
+              Loading semesters…
+            </p>
+          ) : availableSemesters.length === 0 ? (
+            <p className="text-muted-foreground">
+              No resources available for this branch yet.
+            </p>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {availableSemesters.map((sem) => (
+                <Card
+                  key={sem}
+                  className="cursor-pointer hover:shadow-lg transition"
+                  onClick={() =>
+                    navigate(
+                      `/programs/${programId}/branches/${branchName}/resources/${sem}`
+                    )
+                  }
+                >
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Semester {sem}
+                    </CardTitle>
+                    <CardDescription>
+                      View resources
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
+
 
       {/* 📘 Subjects */}
       {semester && !subjectId && (
@@ -363,7 +404,7 @@ export default function ResourcesUserView() {
                 >
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      {resource.type === "pdf" ? "📄" : "▶️"}
+                      {resource.title}
                     </CardTitle>
 
                     {resource.description && (

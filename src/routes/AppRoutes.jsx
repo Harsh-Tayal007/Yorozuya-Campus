@@ -4,18 +4,23 @@ import { Routes, Route } from "react-router-dom"
 import Home from "../pages/Home"
 import Universities from "../pages/Universities"
 import UniversityDetail from "../pages/UniversityDetail"
+
 // import CourseDetail from "../pages/CourseDetail"
 import Forum from "../pages/Forum"
 import ThreadDetail from "../pages/ThreadDetail"
 import Tools from "../pages/Tools"
 import NotFound from "../pages/NotFound"
 import ResourcesUserView from "@/pages/resources/ResourcesUserView"
+import SyllabusUserView from "../pages/admin/syllabus/SyllabusUserView"
+import PyqUserView from "@/pages/pyqs/PyqUserView"
+import PyqSemesterSubjects from "@/pages/pyqs/PyqSemesterSubjects"
+import PyqSubjectList from "@/pages/pyqs/PyqSubjectList"
+
 
 import ProgramDetail from "@/pages/programs/ProgramDetail"
 import ProgramSyllabus from "@/pages/programs/ProgramSyllabus"
 import BranchDetail from "@/pages/branches/BranchDetail"
 import BranchSyllabus from "@/pages/branches/BranchSyllabus"
-import SyllabusUserView from "../pages/admin/syllabus/SyllabusUserView"
 
 
 /* 🔐 Auth pages */
@@ -108,6 +113,22 @@ const AppRoutes = () => {
         path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId/:unitId"
         element={<ResourcesUserView />}
       />
+
+      <Route
+        path="/programs/:programId/branches/:branchName/pyqs"
+        element={<PyqUserView />}
+      />
+
+      <Route
+        path="/programs/:programId/branches/:branchName/pyqs/semester/:semester"
+        element={<PyqSemesterSubjects />}
+      />
+
+      <Route
+        path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId"
+        element={<PyqSubjectList />}
+      />
+
 
 
 

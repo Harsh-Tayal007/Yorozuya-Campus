@@ -13,7 +13,7 @@ export const createProgram = async (data, currentUser) => {
     DATABASE_ID,
     PROGRAMS_COLLECTION_ID,
     ID.unique(),
-    data
+    data,
   );
 
   await logActivity({
@@ -33,9 +33,16 @@ export const getPrograms = async () => {
   const res = await databases.listDocuments(
     DATABASE_ID,
     PROGRAMS_COLLECTION_ID,
-    [Query.orderDesc("$createdAt")]
+    [Query.orderDesc("$createdAt")],
   );
   return res.documents;
+};
+
+/**
+ * Get program by ID
+ */
+export const getProgramById = async (programId) => {
+  return databases.getDocument(DATABASE_ID, PROGRAMS_COLLECTION_ID, programId);
 };
 
 /**
@@ -45,7 +52,7 @@ export const getProgramsByUniversity = async (universityId) => {
   const res = await databases.listDocuments(
     DATABASE_ID,
     PROGRAMS_COLLECTION_ID,
-    [Query.equal("universityId", universityId)]
+    [Query.equal("universityId", universityId)],
   );
   return res.documents;
 };
@@ -58,7 +65,7 @@ export const updateProgram = async (id, data, currentUser) => {
     DATABASE_ID,
     PROGRAMS_COLLECTION_ID,
     id,
-    data
+    data,
   );
 
   await logActivity({
@@ -75,11 +82,7 @@ export const updateProgram = async (id, data, currentUser) => {
  * Delete program
  */
 export const deleteProgram = async (id, currentUser, entityName) => {
-  await databases.deleteDocument(
-    DATABASE_ID,
-    PROGRAMS_COLLECTION_ID,
-    id
-  );
+  await databases.deleteDocument(DATABASE_ID, PROGRAMS_COLLECTION_ID, id);
 
   await logActivity({
     actor: currentUser,
@@ -90,12 +93,7 @@ export const deleteProgram = async (id, currentUser, entityName) => {
 };
 
 /* ---------------- HELPER ---------------- */
-const logActivity = async ({
-  actor,
-  action,
-  entityType,
-  entityName,
-}) => {
+const logActivity = async ({ actor, action, entityType, entityName }) => {
   return databases.createDocument(
     DATABASE_ID,
     ACTIVITIES_COLLECTION_ID,
@@ -106,6 +104,6 @@ const logActivity = async ({
       action,
       entityType,
       entityName,
-    }
+    },
   );
 };

@@ -87,10 +87,21 @@ const PyqUpload = () => {
 
     const [searchTerm, setSearchTerm] = useState("")
 
+
     const isProgramSelected = pyqFilters.programId !== "all"
     const isBranchSelected = pyqFilters.branch !== "all"
     const isSemesterSelected = pyqFilters.semester !== "all"
     const isSubjectSelected = pyqFilters.subjectId !== "all"
+
+    const uploadBranches = Array.from(
+        new Set(syllabusList.map(s => s.branch).filter(Boolean))
+    )
+
+
+    const filterBranches = Array.from(
+        new Set(filterSyllabusList.map(s => s.branch).filter(Boolean))
+    )
+
 
 
 
@@ -400,10 +411,6 @@ const PyqUpload = () => {
         setForm((prev) => ({ ...prev, [key]: value }))
     }
 
-    const availableBranches = Array.from(
-        new Set(filterSyllabusList.map(s => s.branch).filter(Boolean))
-    )
-
 
     useEffect(() => {
         if (!branch || !form.semester) {
@@ -641,12 +648,14 @@ const PyqUpload = () => {
                         <h3 className="font-medium">Academic Scope</h3>
 
                         <Select
+                            modal={false}
                             value={form.programId}
                             onValueChange={(value) => {
                                 updateField("programId", value)
                                 updateField("semester", "")
                                 updateField("subjectId", "")
                                 updateField("unitId", "")
+                                setBranch("")               // 🔥 REQUIRED
                             }}
                         >
 
@@ -677,7 +686,7 @@ const PyqUpload = () => {
 
                         <Select
                             value={branch}
-                            disabled={!syllabusList.length}
+                            disabled={!uploadBranches.length}
                             onValueChange={(value) => {
                                 setBranch(value)
                                 updateField("subjectId", "")
@@ -688,7 +697,7 @@ const PyqUpload = () => {
                                 <SelectValue placeholder="Select Branch" />
                             </SelectTrigger>
                             <SelectContent>
-                                {availableBranches.map((b) => (
+                                {uploadBranches.map((b) => (
                                     <SelectItem key={b} value={b}>
                                         {b}
                                     </SelectItem>
@@ -697,7 +706,9 @@ const PyqUpload = () => {
                         </Select>
 
 
+
                         <Select
+                            modal={false}
                             value={form.semester}
                             disabled={!form.programId}
                             onValueChange={(value) => {
@@ -728,6 +739,7 @@ const PyqUpload = () => {
 
 
                         <Select
+                            modal={false}
                             value={form.subjectId}
                             disabled={!form.programId || !form.semester}
                             onValueChange={(value) => {
@@ -763,6 +775,7 @@ const PyqUpload = () => {
 
 
                         <Select
+                            modal={false}
                             value={form.unitId}
                             disabled={!form.subjectId}
                             onValueChange={(value) => updateField("unitId", value)}
@@ -814,6 +827,7 @@ const PyqUpload = () => {
 
 
                         <Select
+                            modal={false}
                             value={form.fileType}
                             onValueChange={(value) => updateField("fileType", value)}
                         >
@@ -920,6 +934,7 @@ const PyqUpload = () => {
                                 {/* Program */}
                                 {/* Filter by Program */}
                                 <Select
+                                    modal={false}
                                     value={pyqFilters.programId}
                                     onValueChange={(value) => {
                                         updatePyqFilter(
@@ -958,14 +973,14 @@ const PyqUpload = () => {
                                         resetDependentPyqFilters(["semester", "subjectId", "unitId"])
                                     }}
                                 >
-                                    <SelectTrigger className="pl-9 h-10 w-full focus-visible:ring-2 focus-visible:ring-ring">
+                                    <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
 
                                     <SelectContent>
                                         <SelectItem value="all">All Branches</SelectItem>
 
-                                        {availableBranches.map((b) => (
+                                        {filterBranches.map((b) => (
                                             <SelectItem key={b} value={b}>
                                                 {b}
                                             </SelectItem>
@@ -975,6 +990,7 @@ const PyqUpload = () => {
 
                                 {/* Filter by Semester */}
                                 <Select
+                                    modal={false}
                                     value={pyqFilters.semester}
                                     disabled={!isProgramSelected}
                                     onValueChange={(value) => {
@@ -1002,6 +1018,7 @@ const PyqUpload = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {/* Filter by Subjects */}
                                 <Select
+                                    modal={false}
                                     value={pyqFilters.subjectId}
                                     disabled={!isProgramSelected || (!isBranchSelected && !isSemesterSelected)}
                                     onValueChange={(value) => {
@@ -1039,6 +1056,7 @@ const PyqUpload = () => {
 
                                 {/* Filter by Units */}
                                 <Select
+                                    modal={false}
                                     value={pyqFilters.unitId}
                                     disabled={!isSubjectSelected}
                                     onValueChange={(value) => {

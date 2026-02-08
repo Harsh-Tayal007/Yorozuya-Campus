@@ -214,7 +214,6 @@ export default function ResourcesUpload() {
                 !semester ||
                 !branch ||
                 !subjectId ||
-                !unitId ||
                 !resourceType ||
                 !title
             ) {
@@ -234,23 +233,34 @@ export default function ResourcesUpload() {
 
             if (isEditMode) {
                 // 🔵 STEP 5 — UPDATE
-                const updated = await updateResource(editingResource.$id, {
+                const updatePayload = {
                     programId,
                     semester,
                     branch,
                     subjectId,
-                    unitId,
                     title,
                     description,
                     type: resourceType,
                     url,
-                }, user)
+                }
+
+                // ✅ unitId only if exists
+                if (unitId) {
+                    updatePayload.unitId = unitId
+                }
+
+                const updated = await updateResource(
+                    editingResource.$id,
+                    updatePayload,
+                    user
+                )
 
                 setResources(prev =>
                     prev.map(r =>
                         r.$id === updated.$id ? updated : r
                     )
                 )
+
 
                 // 🔵 STEP 6 — EXIT EDIT MODE
                 // setEditingResource(null)
@@ -260,18 +270,25 @@ export default function ResourcesUpload() {
                 alert("Resource updated successfully")
             } else {
                 // 🟢 CREATE (your existing logic)
-                const created = await createResource({
+                const payload = {
                     programId,
                     semester,
                     branch,
                     subjectId,
-                    unitId,
                     title,
                     description,
                     resourceType,
                     file,
                     url,
-                }, user)
+                }
+
+                // ✅ attach unitId only if selected
+                if (unitId) {
+                    payload.unitId = unitId
+                }
+
+                const created = await createResource(payload, user)
+
 
                 setResources(prev => [created, ...prev])
                 alert("Resource uploaded successfully")
@@ -487,8 +504,8 @@ export default function ResourcesUpload() {
                                             !subjectId
                                                 ? "Select Subject first"
                                                 : units.length === 0
-                                                    ? "No units added yet"
-                                                    : "Select Unit"
+                                                    ? "No units (optional)"
+                                                    : "Select Unit (optional)"
                                         }
                                     />
                                 </SelectTrigger>
