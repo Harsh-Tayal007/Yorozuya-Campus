@@ -1,69 +1,69 @@
-import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSemestersWithPyqs } from "@/services/pyqService"
-import { Link } from "react-router-dom"
 import { getProgramById } from "@/services/programService"
+import { BackButton, Breadcrumbs } from "@/components"
+import { useQuery } from "@tanstack/react-query"
+import { ArrowUpRight } from "lucide-react"
+import GlowCard from "@/components/common/GlowCard"
 
 
 const PyqUserView = () => {
     const { programId, branchName } = useParams()
     const navigate = useNavigate()
 
-    const [semesters, setSemesters] = useState([])
-    const [loading, setLoading] = useState(true)
+    const decodedBranch = decodeURIComponent(branchName)
 
-    const [program, setProgram] = useState(null)
+    const {
+        data: semesters = [],
+        isLoading: loadingSemesters,
+        error: semestersError,
+    } = useQuery({
+        queryKey: ["pyq-semesters", programId],
+        queryFn: () => getSemestersWithPyqs(programId),
+        enabled: !!programId,
+    })
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [semesterData, programData] = await Promise.all([
-                    getSemestersWithPyqs(programId),
-                    getProgramById(programId),
-                ])
+    const {
+        data: program = null,
+        isLoading: loadingProgram,
+        error: programError,
+    } = useQuery({
+        queryKey: ["program", programId],
+        queryFn: () => getProgramById(programId),
+        enabled: !!programId,
+    })
 
-                setSemesters(semesterData)
-                setProgram(programData)
-            } catch (err) {
-                console.error("Failed to fetch PYQ data", err)
-            } finally {
-                setLoading(false)
-            }
-        }
+    if (semestersError || programError) {
+        return (
+            <div className="max-w-6xl mx-auto px-4 py-8">
+                <p className="text-destructive">
+                    Failed to load PYQs.
+                </p>
+            </div>
+        )
+    }
 
-        fetchData()
-    }, [programId])
+    const breadcrumbItems = [
+        { label: "B.Tech", href: "/" },
+        {
+            label: decodedBranch,
+            href: `/programs/${programId}/branches/${branchName}`,
+        },
+        {
+            label: "PYQs",
+        },
+    ]
+
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-            {/* 🔗 Temporary Breadcrumbs */}
-            <div className="text-sm text-muted-foreground">
-                <Link
-                    to={`/programs`}
-                    className="hover:underline"
-                >
-                    Programs
-                </Link>
-                {" → "}
-                <Link
-                    to={`/programs/${programId}`}
-                    className="hover:underline"
-                >
-                    {program?.name || "Program"}
-                </Link>
-                {" → "}
-                <Link
-                    to={`/programs/${programId}/branches/${branchName}`}
-                    className="hover:underline"
-                >
-                    {decodeURIComponent(branchName)}
-                </Link>
-                {" → "}
-                <span className="text-foreground font-medium">
-                    PYQs
-                </span>
-            </div>
+            <BackButton
+                to={`/programs/${programId}/branches/${branchName}`}
+                label={decodedBranch}
+            />
+
+            <Breadcrumbs items={breadcrumbItems} />
 
             <div>
                 <h1 className="text-2xl font-bold">PYQs</h1>
@@ -72,7 +72,7 @@ const PyqUserView = () => {
                 </p>
             </div>
 
-            {loading ? (
+            {loadingSemesters || loadingProgram ? (
                 <p className="text-muted-foreground">Loading semesters...</p>
             ) : semesters.length === 0 ? (
                 <p className="text-muted-foreground">
@@ -81,24 +81,40 @@ const PyqUserView = () => {
             ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {semesters.map((sem) => (
-                        <Card
+                        <GlowCard
                             key={sem}
+                            className="cursor-pointer relative"
                             onClick={() =>
                                 navigate(
                                     `/programs/${programId}/branches/${branchName}/pyqs/semester/${sem}`
                                 )
                             }
-                            className="cursor-pointer hover:shadow-lg transition"
                         >
                             <CardHeader>
-                                <CardTitle>Semester {sem}</CardTitle>
+                                <CardTitle className="text-lg">
+                                    Semester {sem}
+                                </CardTitle>
+
                                 <CardDescription>
-                                    View resources
+                                    View PYQs
                                 </CardDescription>
                             </CardHeader>
-                        </Card>
+
+                            {/* Arrow Icon */}
+                            <ArrowUpRight
+                                className="
+          absolute bottom-4 right-4
+          h-4 w-4
+          text-muted-foreground
+          opacity-70
+          transition
+          group-hover:opacity-100
+        "
+                            />
+                        </GlowCard>
                     ))}
                 </div>
+
             )}
         </div>
     )

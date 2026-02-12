@@ -10,7 +10,7 @@ import { Construction } from "lucide-react"
 
 const Home = () => {
   return (
-    <div className="flex min-h-[75vh] items-center justify-center px-4">
+    <div className="flex min-h-[75vh] items-center justify-center px-4 py-4">
       <Card className="w-full max-w-3xl">
         <CardContent className="p-8 text-center space-y-6">
 

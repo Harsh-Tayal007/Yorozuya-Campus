@@ -7,15 +7,21 @@ const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const SUBJECTS_COLLECTION_ID = import.meta.env
   .VITE_APPWRITE_SUBJECTS_COLLECTION_ID;
 
+
 export const getSubjectsForPyqSemester = async ({
   programId,
-  branch,
   semester,
 }) => {
+   if (!programId || !semester) {
+    return [];
+  }
+
+  const normalizedSemester = String(semester);
+
   // 1. syllabus ids
   const syllabusIds = await getSyllabusIdsForPyqs({
     programId,
-    semester,
+     semester: normalizedSemester,
   });
 
   if (syllabusIds.length === 0) return [];
@@ -30,7 +36,7 @@ export const getSubjectsForPyqSemester = async ({
   // 3. subject ids with pyqs
   const subjectIdsWithPyqs = await getSubjectIdsWithPyqs({
     programId,
-    semester,
+     semester: normalizedSemester,
   });
 
   const validSubjectIdSet = new Set(subjectIdsWithPyqs);

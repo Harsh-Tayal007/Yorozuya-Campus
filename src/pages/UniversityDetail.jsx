@@ -12,6 +12,9 @@ import {
   EmptyDescription,
 } from "@/components/ui/empty"
 
+import { useQuery } from "@tanstack/react-query"
+
+
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const UNIVERSITIES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNIVERSITIES_COLLECTION_ID
 const PROGRAMS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_PROGRAMS_COLLECTION_ID
@@ -21,55 +24,56 @@ const UniversityDetail = () => {
   const { universityId } = useParams()
   const navigate = useNavigate()
 
-  const [university, setUniversity] = useState(null)
-  const [programs, setPrograms] = useState([])
-  const [loading, setLoading] = useState(true)
+  const {
+  data,
+  isLoading,
+  isError,
+} = useQuery({
+  queryKey: ["university-detail", universityId],
+  queryFn: async () => {
+    const [uniRes, progRes] = await Promise.all([
+      databases.getDocument(
+        DATABASE_ID,
+        UNIVERSITIES_COLLECTION_ID,
+        universityId
+      ),
+      databases.listDocuments(
+        DATABASE_ID,
+        PROGRAMS_COLLECTION_ID,
+        [Query.equal("universityId", universityId)]
+      ),
+    ])
 
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const uniRes = await databases.getDocument(
-          DATABASE_ID,
-          UNIVERSITIES_COLLECTION_ID,
-          universityId
-        )
-
-        const progRes = await databases.listDocuments(
-          DATABASE_ID,
-          PROGRAMS_COLLECTION_ID,
-          [Query.equal("universityId", universityId)]
-        )
-
-        setUniversity(uniRes)
-        setPrograms(progRes.documents)
-      } catch (err) {
-        console.error("Failed to load university", err)
-      } finally {
-        setLoading(false)
-      }
+    return {
+      university: uniRes,
+      programs: progRes.documents,
     }
+  },
+  enabled: !!universityId,
+})
 
-    fetchData()
-  }, [universityId])
+  if (isLoading) {
+  return (
+    <PageWrapper>
+      <p className="text-sm text-muted-foreground">
+        Loading university…
+      </p>
+    </PageWrapper>
+  )
+}
 
-  if (loading) {
-    return (
-      <PageWrapper>
-        <p className="text-sm text-muted-foreground">Loading university…</p>
-      </PageWrapper>
-    )
-  }
 
-  if (!university) {
-    return (
-      <PageWrapper>
-        <p className="text-sm text-muted-foreground">
-          University not found
-        </p>
-      </PageWrapper>
-    )
-  }
+  if (isError || !data?.university) {
+  return (
+    <PageWrapper>
+      <p className="text-sm text-muted-foreground">
+        University not found
+      </p>
+    </PageWrapper>
+  )
+}
+
+const { university, programs } = data
 
 
   return (
@@ -88,10 +92,10 @@ const UniversityDetail = () => {
       <Separator />
       {/* Courses section */}
       <div className="
-        mt-6 rounded-xl border p-5
-        border-gray-200 bg-gray-50
-        dark:border-gray-700 dark:bg-gray-800
-      ">
+  mt-6 rounded-xl border p-4
+  border-gray-200 bg-gray-50
+  dark:border-gray-700 dark:bg-gray-800
+">
         {programs.length === 0 ? (
           <Empty>
             <EmptyHeader>
@@ -102,7 +106,7 @@ const UniversityDetail = () => {
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {programs.map((program) => (
               <CourseCard
                 key={program.$id}

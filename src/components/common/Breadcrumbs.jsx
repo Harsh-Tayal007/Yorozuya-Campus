@@ -11,7 +11,13 @@ const Breadcrumbs = ({ items }) => {
                 {item.label}
               </Link>
             ) : (
-              <span className="text-foreground font-medium">
+              <span
+                className={
+                  item.label === "…"
+                    ? "text-muted-foreground"
+                    : "text-foreground font-medium"
+                }
+              >
                 {item.label}
               </span>
             )}

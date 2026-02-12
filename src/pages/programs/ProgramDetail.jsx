@@ -1,8 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { useEffect, useState } from "react"
 import { getBranchesForProgram } from "@/utils/getBranchesForProgram"
 import { getAvailableBranchesForProgram } from "@/services/branchAvailabilityService"
+import { useQuery } from "@tanstack/react-query"
+import GlowCard from "@/components/common/GlowCard"
+import { ArrowUpRight } from "lucide-react"
 
 const ProgramDetail = () => {
   const { programId } = useParams()
@@ -17,23 +19,15 @@ const ProgramDetail = () => {
 
   const allBranches = getBranchesForProgram(program.name)
 
-  const [availableBranches, setAvailableBranches] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchAvailableBranches = async () => {
-      try {
-        const data = await getAvailableBranchesForProgram(programId)
-        setAvailableBranches(data)
-      } catch (err) {
-        console.error("Failed to fetch available branches", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAvailableBranches()
-  }, [programId])
+  const {
+    data: availableBranches = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["available-branches", programId],
+    queryFn: () => getAvailableBranchesForProgram(programId),
+    enabled: !!programId,
+  })
 
   const visibleBranches = allBranches.filter(branch =>
     availableBranches.includes(branch)
@@ -55,7 +49,7 @@ const ProgramDetail = () => {
           Choose your branch
         </h2>
 
-        {loading ? (
+        {isLoading ? (
           <p className="text-muted-foreground">Loading branches…</p>
         ) : visibleBranches.length === 0 ? (
           <p className="text-muted-foreground">
@@ -64,20 +58,33 @@ const ProgramDetail = () => {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {visibleBranches.map(branch => (
-              <Card
+              <GlowCard
                 key={branch}
+                className="cursor-pointer"
                 onClick={() =>
                   navigate(
                     `/programs/${programId}/branches/${encodeURIComponent(branch)}`
                   )
                 }
-                className="cursor-pointer hover:shadow-lg transition"
               >
                 <CardHeader>
-                  <CardTitle>{branch}</CardTitle>
+                  <CardTitle className="text-lg">
+                    {branch}
+                  </CardTitle>
                 </CardHeader>
-              </Card>
+                <ArrowUpRight
+                  className="
+    absolute bottom-4 right-4
+    h-4 w-4
+    text-muted-foreground
+    opacity-70
+    transition
+    group-hover:opacity-100
+  "
+                />
+              </GlowCard>
             ))}
+
           </div>
         )}
       </div>

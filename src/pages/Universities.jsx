@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   createUniversity,
   deleteUniversity,
@@ -17,6 +17,9 @@ import { useAuth } from "@/context/AuthContext";
 
 import { useNavigate } from "react-router-dom"
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+
 
 const Universities = () => {
   const { currentUser, hasPermission } = useAuth()
@@ -30,9 +33,8 @@ const Universities = () => {
     website: "",
   })
 
-  const [universities, setUniversities] = useState([])
   const [loading, setLoading] = useState(false)
-  const [loadingList, setLoadingList] = useState(true)
+
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
@@ -41,6 +43,29 @@ const Universities = () => {
   const isEditing = Boolean(editingUniversity)
 
   const navigate = useNavigate()
+
+  const queryClient = useQueryClient()
+
+  const createMutation = useMutation({
+  mutationFn: (data) => createUniversity(data, currentUser),
+  onSuccess: () => {
+    queryClient.invalidateQueries(["universities"])
+    setForm({ name: "", country: "", city: "", website: "" })
+    setSuccess(true)
+  },
+  onError: () => {
+    setError("Failed to create university.")
+  },
+})
+
+  const {
+    data: universities = [],
+    isLoading: loadingList,
+  } = useQuery({
+    queryKey: ["universities"],
+    queryFn: getUniversities,
+    // staleTime: 20 * 60 * 1000,  // optional if global not set
+  })
 
 
   // -------------------------
@@ -60,112 +85,76 @@ const Universities = () => {
       return
     }
 
-
     if (!form.name || !form.country) {
       setError("University name and country are required.")
       return
     }
 
-
-    try {
-      setLoading(true)
-
-      // ✅ pass currentUser
-      const created = await createUniversity(form, currentUser)
-
-      setUniversities((prev) => [created, ...prev])
-      setForm({ name: "", country: "", city: "", website: "" })
-      setSuccess(true)
-    } catch (err) {
-      console.error(err)
-      setError("Failed to create university.")
-    } finally {
-      setLoading(false)
-    }
+    createMutation.mutate(form)
   }
+
 
   // -------------------------
   // DELETE (Optimistic)
   // -------------------------
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this university?"
-    )
 
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, name }) =>
+      deleteUniversity(id, currentUser, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["universities"])
+    },
+  })
+
+  const handleDelete = (id) => {
     if (!canManage) {
       alert("You are not allowed to delete universities.")
       return
     }
 
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this university?"
+    )
 
     if (!confirmed) return
 
-    const previous = universities
+    const university = universities.find((u) => u.$id === id)
 
-    setUniversities((prev) => prev.filter((u) => u.$id !== id))
-
-    try {
-      const university = universities.find((u) => u.$id === id)
-
-      await deleteUniversity(id, currentUser, university.name)
-    } catch (err) {
-      console.error(err)
-      setUniversities(previous)
-      alert("Failed to delete university")
-    }
+    deleteMutation.mutate({ id, name: university.name })
   }
+
 
   // -------------------------
   // UPDATE (Optimistic)
   // -------------------------
-  const handleUpdate = async () => {
-    const updated = editingUniversity
-    const previous = universities
 
+  const updateMutation = useMutation({
+    mutationFn: (updated) =>
+      updateUniversity(
+        updated.$id,
+        {
+          name: updated.name,
+          country: updated.country,
+          city: updated.city,
+          website: updated.website,
+        },
+        currentUser
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["universities"])
+      setEditingUniversity(null)
+    },
+  })
+
+
+  const handleUpdate = () => {
     if (!canManage) {
       alert("You are not allowed to edit universities.")
       return
     }
 
-
-
-    setUniversities((prev) =>
-      prev.map((u) => (u.$id === updated.$id ? updated : u))
-    )
-
-    setEditingUniversity(null)
-
-    try {
-      await updateUniversity(updated.$id, {
-        name: updated.name,
-        country: updated.country,
-        city: updated.city,
-        website: updated.website,
-      }, currentUser)
-    } catch (err) {
-      console.error(err)
-      setUniversities(previous)
-      alert("Update failed")
-    }
+    updateMutation.mutate(editingUniversity)
   }
-
-  // -------------------------
-  // READ
-  // -------------------------
-  useEffect(() => {
-    const fetchUniversities = async () => {
-      try {
-        const res = await getUniversities()
-        setUniversities(res)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoadingList(false)
-      }
-    }
-
-    fetchUniversities()
-  }, [])
 
   // -------------------------
   // UI

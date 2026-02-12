@@ -12,8 +12,20 @@ import { databases } from "@/lib/appwrite"
 
 import { getPdfViewUrl } from "@/services/storageService"
 import { getAvailableResourceSemesters } from "@/services/resourceAvailabilityService"
-
-
+import { BackButton, Breadcrumbs, FileTypeBadge } from "@/components"
+import { getResolvedResourcesForSubject }
+  from "@/services/resourceUserResolver";
+import { Button } from "@/components/ui/button"
+import { formatFileSize } from "@/utils/formatFileSize"
+import { Badge } from "@/components/ui/badge"
+import PdfPreviewModal from "@/components/common/PdfPreviewModal"
+import { STORAGE_BUCKET_ID } from "@/config/appwrite"
+import { buildResourceFilename } from "@/utils/filenameUtils"
+import { downloadFileXHR } from "@/services/downloadService"
+import { isMobileDevice } from "@/utils/isMobileDevice"
+import { useQuery } from "@tanstack/react-query"
+import GlowCard from "@/components/common/GlowCard"
+import { ArrowUpRight } from "lucide-react"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const SYLLABUS_COLLECTION = import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID
@@ -21,27 +33,114 @@ const SUBJECTS_COLLECTION = import.meta.env.VITE_APPWRITE_SUBJECTS_COLLECTION_ID
 const UNITS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID
 const RESOURCES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_RESOURCES_COLLECTION_ID
 
-
-
 export default function ResourcesUserView() {
   const { programId, branchName, semester, subjectId, unitId } = useParams()
 
-  const [subjects, setSubjects] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const [progress, setProgress] = useState(null)
+
   const navigate = useNavigate()
-  const [units, setUnits] = useState([])
-  const [loadingUnits, setLoadingUnits] = useState(false)
-  const [resources, setResources] = useState([])
-  const [loadingResources, setLoadingResources] = useState(false)
-  const [currentSubject, setCurrentSubject] = useState(null)
-  const [currentUnit, setCurrentUnit] = useState(null)
-
-  const [availableSemesters, setAvailableSemesters] = useState([])
-  const [loadingSemesters, setLoadingSemesters] = useState(true)
-
 
   const decodedBranch = decodeURIComponent(branchName)
+
+  const [previewResource, setPreviewResource] = useState(null);
+
+  const [activeDownload, setActiveDownload] = useState(null)
+
+  const {
+    data: resources = [],
+    isLoading: loadingResources,
+  } = useQuery({
+    queryKey: ["resources", programId, semester, subjectId],
+    queryFn: () =>
+      getResolvedResourcesForSubject({
+        programId,
+        semester,
+        subjectId,
+      }),
+    enabled: !!programId && !!semester && !!subjectId,
+    // staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  const {
+    data: subjects = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ["subjects", programId, decodedBranch, semester],
+    queryFn: () =>
+      getSubjectsBySemesterContext({
+        programId,
+        branch: decodedBranch,
+        semester,
+      }),
+    enabled: !!programId && !!decodedBranch && !!semester,
+    // staleTime: 10 * 60 * 1000,
+  });
+
+
+  const {
+    data: units = [],
+    isLoading: loadingUnits,
+  } = useQuery({
+    queryKey: ["units", subjectId],
+    queryFn: async () => {
+      const res = await databases.listDocuments(
+        DATABASE_ID,
+        UNITS_COLLECTION_ID,
+        [
+          Query.equal("subjectId", subjectId),
+          Query.orderAsc("order"),
+        ]
+      );
+      return res.documents;
+    },
+    enabled: !!subjectId,
+    // staleTime: 15 * 60 * 1000,
+  });
+
+  const {
+    data: currentSubject = null,
+  } = useQuery({
+    queryKey: ["subject", subjectId],
+    queryFn: () =>
+      databases.getDocument(
+        DATABASE_ID,
+        SUBJECTS_COLLECTION,
+        subjectId
+      ),
+    enabled: !!subjectId,
+    // staleTime: 30 * 60 * 1000,
+  });
+
+  const {
+    data: currentUnit = null,
+  } = useQuery({
+    queryKey: ["unit", unitId],
+    queryFn: () =>
+      databases.getDocument(
+        DATABASE_ID,
+        UNITS_COLLECTION_ID,
+        unitId
+      ),
+    enabled: !!unitId,
+    // staleTime: 30 * 60 * 1000,
+  });
+
+  const {
+    data: availableSemesters = [],
+    isLoading: loadingSemesters,
+  } = useQuery({
+    queryKey: ["resourceSemesters", programId, branchName],
+    queryFn: () =>
+      getAvailableResourceSemesters({
+        programId,
+        branch: decodeURIComponent(branchName),
+      }),
+    enabled: !!programId && !semester,
+    // staleTime: 20 * 60 * 1000,
+  });
 
   async function getSubjectsBySemesterContext({ programId, branch, semester }) {
     const syllabusRes = await databases.listDocuments(
@@ -70,166 +169,69 @@ export default function ResourcesUserView() {
     return subjectsRes.documents
   }
 
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const subjectDocs = await getSubjectsBySemesterContext({
-          programId,
-          branch: decodedBranch,
-          semester,
-        })
-
-        setSubjects(subjectDocs)
-      } catch (err) {
-        console.error(err)
-        setError("Subjects not found")
-      } finally {
-        setLoading(false)
-      }
+  const breadcrumbItems = [
+    { label: "B.Tech", href: "/" },
+    {
+      label: decodedBranch,
+      href: `/programs/${programId}/branches/${branchName}`,
     }
+  ]
 
-    if (programId && decodedBranch && semester) {
-      fetchSubjects()
-    }
-  }, [programId, decodedBranch, semester])
-
-  useEffect(() => {
-    const fetchUnits = async () => {
-      try {
-        setLoadingUnits(true)
-
-        const res = await databases.listDocuments(
-          DATABASE_ID,
-          UNITS_COLLECTION_ID,
-          [
-            Query.equal("subjectId", subjectId),
-            Query.orderAsc("order"),
-          ]
-        )
-
-        setUnits(res.documents)
-      } catch (err) {
-        console.error("Failed to load units", err)
-      } finally {
-        setLoadingUnits(false)
-      }
-    }
-
-    if (subjectId) {
-      fetchUnits()
-    }
-  }, [subjectId])
-
-  useEffect(() => {
-    const fetchResources = async () => {
-      try {
-        setLoadingResources(true)
-
-        const res = await databases.listDocuments(
-          DATABASE_ID,
-          RESOURCES_COLLECTION_ID,
-          [
-            Query.equal("unitId", unitId),
-            Query.orderDesc("$createdAt"),
-          ]
-        )
-
-        setResources(res.documents)
-      } catch (err) {
-        console.error("Failed to load resources", err)
-      } finally {
-        setLoadingResources(false)
-      }
-    }
-
-    if (unitId) {
-      fetchResources()
-    }
-  }, [unitId])
-
-  useEffect(() => {
-    const fetchSubject = async () => {
-      try {
-        const res = await databases.getDocument(
-          DATABASE_ID,
-          SUBJECTS_COLLECTION,
-          subjectId
-        )
-        setCurrentSubject(res)
-      } catch (err) {
-        console.error("Failed to fetch subject", err)
-      }
-    }
-
-    if (subjectId) {
-      fetchSubject()
-    } else {
-      setCurrentSubject(null)
-    }
-  }, [subjectId])
+  breadcrumbItems.push({
+    label: "Resources",
+    href: semester
+      ? `/programs/${programId}/branches/${branchName}/resources`
+      : undefined,
+  })
 
 
-  useEffect(() => {
-    const fetchUnit = async () => {
-      try {
-        const res = await databases.getDocument(
-          DATABASE_ID,
-          UNITS_COLLECTION_ID,
-          unitId
-        )
-        setCurrentUnit(res)
-      } catch (err) {
-        console.error("Failed to fetch unit", err)
-      }
-    }
+  if (semester) {
+    breadcrumbItems.push({
+      label: `Semester ${semester}`,
+      href: currentSubject
+        ? `/programs/${programId}/branches/${branchName}/resources/${semester}`
+        : undefined,
+    })
+  }
 
-    if (unitId) {
-      fetchUnit()
-    } else {
-      setCurrentUnit(null)
-    }
-  }, [unitId])
+  if (subjectId && currentSubject) {
+    breadcrumbItems.push({
+      label: currentSubject.subjectName,
+    })
+  }
 
-  // for semesters fetch fikter
 
-  useEffect(() => {
-    if (semester) return
 
-    const fetchSemesters = async () => {
-      setLoadingSemesters(true)
 
-      try {
-        const data = await getAvailableResourceSemesters({
-          programId,
-          branch: decodeURIComponent(branchName),
-        })
 
-        setAvailableSemesters(data)
-      } catch (err) {
-        console.error("Failed to fetch resource semesters", err)
-      } finally {
-        setLoadingSemesters(false)
-      }
-    }
-
-    fetchSemesters()
-  }, [programId, branchName, semester])
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-      {/* 🧭 Breadcrumb */}
-      {semester && (
-        <p className="text-sm text-muted-foreground">
-          B.Tech → {decodedBranch}
-          {semester && ` → Semester ${semester}`}
-          {currentSubject && ` → ${currentSubject.subjectName}`}
-          {currentUnit && ` → ${currentUnit.title}`}
-        </p>
+
+      {/* ⬅ Back Button */}
+      {!semester && (
+        <BackButton
+          to={`/programs/${programId}/branches/${branchName}`}
+          label={decodedBranch}
+        />
       )}
 
+      {semester && !subjectId && (
+        <BackButton
+          to={`/programs/${programId}/branches/${branchName}/resources`}
+          label="Resources"
+        />
+      )}
+
+      {semester && subjectId && (
+        <BackButton
+          to={`/programs/${programId}/branches/${branchName}/resources/${semester}`}
+          label={`Semester ${semester}`}
+        />
+      )}
+
+      {/* 🧭 Breadcrumb */}
+      <Breadcrumbs items={breadcrumbItems} />
 
       {/* 🧾 Header */}
       <div className="space-y-1">
@@ -255,9 +257,9 @@ export default function ResourcesUserView() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {availableSemesters.map((sem) => (
-                <Card
+                <GlowCard
                   key={sem}
-                  className="cursor-pointer hover:shadow-lg transition"
+                  className="cursor-pointer"
                   onClick={() =>
                     navigate(
                       `/programs/${programId}/branches/${branchName}/resources/${sem}`
@@ -272,7 +274,18 @@ export default function ResourcesUserView() {
                       View resources
                     </CardDescription>
                   </CardHeader>
-                </Card>
+                  {/* Arrow Icon */}
+                  <ArrowUpRight
+                    className="
+          absolute bottom-4 right-4
+          h-4 w-4
+          text-muted-foreground
+          opacity-70
+          transition
+          group-hover:opacity-100
+        "
+                  />
+                </GlowCard>
               ))}
             </div>
           )}
@@ -297,10 +310,10 @@ export default function ResourcesUserView() {
 
           {!loading && subjects.length > 0 && (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {subjects.map(subject => (
-                <Card
+              {subjects.map((subject) => (
+                <GlowCard
                   key={subject.$id}
-                  className="cursor-pointer hover:shadow-lg transition"
+                  className="cursor-pointer"
                   onClick={() =>
                     navigate(
                       `/programs/${programId}/branches/${branchName}/resources/${semester}/${subject.$id}`
@@ -309,7 +322,7 @@ export default function ResourcesUserView() {
                 >
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      📄 {subject.subjectName}
+                      {subject.subjectName}
                     </CardTitle>
 
                     {subject.description && (
@@ -318,55 +331,27 @@ export default function ResourcesUserView() {
                       </CardDescription>
                     )}
                   </CardHeader>
-                </Card>
+                   {/* Arrow Icon */}
+                            <ArrowUpRight
+                                className="
+          absolute bottom-4 right-4
+          h-4 w-4
+          text-muted-foreground
+          opacity-70
+          transition
+          group-hover:opacity-100
+        "
+                            />
+                </GlowCard>
               ))}
             </div>
-          )}
-        </>
-      )}
 
-
-      {/* 📘 Units */}
-      {subjectId && !unitId && (
-        <>
-          {loadingUnits && (
-            <div className="text-center text-muted-foreground">
-              Loading units...
-            </div>
-          )}
-
-          {!loadingUnits && units.length === 0 && (
-            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-              No units added for this subject yet.
-            </div>
-          )}
-
-          {!loadingUnits && units.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {units.map(unit => (
-                <Card
-                  key={unit.$id}
-                  className="cursor-pointer hover:shadow-lg transition"
-                  onClick={() =>
-                    navigate(
-                      `/programs/${programId}/branches/${branchName}/resources/${semester}/${subjectId}/${unit.$id}`
-                    )
-                  }
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {unit.title}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
           )}
         </>
       )}
 
       {/* 📚 Resources */}
-      {unitId && (
+      {subjectId && (
         <>
           {loadingResources && (
             <div className="text-center text-muted-foreground">
@@ -381,45 +366,193 @@ export default function ResourcesUserView() {
           )}
 
           {!loadingResources && resources.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {resources.map(resource => (
+            <div className="space-y-4">
+              {resources.map((resource) => (
                 <Card
                   key={resource.$id}
-                  className="cursor-pointer hover:shadow-lg transition"
-                  onClick={() => {
+                  className="
+  p-4
+  flex flex-col gap-4
+  md:flex-row md:items-center md:justify-between
 
-                    if (resource.type === "pdf" && resource.fileId) {
-                      window.open(
-                        getPdfViewUrl(resource.fileId),
-                        "_blank"
-                      )
-                    }
+  cursor-default
+  transition-all duration-200
+  hover:bg-muted/40
+  hover:shadow-lg
+hover:-translate-y-[2px]
 
-                    if (resource.type === "link" && resource.url) {
-                      window.open(resource.url, "_blank")
-                    }
-                  }}
-
+"
 
                 >
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {resource.title}
-                    </CardTitle>
 
-                    {resource.description && (
-                      <CardDescription>
-                        {resource.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
+                  {/* Left */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <FileTypeBadge
+                        fileType={resource.type === "pdf" ? "PDF" : "LINK"}
+                      />
+
+                      <p className="font-medium">{resource.title}</p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {resource.unit && (
+                        <Badge variant="secondary">
+                          Unit {resource.unit.order}: {resource.unit.title}
+                        </Badge>
+                      )}
+
+                      {resource.fileSize && (
+                        <Badge
+                          variant="secondary"
+                          className="font-normal opacity-80"
+                        >
+                          {formatFileSize(resource.fileSize)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right */}
+                  <div className="flex flex-col items-end gap-1 md:shrink-0">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // LINK resources → always open normally
+                          if (resource.type === "link" && resource.url) {
+                            window.open(resource.url, "_blank")
+                            return
+                          }
+
+                          // PDF on mobile → open directly
+                          if (isMobileDevice()) {
+                            const url = getPdfViewUrl(resource.fileId)
+                            window.open(url, "_blank")
+                            return
+                          }
+
+                          // Desktop PDF → modal preview
+                          setPreviewResource(resource)
+                        }}
+                      >
+                        View
+                      </Button>
+
+                      {resource.type === "pdf" && (
+                        <div className="relative">
+                          <Button
+                            size="sm"
+                            className="relative overflow-hidden pr-8"
+                            onClick={() => {
+                              if (downloadingId === resource.$id) return
+
+                              setDownloadingId(resource.$id)
+                              setProgress(0)
+
+                              const controller = downloadFileXHR({
+                                url: getPdfViewUrl(resource.fileId),
+                                fileName: buildResourceFilename(resource),
+
+                                onProgress: (data) => {
+                                  if (typeof data === "number") {
+                                    setProgress(data)
+                                  } else {
+                                    const percent = Math.min(
+                                      Math.round((data.loaded / resource.fileSize) * 100),
+                                      99
+                                    )
+                                    setProgress(percent)
+                                  }
+                                },
+
+                                onSuccess: () => {
+                                  setProgress(null)
+                                  setDownloadingId(null)
+                                  setActiveDownload(null)
+                                },
+
+                                onCancel: () => {
+                                  setProgress(null)
+                                  setDownloadingId(null)
+                                  setActiveDownload(null)
+                                },
+
+                                onError: () => {
+                                  setProgress(null)
+                                  setDownloadingId(null)
+                                  setActiveDownload(null)
+                                },
+                              })
+
+                              setActiveDownload(controller)
+                            }}
+                          >
+                            {/* BASE */}
+                            {downloadingId === resource.$id && (
+                              <span className="absolute inset-0 bg-zinc-300 dark:bg-zinc-700" />
+                            )}
+
+                            {/* PROGRESS */}
+                            {downloadingId === resource.$id && (
+                              <span
+                                className="absolute inset-y-0 left-0 bg-primary transition-[width]"
+                                style={{ width: `${progress}%` }}
+                              />
+                            )}
+
+                            {/* TEXT (auto-contrast) */}
+                            <span className="relative z-10 mix-blend-difference text-white font-medium">
+                              {downloadingId === resource.$id
+                                ? `Downloading… ${progress ?? 0}%`
+                                : "Download"}
+                            </span>
+                          </Button>
+
+                          {/* ❌ CANCEL (NOT INSIDE BUTTON) */}
+                          {downloadingId === resource.$id && (
+                            <span
+                              className="
+        absolute right-2 top-1/2 -translate-y-1/2
+        cursor-pointer
+        text-xs
+        opacity-70
+        hover:opacity-100
+        z-20
+      "
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                activeDownload?.cancel()
+                              }}
+                            >
+                              ✕
+                            </span>
+                          )}
+                        </div>
+
+
+                      )}
+                    </div>
+                  </div>
+
                 </Card>
               ))}
             </div>
           )}
+
         </>
       )}
 
+      {!isMobileDevice() && (
+        <PdfPreviewModal
+          open={!!previewResource}
+          fileId={previewResource?.fileId}
+          bucketId={STORAGE_BUCKET_ID}
+          title={previewResource?.title}
+          onClose={() => setPreviewResource(null)}
+        />
+      )}
 
     </div>
   )
