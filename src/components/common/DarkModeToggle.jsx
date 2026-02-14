@@ -3,21 +3,12 @@ import React, { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 
 const DarkModeToggle = () => {
-  const [isDark, setIsDark] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [isDark, setIsDark] = useState(() =>
+  document.documentElement.classList.contains("dark")
+)
+
 
   // Prevent hydration mismatch
-  useEffect(() => {
-    const storedTheme = localStorage.getItem("theme")
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-
-    const shouldBeDark =
-      storedTheme === "dark" || (!storedTheme && prefersDark)
-
-    document.documentElement.classList.toggle("dark", shouldBeDark)
-    setIsDark(shouldBeDark)
-    setMounted(true)
-  }, [])
 
   const toggleTheme = () => {
     const newTheme = !isDark
@@ -25,8 +16,6 @@ const DarkModeToggle = () => {
     localStorage.setItem("theme", newTheme ? "dark" : "light")
     setIsDark(newTheme)
   }
-
-  if (!mounted) return null
 
   return (
     <motion.button

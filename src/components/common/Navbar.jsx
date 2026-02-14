@@ -57,8 +57,6 @@ const Navbar = ({
   const isStandalone =
     window.matchMedia("(display-mode: standalone)").matches;
 
-  if (isLoading) return null
-
   const handleLogout = async () => {
     await logout()
     navigate("/login")
@@ -165,7 +163,9 @@ const Navbar = ({
           <DarkModeToggle />
 
           {/* Auth */}
-          {authStatus ? (
+          {isLoading ? (
+            <div className="h-8 w-20 rounded-md bg-white/20 dark:bg-white/10 animate-pulse" />
+          ) : authStatus ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <motion.button

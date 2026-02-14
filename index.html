@@ -1,5 +1,19 @@
 <!doctype html>
 <html lang="en">
+  <script>
+  (function () {
+    const storedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const shouldBeDark =
+      storedTheme === "dark" || (!storedTheme && prefersDark);
+
+    if (shouldBeDark) {
+      document.documentElement.classList.add("dark");
+    }
+  })();
+</script>
+
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
