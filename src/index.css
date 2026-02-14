@@ -145,3 +145,7 @@
   background-color: #6366f1; /* indigo-500 */
   color: white;
 }
+
+html {
+  scrollbar-gutter: stable;
+}
