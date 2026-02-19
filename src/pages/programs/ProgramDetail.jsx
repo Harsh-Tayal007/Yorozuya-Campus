@@ -34,7 +34,7 @@ const ProgramDetail = () => {
   )
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
       {/* Program Header */}
       <div>
         <h1 className="text-3xl font-bold">{program.name}</h1>

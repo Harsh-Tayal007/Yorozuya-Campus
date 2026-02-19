@@ -12,7 +12,7 @@ import { databases } from "@/lib/appwrite"
 
 import { getPdfViewUrl } from "@/services/storageService"
 import { getAvailableResourceSemesters } from "@/services/resourceAvailabilityService"
-import { BackButton, Breadcrumbs, FileTypeBadge } from "@/components"
+import { BackButton, Breadcrumbs, ErrorState, FileTypeBadge, LoadingCard, SyllabusListSkeleton } from "@/components"
 import { getResolvedResourcesForSubject }
   from "@/services/resourceUserResolver";
 import { Button } from "@/components/ui/button"
@@ -33,8 +33,19 @@ const SUBJECTS_COLLECTION = import.meta.env.VITE_APPWRITE_SUBJECTS_COLLECTION_ID
 const UNITS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID
 const RESOURCES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_RESOURCES_COLLECTION_ID
 
-export default function ResourcesUserView() {
-  const { programId, branchName, semester, subjectId, unitId } = useParams()
+export default function ResourcesUserView({
+  programId: propProgramId,
+  branchName: propBranchName,
+  isDashboard
+}) {
+
+  const params = useParams()
+
+  const programId = propProgramId ?? params.programId
+  const branchName = propBranchName ?? params.branchName
+  const semester = params.semester
+  const subjectId = params.subjectId
+  const unitId = params.unitId
 
   const [downloadingId, setDownloadingId] = useState(null);
 
@@ -42,15 +53,31 @@ export default function ResourcesUserView() {
 
   const navigate = useNavigate()
 
-  const decodedBranch = decodeURIComponent(branchName)
+  const decodedBranch = branchName
+    ? decodeURIComponent(branchName)
+    : null
 
   const [previewResource, setPreviewResource] = useState(null);
 
   const [activeDownload, setActiveDownload] = useState(null)
 
+  const programBase = `/programs/${programId}/branches/${branchName}`
+  const dashboardBase = "/dashboard/resources"
+
+  const baseResourcesPath = isDashboard
+    ? dashboardBase
+    : `${programBase}/resources`
+
+  const branchBasePath = isDashboard
+    ? "/dashboard"
+    : programBase
+
   const {
     data: resources = [],
     isLoading: loadingResources,
+    error: resourcesError,
+    refetch: refetchResources,
+
   } = useQuery({
     queryKey: ["resources", programId, semester, subjectId],
     queryFn: () =>
@@ -66,7 +93,8 @@ export default function ResourcesUserView() {
   const {
     data: subjects = [],
     isLoading: loading,
-    error,
+    error: subjectsError,
+    refetch: refetchSubjects,
   } = useQuery({
     queryKey: ["subjects", programId, decodedBranch, semester],
     queryFn: () =>
@@ -132,13 +160,13 @@ export default function ResourcesUserView() {
     data: availableSemesters = [],
     isLoading: loadingSemesters,
   } = useQuery({
-    queryKey: ["resourceSemesters", programId, branchName],
+    queryKey: ["resourceSemesters", programId, decodedBranch],
     queryFn: () =>
       getAvailableResourceSemesters({
         programId,
-        branch: decodeURIComponent(branchName),
+        branch: decodedBranch,
       }),
-    enabled: !!programId && !semester,
+    enabled: !!programId && !semester && !subjectId,
     // staleTime: 20 * 60 * 1000,
   });
 
@@ -169,27 +197,32 @@ export default function ResourcesUserView() {
     return subjectsRes.documents
   }
 
-  const breadcrumbItems = [
-    { label: "B.Tech", href: "/" },
-    {
-      label: decodedBranch,
-      href: `/programs/${programId}/branches/${branchName}`,
-    }
-  ]
-
-  breadcrumbItems.push({
-    label: "Resources",
-    href: semester
-      ? `/programs/${programId}/branches/${branchName}/resources`
-      : undefined,
-  })
+ const breadcrumbItems = isDashboard
+  ? [
+      { label: "Dashboard", href: "/dashboard" },
+      {
+        label: "Resources",
+        href: semester ? "/dashboard/resources" : undefined,
+      },
+    ]
+  : [
+      { label: "B.Tech", href: "/" },
+      {
+        label: decodedBranch,
+        href: branchBasePath,
+      },
+      {
+        label: "Resources",
+        href: semester ? baseResourcesPath : undefined,
+      },
+    ]
 
 
   if (semester) {
     breadcrumbItems.push({
       label: `Semester ${semester}`,
-      href: currentSubject
-        ? `/programs/${programId}/branches/${branchName}/resources/${semester}`
+      href: subjectId
+        ? `${baseResourcesPath}/${semester}`
         : undefined,
     })
   }
@@ -201,31 +234,41 @@ export default function ResourcesUserView() {
   }
 
 
-
+  if (subjectsError || resourcesError) {
+    return (
+      <ErrorState
+        message="Failed to load resources."
+        onRetry={() => {
+          refetchSubjects()
+          refetchResources()
+        }}
+      />
+    )
+  }
 
 
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
       {/* ⬅ Back Button */}
       {!semester && (
         <BackButton
-          to={`/programs/${programId}/branches/${branchName}`}
+          to={branchBasePath}
           label={decodedBranch}
         />
       )}
 
       {semester && !subjectId && (
         <BackButton
-          to={`/programs/${programId}/branches/${branchName}/resources`}
+          to={baseResourcesPath}
           label="Resources"
         />
       )}
 
       {semester && subjectId && (
         <BackButton
-          to={`/programs/${programId}/branches/${branchName}/resources/${semester}`}
+          to={`${baseResourcesPath}/${semester}`}
           label={`Semester ${semester}`}
         />
       )}
@@ -247,9 +290,7 @@ export default function ResourcesUserView() {
       {!semester && (
         <>
           {loadingSemesters ? (
-            <p className="text-muted-foreground">
-              Loading semesters…
-            </p>
+            <LoadingCard count={4} />
           ) : availableSemesters.length === 0 ? (
             <p className="text-muted-foreground">
               No resources available for this branch yet.
@@ -261,9 +302,7 @@ export default function ResourcesUserView() {
                   key={sem}
                   className="cursor-pointer"
                   onClick={() =>
-                    navigate(
-                      `/programs/${programId}/branches/${branchName}/resources/${sem}`
-                    )
+                    navigate(`${baseResourcesPath}/${sem}`)
                   }
                 >
                   <CardHeader>
@@ -297,9 +336,7 @@ export default function ResourcesUserView() {
       {semester && !subjectId && (
         <>
           {loading && (
-            <div className="text-center text-muted-foreground">
-              Loading subjects...
-            </div>
+            <LoadingCard count={4} />
           )}
 
           {!loading && subjects.length === 0 && (
@@ -315,9 +352,7 @@ export default function ResourcesUserView() {
                   key={subject.$id}
                   className="cursor-pointer"
                   onClick={() =>
-                    navigate(
-                      `/programs/${programId}/branches/${branchName}/resources/${semester}/${subject.$id}`
-                    )
+                    navigate(`${baseResourcesPath}/${semester}/${subject.$id}`)
                   }
                 >
                   <CardHeader>
@@ -331,9 +366,9 @@ export default function ResourcesUserView() {
                       </CardDescription>
                     )}
                   </CardHeader>
-                   {/* Arrow Icon */}
-                            <ArrowUpRight
-                                className="
+                  {/* Arrow Icon */}
+                  <ArrowUpRight
+                    className="
           absolute bottom-4 right-4
           h-4 w-4
           text-muted-foreground
@@ -341,7 +376,7 @@ export default function ResourcesUserView() {
           transition
           group-hover:opacity-100
         "
-                            />
+                  />
                 </GlowCard>
               ))}
             </div>
@@ -354,9 +389,7 @@ export default function ResourcesUserView() {
       {subjectId && (
         <>
           {loadingResources && (
-            <div className="text-center text-muted-foreground">
-              Loading resources...
-            </div>
+            <SyllabusListSkeleton count={4} />
           )}
 
           {!loadingResources && resources.length === 0 && (

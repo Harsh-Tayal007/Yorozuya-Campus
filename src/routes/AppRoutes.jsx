@@ -56,9 +56,17 @@ import RequirePermissionRoute from "@/components/auth/RequirePermissionRoute"
 import { PERMISSIONS } from "@/config/permissions"
 import AdminLayout from "@/pages/admin/AdminLayout"
 import UserRolesAdmin from "@/pages/admin/roles/userRolesAdmin"
-import Dashboard from "@/pages/Dashboard"
+import Dashboard from "@/pages/user/dashboard/Dashboard"
 import RequireAcademicProfile from "@/components/auth/RequireAcademicProfile"
 import CompleteProfile from "@/pages/user/CompleteProfile"
+import DashboardLayout from "@/layouts/DashboardLayout"
+import DashboardSettings from "@/pages/user/dashboard/DashboardSettings"
+import DashboardSyllabus from "@/components/dashboard/DashboardSyllabus"
+import DashboardSemesterSyllabus from "@/components/dashboard/DashboardSemesterSyllabus"
+import DashboardResources from "@/components/dashboard/DashboardResources"
+import DashboardPyqs from "@/components/dashboard/DashboardPyqs"
+import DashboardPyqSemester from "@/components/dashboard/DashboardPyqSemester"
+import DashboardPyqSubject from "@/components/dashboard/DashboardPyqSubject"
 
 const AppRoutes = () => {
   return (
@@ -94,7 +102,30 @@ const AppRoutes = () => {
           {/* 👤 User Layout Routes */}
           <Route element={<UserLayout />}>
 
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="settings" element={<DashboardSettings />} />
+
+              <Route path="syllabus">
+                <Route index element={<DashboardSyllabus />} />
+                <Route path=":semester" element={<DashboardSemesterSyllabus />} />
+              </Route>
+
+              <Route path="resources">
+                <Route index element={<DashboardResources />} />
+                <Route path=":semester" element={<DashboardResources />} />
+                <Route path=":semester/:subjectId" element={<DashboardResources />} />
+                <Route path=":semester/:subjectId/:unitId" element={<DashboardResources />} />
+              </Route>
+
+              <Route path="pyqs">
+                <Route index element={<DashboardPyqs />} />
+                <Route path="semester/:semester" element={<DashboardPyqSemester />} />
+                <Route path="semester/:semester/subject/:subjectId" element={<DashboardPyqSubject />} />
+              </Route>
+
+            </Route>
+
 
             <Route path="/universities" element={<Universities />} />
 

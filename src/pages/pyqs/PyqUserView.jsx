@@ -2,17 +2,40 @@ import { useParams, useNavigate } from "react-router-dom"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSemestersWithPyqs } from "@/services/pyqService"
 import { getProgramById } from "@/services/programService"
-import { BackButton, Breadcrumbs } from "@/components"
+import { BackButton, Breadcrumbs, ErrorState, LoadingCard } from "@/components"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowUpRight } from "lucide-react"
 import GlowCard from "@/components/common/GlowCard"
 
 
-const PyqUserView = () => {
-    const { programId, branchName } = useParams()
+const PyqUserView = ({
+    programId: propProgramId,
+    branchName: propBranchName,
+    isDashboard
+}) => {
+    const params = useParams()
+
+    const programId = propProgramId ?? params.programId
+    const branchName = propBranchName ?? params.branchName
+    const semester = params.semester
+    const subjectId = params.subjectId
+
     const navigate = useNavigate()
 
-    const decodedBranch = decodeURIComponent(branchName)
+    const decodedBranch = branchName
+        ? decodeURIComponent(branchName)
+        : null
+
+    const programBase = `/programs/${programId}/branches/${branchName}`
+    const dashboardBase = "/dashboard/pyqs"
+
+    const basePyqPath = isDashboard
+        ? dashboardBase
+        : `${programBase}/pyqs`
+
+    const branchBasePath = isDashboard
+        ? "/dashboard"
+        : programBase
 
     const {
         data: semesters = [],
@@ -35,33 +58,42 @@ const PyqUserView = () => {
     })
 
     if (semestersError || programError) {
-        return (
-            <div className="max-w-6xl mx-auto px-4 py-8">
-                <p className="text-destructive">
-                    Failed to load PYQs.
-                </p>
-            </div>
-        )
-    }
+  return (
+    <ErrorState
+      message="Failed to load PYQs."
+      onRetry={() => {
+        refetchSemesters()
+        refetchProgram()
+      }}
+    />
+  )
+}
 
-    const breadcrumbItems = [
-        { label: "B.Tech", href: "/" },
-        {
-            label: decodedBranch,
-            href: `/programs/${programId}/branches/${branchName}`,
-        },
-        {
-            label: "PYQs",
-        },
+
+    const breadcrumbItems = isDashboard
+  ? [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "PYQs" },
+    ]
+  : [
+      { label: "B.Tech", href: "/" },
+      {
+        label: decodedBranch,
+        href: branchBasePath,
+      },
+      {
+        label: "PYQs",
+      },
     ]
 
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
             <BackButton
-                to={`/programs/${programId}/branches/${branchName}`}
+                to={branchBasePath}
                 label={decodedBranch}
             />
+
 
             <Breadcrumbs items={breadcrumbItems} />
 
@@ -73,7 +105,7 @@ const PyqUserView = () => {
             </div>
 
             {loadingSemesters || loadingProgram ? (
-                <p className="text-muted-foreground">Loading semesters...</p>
+                <LoadingCard count={4} />
             ) : semesters.length === 0 ? (
                 <p className="text-muted-foreground">
                     No PYQs available yet.
@@ -85,9 +117,7 @@ const PyqUserView = () => {
                             key={sem}
                             className="cursor-pointer relative"
                             onClick={() =>
-                                navigate(
-                                    `/programs/${programId}/branches/${branchName}/pyqs/semester/${sem}`
-                                )
+                                navigate(`${basePyqPath}/semester/${sem}`)
                             }
                         >
                             <CardHeader>

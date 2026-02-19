@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 import { getSubjectsBySyllabus } from "@/services/subjectService"
 import { storage } from "@/lib/appwrite"
+import { LoadingCard } from "@/components"
 
 const BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID
 
@@ -63,7 +64,7 @@ const SyllabusCard = ({ syllabus, onView, onEdit, onDelete }) => {
 
           {/* Subjects preview */}
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading subjects…</p>
+            <LoadingCard count={4} />
           ) : subjects.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No subjects added yet

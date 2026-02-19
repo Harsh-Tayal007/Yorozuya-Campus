@@ -3,14 +3,23 @@ import { useParams, useNavigate, Link } from "react-router-dom"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSubjectsForPyqSemester } from "@/services/pyqUserResolver"
 import { getProgramById } from "@/services/programService"
-import { BackButton, Breadcrumbs } from "@/components"
+import { BackButton, Breadcrumbs, ErrorState, LoadingCard } from "@/components"
 import GlowCard from "@/components/common/GlowCard"
 import { ArrowUpRight } from "lucide-react"
 
 
 
-const PyqSemesterSubjects = () => {
-    const { programId, branchName, semester } = useParams()
+const PyqSemesterSubjects = ({
+    programId: propProgramId,
+    branchName: propBranchName,
+    isDashboard
+}) => {
+    const params = useParams()
+
+    const programId = propProgramId ?? params.programId
+    const branchName = propBranchName ?? params.branchName
+    const semester = params.semester
+    const subjectId = params.subjectId
     const navigate = useNavigate()
 
     const {
@@ -41,39 +50,58 @@ const PyqSemesterSubjects = () => {
 
     if (subjectsError || programError) {
         return (
-            <div className="max-w-4xl mx-auto px-4 py-8">
-                <p className="text-destructive">
-                    Failed to load PYQ subjects.
-                </p>
-            </div>
+            <ErrorState
+                message="Failed to load PYQ subjects."
+                onRetry={() => {
+                    refetchSubjects()
+                    refetchProgram()
+                }}
+            />
         )
     }
 
-    const decodedBranch = decodeURIComponent(branchName)
 
-    const breadcrumbItems = [
-        { label: "B.Tech", href: "/" },
-        {
-            label: decodedBranch,
-            href: `/programs/${programId}/branches/${branchName}`,
-        },
-        {
-            label: "PYQs",
-            href: `/programs/${programId}/branches/${branchName}/pyqs`,
-        },
-        {
-            label: `Semester ${semester}`,
-        },
-    ]
+    const decodedBranch = branchName
+        ? decodeURIComponent(branchName)
+        : null
 
+    const programBase = `/programs/${programId}/branches/${branchName}`
+    const dashboardBase = "/dashboard/pyqs"
 
+    const basePyqPath = isDashboard
+        ? dashboardBase
+        : `${programBase}/pyqs`
 
+    const branchBasePath = isDashboard
+        ? "/dashboard"
+        : programBase
+
+    const breadcrumbItems = isDashboard
+        ? [
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "PYQs", href: "/dashboard/pyqs" },
+            { label: `Semester ${semester}` },
+        ]
+        : [
+            { label: "B.Tech", href: "/" },
+            {
+                label: decodedBranch,
+                href: branchBasePath,
+            },
+            {
+                label: "PYQs",
+                href: basePyqPath,
+            },
+            {
+                label: `Semester ${semester}`,
+            },
+        ]
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
             <BackButton
-                to={`/programs/${programId}/branches/${branchName}/pyqs`}
+                to={basePyqPath}
                 label="PYQs"
             />
 
@@ -89,7 +117,7 @@ const PyqSemesterSubjects = () => {
             </div>
 
             {loadingSubjects || loadingProgram ? (
-                <p className="text-muted-foreground">Loading subjects...</p>
+                <LoadingCard count={4} />
             ) : !semester ? (
                 <p className="text-muted-foreground">Select a semester</p>
             ) : subjects.length === 0 ? (
@@ -105,7 +133,7 @@ const PyqSemesterSubjects = () => {
                                 className="cursor-pointer"
                                 onClick={() =>
                                     navigate(
-                                        `/programs/${programId}/branches/${branchName}/pyqs/semester/${semester}/subject/${subject.$id}`,
+                                        `${basePyqPath}/semester/${semester}/subject/${subject.$id}`,
                                         {
                                             state: { subjectName: subject.subjectName },
                                         }

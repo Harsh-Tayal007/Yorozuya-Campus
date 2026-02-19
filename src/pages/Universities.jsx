@@ -160,7 +160,7 @@ const Universities = () => {
   // UI
   // -------------------------
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
       {/* ADD UNIVERSITY */}
 
       {canManage && (

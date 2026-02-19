@@ -2,47 +2,69 @@ import { useParams, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getAvailableSyllabusSemesters } from "@/services/syllabusService"
-import { BackButton, Breadcrumbs } from "@/components"
+import { BackButton, Breadcrumbs, LoadingCard } from "@/components"
 import { ArrowUpRight } from "lucide-react"
+import SemesterCard from "@/components/academic/SemesterCard"
 
-const BranchSyllabus = () => {
-  const { programId, branchName } = useParams()
+const BranchSyllabus = ({
+  programId,
+  branchName,
+  isDashboard = false
+}) => {
+
+  const params = useParams()
   const navigate = useNavigate()
 
-  const decodedBranch = decodeURIComponent(branchName)
+  const finalProgramId = programId ?? params.programId
+  const finalBranchName = branchName ?? params.branchName
+
+  const decodedBranch = finalBranchName
+    ? decodeURIComponent(finalBranchName)
+    : null
 
   // UseQuery - for cache
-  const {
-    data: semesters = [],
-    isLoading,
-  } = useQuery({
-    queryKey: ["syllabus-semesters", programId, decodedBranch],
+  const { data: semesters = [], isLoading } = useQuery({
+    queryKey: ["syllabus-semesters", finalProgramId, decodedBranch],
     queryFn: () =>
       getAvailableSyllabusSemesters({
-        programId,
+        programId: finalProgramId,
         branch: decodedBranch,
       }),
-    enabled: !!programId && !!decodedBranch,
-  });
+    enabled: Boolean(finalProgramId && decodedBranch),
+  })
 
-  const breadcrumbItems = [
-    { label: "B.Tech", href: "/" },
-    {
-      label: decodedBranch,
-      href: `/programs/${programId}/branches/${branchName}`,
-    },
-    {
-      label: "Syllabus",
-    },
-  ]
+
+  const breadcrumbItems = isDashboard
+    ? [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Syllabus" },
+    ]
+    : [
+      { label: "B.Tech", href: "/" },
+      {
+        label: decodedBranch,
+        href: `/programs/${finalProgramId}/branches/${finalBranchName}`,
+      },
+      {
+        label: "Syllabus",
+      },
+    ]
+
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+   <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-      <BackButton
-        to={`/programs/${programId}/branches/${branchName}`}
-        label={decodedBranch}
-      />
+      {isDashboard ? (
+        <BackButton
+          to="/dashboard"
+          label="Dashboard"
+        />
+      ) : (
+        <BackButton
+          to={`/programs/${finalProgramId}/branches/${finalBranchName}`}
+          label={decodedBranch}
+        />
+      )}
 
       <Breadcrumbs items={breadcrumbItems} />
 
@@ -58,7 +80,7 @@ const BranchSyllabus = () => {
 
       {/* Content */}
       {isLoading ? (
-        <p className="text-muted-foreground">Loading semesters…</p>
+        <LoadingCard count={4} />
       ) : semesters.length === 0 ? (
         <p className="text-muted-foreground">
           No syllabus available for this branch yet.
@@ -66,55 +88,20 @@ const BranchSyllabus = () => {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {semesters.map((sem) => (
-            <Card
+            <SemesterCard
               key={sem}
-              onClick={() =>
-                navigate(
-                  `/programs/${programId}/branches/${branchName}/syllabus/${sem}`
-                )
-              }
-              onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                e.currentTarget.style.setProperty("--mouse-x", `${x}px`);
-                e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
+              semester={sem}
+              onClick={() => {
+                if (isDashboard) {
+                  navigate(`/dashboard/syllabus/${sem}`)
+                } else {
+                  navigate(
+                    `/programs/${finalProgramId}/branches/${encodeURIComponent(finalBranchName)}/syllabus/${sem}`
+                  )
+                }
               }}
-              className="
-    relative
-    cursor-pointer
-    text-center
-    overflow-hidden
-    transition-colors duration-300
-    before:absolute
-    before:inset-0
-    before:opacity-0
-    hover:before:opacity-100
-    before:transition-opacity before:duration-300
-    before:bg-[radial-gradient(600px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(255,255,255,0.12),transparent_40%)]
-    dark:before:bg-[radial-gradient(600px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(255,255,255,0.08),transparent_40%)]
-    hover:ring-1 hover:ring-primary/20
-  "
-            >
-              <CardHeader className="items-start text-left">
-                <CardTitle className="text-lg">Semester {sem}</CardTitle>
-                <CardDescription>
-                  View syllabus
-                </CardDescription>
-              </CardHeader>
-              {/* Arrow Icon */}
-              <ArrowUpRight
-                className="
-          absolute bottom-4 right-4
-          h-4 w-4
-          text-muted-foreground
-          opacity-70
-          transition
-          group-hover:opacity-100
-        "
-              />
-            </Card>
+            />
+
           ))}
         </div>
       )}

@@ -6,7 +6,7 @@ import { getPdfViewUrl } from "@/services/storageService"
 
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
-import { BackButton, Breadcrumbs } from "@/components"
+import { BackButton, Breadcrumbs, ErrorState, SyllabusListSkeleton } from "@/components"
 
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,20 +20,28 @@ import { downloadFileXHR } from "@/services/downloadService";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 
-
-
-
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const SYLLABUS_COLLECTION = SYLLABUS_COLLECTION_ID;
 const SUBJECTS_COLLECTION = SUBJECTS_COLLECTION_ID;
 const SYLLABUS_BUCKET_ID = STORAGE_BUCKET_ID
 
 
-export default function SyllabusUserView() {
+export default function SyllabusUserView({
+    programId: propProgramId,
+    branchName: propBranchName,
+    semester: propSemester,
+    isDashboard
+}) {
 
-    const { programId, branchName, semester } = useParams()
+    const params = useParams()
 
-    const decodedBranch = decodeURIComponent(branchName)
+    const programId = propProgramId ?? params.programId
+    const branchName = propBranchName ?? params.branchName
+    const semester = propSemester ?? params.semester
+
+    const decodedBranch = branchName
+        ? decodeURIComponent(branchName)
+        : null
 
     const [previewFile, setPreviewFile] = useState(null)
 
@@ -41,6 +49,7 @@ export default function SyllabusUserView() {
         data: syllabus = null,
         isLoading: loadingSyllabus,
         error: syllabusError,
+        refetch: refetchSyllabus,
     } = useQuery({
         queryKey: ["syllabus", programId, decodedBranch, semester],
         queryFn: () =>
@@ -203,44 +212,52 @@ export default function SyllabusUserView() {
         return subjectsRes.documents;
     }
 
-    /* 🌀 Loading */
-    if (loadingSyllabus || loadingSubjects) {
-        return <p className="p-6 text-muted-foreground">Loading syllabus…</p>
-    }
-
     /* ❌ Error */
     if (syllabusError || subjectsError) {
-        return <p className="p-6 text-destructive">{error}</p>
+        return (
+            <ErrorState
+                message="Failed to load syllabus."
+                onRetry={() => {
+                    refetchSyllabus()
+                    refetchSubjects()
+                }}
+            />
+        )
     }
+    const basePath = isDashboard
+        ? "/dashboard/syllabus"
+        : `/programs/${programId}/branches/${branchName}/syllabus`
 
-    /* ⚠️ Empty */
-    if (!syllabus) {
-        return <p className="p-6">No syllabus available.</p>
-    }
+    const breadcrumbItems = isDashboard
+        ? [
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Syllabus", href: "/dashboard/syllabus" },
+            { label: `Semester ${semester}` },
+        ]
+        : [
+            { label: "B.Tech", href: "/" },
+            {
+                label: decodedBranch,
+                href: `/programs/${programId}/branches/${branchName}`,
+            },
+            {
+                label: "Syllabus",
+                href: `/programs/${programId}/branches/${branchName}/syllabus`,
+            },
+            {
+                label: `Semester ${semester}`,
+            },
+        ]
 
 
-    const breadcrumbItems = [
-        { label: "B.Tech", href: "/" },
-        {
-            label: decodedBranch,
-            href: `/programs/${programId}/branches/${branchName}`,
-        },
-        {
-            label: "Syllabus",
-            href: `/programs/${programId}/branches/${branchName}/syllabus`,
-        },
-        {
-            label: `Semester ${semester}`,
-        },
-    ]
 
 
 
     return (
-        <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
             <div className="flex items-center gap-4">
                 <BackButton
-                    to={`/programs/${programId}/branches/${branchName}/syllabus`}
+                    to={basePath}
                     label="Syllabus"
                 />
             </div>
@@ -262,7 +279,7 @@ export default function SyllabusUserView() {
 
             {/* 📘 Syllabus Subjects */}
             {loadingSyllabus || loadingSubjects ? (
-                <p className="text-muted-foreground">Loading syllabus...</p>
+                <SyllabusListSkeleton count={6} />
             ) : subjects.length === 0 ? (
                 <p className="text-muted-foreground">
                     No subjects uploaded for this semester yet.

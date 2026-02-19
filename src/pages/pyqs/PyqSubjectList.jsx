@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { databases, storage } from "@/lib/appwrite"
-import { BackButton, Breadcrumbs, FileTypeBadge } from "@/components"
+import { BackButton, Breadcrumbs, ErrorState, FileTypeBadge, LoadingCard, SyllabusListSkeleton } from "@/components"
 import { formatFileSize } from "@/utils/formatFileSize"
 import PyqPreviewModal from "./PyqPreviewModal"
 
@@ -15,18 +15,24 @@ import { DATABASE_ID, SUBJECTS_COLLECTION_ID } from "@/config/appwrite"
 import { isMobileDevice } from "@/utils/isMobileDevice"
 
 
-const PyqSubjectList = () => {
-    const {
-        programId,
-        branchName,
-        semester,
-        subjectId,
-    } = useParams()
+const PyqSubjectList = ({
+    programId: propProgramId,
+    branchName: propBranchName,
+    isDashboard
+}) => {
+    const params = useParams()
+
+    const programId = propProgramId ?? params.programId
+    const branchName = propBranchName ?? params.branchName
+    const semester = params.semester
+    const subjectId = params.subjectId
 
     const [pyqs, setPyqs] = useState([])
     const [loading, setLoading] = useState(true)
 
     const [previewPyq, setPreviewPyq] = useState(null)
+
+    const [error, setError] = useState(null)
 
     const location = useLocation()
     const initialSubjectName = location.state?.subjectName
@@ -51,7 +57,21 @@ const PyqSubjectList = () => {
     }, [subjectId, initialSubjectName])
 
 
-    const decodedBranch = decodeURIComponent(branchName)
+    const decodedBranch = branchName
+        ? decodeURIComponent(branchName)
+        : null
+
+    const programBase = `/programs/${programId}/branches/${branchName}`
+    const dashboardBase = "/dashboard/pyqs"
+
+    const basePyqPath = isDashboard
+        ? dashboardBase
+        : `${programBase}/pyqs`
+
+    const branchBasePath = isDashboard
+        ? "/dashboard"
+        : programBase
+
 
     useEffect(() => {
         const fetchPyqs = async () => {
@@ -63,7 +83,7 @@ const PyqSubjectList = () => {
                 })
                 setPyqs(data)
             } catch (err) {
-                console.error("Failed to fetch PYQs", err)
+                setError(true)
             } finally {
                 setLoading(false)
             }
@@ -90,31 +110,59 @@ const PyqSubjectList = () => {
         window.open(url, "_blank")
     }
 
-    const breadcrumbItems = [
-        { label: "B.Tech", href: "/" },
-        {
-            label: decodedBranch,
-            href: `/programs/${programId}/branches/${branchName}`,
-        },
-        {
-            label: "PYQs",
-            href: `/programs/${programId}/branches/${branchName}/pyqs`,
-        },
-        {
-            label: `Semester ${semester}`,
-            href: `/programs/${programId}/branches/${branchName}/pyqs/semester/${semester}`,
-        },
-        {
-            label: currentSubject ? currentSubject.subjectName : "…",
-        }
+   const breadcrumbItems = isDashboard
+  ? [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "PYQs", href: "/dashboard/pyqs" },
+      {
+        label: `Semester ${semester}`,
+        href: `/dashboard/pyqs/semester/${semester}`,
+      },
+      {
+        label: currentSubject
+          ? currentSubject.subjectName
+          : "…",
+      },
+    ]
+  : [
+      { label: "B.Tech", href: "/" },
+      {
+        label: decodedBranch,
+        href: branchBasePath,
+      },
+      {
+        label: "PYQs",
+        href: basePyqPath,
+      },
+      {
+        label: `Semester ${semester}`,
+        href: `${basePyqPath}/semester/${semester}`,
+      },
+      {
+        label: currentSubject
+          ? currentSubject.subjectName
+          : "…",
+      },
     ]
 
 
+    if (error) {
+        return (
+            <ErrorState
+                message="Failed to load PYQs."
+                onRetry={() => {
+                    setError(null)
+                    setLoading(true)
+                }}
+            />
+        )
+    }
+
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
             <BackButton
-                to={`/programs/${programId}/branches/${branchName}/pyqs/semester/${semester}`}
+                to={`${basePyqPath}/semester/${semester}`}
                 label={`Semester ${semester}`}
             />
 
@@ -130,7 +178,7 @@ const PyqSubjectList = () => {
 
             {/* 📄 PYQ List */}
             {loading ? (
-                <p className="text-muted-foreground">Loading PYQs...</p>
+                <SyllabusListSkeleton count={4} />
             ) : pyqs.length === 0 ? (
                 <p className="text-muted-foreground">
                     No PYQs uploaded for this subject yet.
