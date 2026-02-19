@@ -5,6 +5,9 @@ import Home from "../pages/Home"
 import Universities from "../pages/Universities"
 import UniversityDetail from "../pages/UniversityDetail"
 
+import PublicLayout from "@/layouts/PublicLayout"
+import UserLayout from "@/layouts/UserLayout"
+
 // import CourseDetail from "../pages/CourseDetail"
 import Forum from "../pages/Forum"
 import ThreadDetail from "../pages/ThreadDetail"
@@ -48,136 +51,133 @@ import { Navigate } from "react-router-dom"
 import SyllabusAdmin from "@/pages/admin/syllabus/syllabus"
 
 
-import AuthRedirect from "@/components/auth/AuthRedirect"
-
-
 import RequireAuth from "@/components/auth/RequireAuth"
 import RequirePermissionRoute from "@/components/auth/RequirePermissionRoute"
 import { PERMISSIONS } from "@/config/permissions"
 import AdminLayout from "@/pages/admin/AdminLayout"
 import UserRolesAdmin from "@/pages/admin/roles/userRolesAdmin"
+import Dashboard from "@/pages/Dashboard"
+import RequireAcademicProfile from "@/components/auth/RequireAcademicProfile"
+import CompleteProfile from "@/pages/user/CompleteProfile"
 
 const AppRoutes = () => {
   return (
     <Routes>
       {/* 🌍 Public routes */}
-      <Route path="/" element={<Home />} />
-      <Route path="/universities" element={<Universities />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/forum" element={<Forum />} />
+        <Route path="/forum/:threadId" element={<ThreadDetail />} />
+        <Route path="/tools" element={<Tools />} />
 
-      <Route
-        path="/university/:universityId"
-        element={<UniversityDetail />}
-      />
-
-      <Route
-        path="/programs/:programId"
-        element={<ProgramDetail />}
-      />
-
-      <Route
-        path="/programs/:programId/syllabus"
-        element={<ProgramSyllabus />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName"
-        element={<BranchDetail />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/syllabus"
-        element={<BranchSyllabus />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/syllabus/:semester"
-        element={<SyllabusUserView />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/resources"
-        element={<ResourcesUserView />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/resources/:semester"
-        element={<ResourcesUserView />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId"
-        element={<ResourcesUserView />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId/:unitId"
-        element={<ResourcesUserView />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/pyqs"
-        element={<PyqUserView />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/pyqs/semester/:semester"
-        element={<PyqSemesterSubjects />}
-      />
-
-      <Route
-        path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId"
-        element={<PyqSubjectList />}
-      />
+      </Route>
 
 
+      {/* Auth routes */}
 
-
-      <Route path="/forum" element={<Forum />} />
-      <Route path="/forum/:threadId" element={<ThreadDetail />} />
-
-      <Route path="/tools" element={<Tools />} />
-
-      <Route
-        path="/login"
-        element={
-          <AuthRedirect>
-            <Login />
-          </AuthRedirect>
-        }
-      />
-
-      <Route
-        path="/signup"
-        element={
-          <AuthRedirect>
-            <Signup />
-          </AuthRedirect>
-        }
-      />
-
-      <Route
-        path="/syllabus"
-        element={<Navigate to="/" replace />}
-      />
-
-
-      {/* 📘 Syllabus User View */}
-      <Route
-        path="/syllabus/:syllabusId"
-        element={<SyllabusUserView />}
-      />
-
-      {/* 📘 Resource User View */}
-      <Route
-        path="/resources"
-        element={<ResourcesUserView />}
-      />
-
+      {/* <Route path="/signup" element={<Signup />} /> */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/signup/academic" element={<div>Step 2 Coming</div>} />
 
 
       {/* 🔒 Logged-in user routes */}
       <Route element={<ProtectedRoute />}>
-        {/* future protected pages */}
+
+        {/* ✅ Session required only */}
+        <Route
+          path="/complete-profile"
+          element={<CompleteProfile />}
+        />
+
+        <Route element={<RequireAcademicProfile />}>
+          {/* 👤 User Layout Routes */}
+          <Route element={<UserLayout />}>
+
+            <Route path="/dashboard" element={<Dashboard />} />
+
+            <Route path="/universities" element={<Universities />} />
+
+            <Route
+              path="/university/:universityId"
+              element={<UniversityDetail />}
+            />
+
+            <Route
+              path="/programs/:programId"
+              element={<ProgramDetail />}
+            />
+
+            <Route
+              path="/programs/:programId/syllabus"
+              element={<ProgramSyllabus />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName"
+              element={<BranchDetail />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/syllabus"
+              element={<BranchSyllabus />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/syllabus/:semester"
+              element={<SyllabusUserView />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/resources"
+              element={<ResourcesUserView />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/resources/:semester"
+              element={<ResourcesUserView />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId"
+              element={<ResourcesUserView />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId/:unitId"
+              element={<ResourcesUserView />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/pyqs"
+              element={<PyqUserView />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/pyqs/semester/:semester"
+              element={<PyqSemesterSubjects />}
+            />
+
+            <Route
+              path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId"
+              element={<PyqSubjectList />}
+            />
+
+            {/* Direct Access Routes */}
+            <Route
+              path="/syllabus/:syllabusId"
+              element={<SyllabusUserView />}
+            />
+
+            <Route
+              path="/resources"
+              element={<ResourcesUserView />}
+            />
+
+          </Route>
+
+        </Route>
+
         {/* <Route path="/forum/create" element={<ForumCreate />} /> */}
         {/* <Route path="/profile" element={<Profile />} /> */}
       </Route>

@@ -10,6 +10,7 @@ import { USERS_COLLECTION_ID } from "@/config/appwrite"
 import { ID, Query } from "appwrite"
 import { account, databases } from "@/lib/appwrite"
 import { ROLE_PERMISSIONS } from "@/config/permissions"
+import Signup from "@/pages/auth/Signup"
 
 const AuthContext = createContext(null)
 
@@ -45,6 +46,8 @@ export const AuthProvider = ({ children }) => {
   // Do NOT derive role from account, prefs, UI, or defaults.
 
 
+
+
   // 🔁 Restore session
   useEffect(() => {
     const restoreSession = async () => {
@@ -78,7 +81,12 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser({
           ...accountUser,
           username: userDoc.username,
+          universityId: userDoc.universityId ?? null,
+          programId: userDoc.programId ?? null,
+          branchId: userDoc.branchId ?? null,
+          profileCompleted: userDoc.profileCompleted ?? false,
         })
+
         setAuthStatus(true)
 
       } catch (err) {
@@ -128,18 +136,33 @@ export const AuthProvider = ({ children }) => {
       throw new Error("Role missing in user profile")
     }
 
+
     setRole(userDoc.role)
     setCurrentUser({
       ...accountUser,
       username: userDoc.username,
+      universityId: userDoc.universityId ?? null,
+      programId: userDoc.programId ?? null,
+      branchId: userDoc.branchId ?? null,
+      profileCompleted: userDoc.profileCompleted ?? false,
     })
+
     setAuthStatus(true)
   }
 
 
   // 🆕 Signup — FIXED (Phase 0.2.b)
-  const signup = async ({ name, email, password }) => {
-    // 1) Create Appwrite account
+  const completeSignup = async (data) => {
+    const { name, email, password, universityId, programId, branchId } = data
+
+    // 🧹 1️⃣ Try deleting existing session
+    try {
+      await account.deleteSession("current")
+    } catch (err) {
+      // ignore if no session exists
+    }
+
+    // 1️⃣ Create auth account
     const user = await account.create(
       ID.unique(),
       email,
@@ -147,26 +170,81 @@ export const AuthProvider = ({ children }) => {
       name
     )
 
-    // 2) Generate guaranteed username
-    const username = await generateAvailableUsername(user.name)
-
-    // 3) Create users collection document (SOURCE OF TRUTH)
+    
+    // 3️⃣ Generate username
+    const username = await generateAvailableUsername(name)
+    
+    // 4️⃣ Create DB profile
     await databases.createDocument(
       DATABASE_ID,
       USERS_TABLE_ID,
       ID.unique(),
       {
         userId: user.$id,
-        email: user.email,
-        name: user.name,
-        username,     // ✅ GUARANTEED
-        role: "user", // ✅ DEFAULT
+        email,
+        name,
+        username,
+        role: "user",
+        universityId,
+        programId,
+        branchId,
+        profileCompleted: true,
+      }
+    )
+    
+    // // 2️⃣ Create session
+    await account.createEmailPasswordSession(email, password)
+    
+    // return user
+  }
+
+
+
+
+
+
+  // function to update academic profile.
+  const completeAcademicProfile = async ({
+    universityId,
+    programId,
+    branchId,
+  }) => {
+    if (!currentUser) throw new Error("User not authenticated")
+
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      USERS_TABLE_ID,
+      [Query.equal("userId", currentUser.$id)]
+    )
+
+    if (res.total === 0) {
+      throw new Error("User profile not found")
+    }
+
+    const userDoc = res.documents[0]
+
+    await databases.updateDocument(
+      DATABASE_ID,
+      USERS_TABLE_ID,
+      userDoc.$id,
+      {
+        universityId,
+        programId,
+        branchId,
+        profileCompleted: true,
       }
     )
 
-    // 4) Normalize state via login
-    await login({ email, password })
+    // Update local state immediately
+    setCurrentUser((prev) => ({
+      ...prev,
+      universityId,
+      programId,
+      branchId,
+      profileCompleted: true,
+    }))
   }
+
 
 
   // 🚪 Logout
@@ -197,9 +275,10 @@ export const AuthProvider = ({ children }) => {
         isLoading,
 
         login,
-        signup,
+        completeSignup,
         logout,
         hasRole,
+        completeAcademicProfile,
 
         permissions,
         hasPermission,

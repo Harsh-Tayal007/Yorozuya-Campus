@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { getBranchesByProgram } from "@/services/branchService";
 
 import {
     Select,
@@ -56,6 +57,30 @@ const SyllabusForm = ({
     const [existingSubjects, setExistingSubjects] = useState([])
 
     const [loading, setLoading] = useState(false)
+
+    const [branches, setBranches] = useState([]);
+    const [branchesLoading, setBranchesLoading] = useState(false);
+
+
+
+    // Fetch When programId Changes
+    useEffect(() => {
+        if (!programId) return;
+
+        const fetchBranches = async () => {
+            try {
+                setBranchesLoading(true);
+                const data = await getBranchesByProgram(programId);
+                setBranches(data);
+            } catch (error) {
+                console.error("Failed to fetch branches", error);
+            } finally {
+                setBranchesLoading(false);
+            }
+        };
+
+        fetchBranches();
+    }, [programId]);
 
 
     /* ----------------------------- HELPERS ----------------------------- */
@@ -327,9 +352,9 @@ const SyllabusForm = ({
                         </SelectTrigger>
 
                         <SelectContent>
-                            {BTECH_BRANCHES.map(branch => (
-                                <SelectItem key={branch} value={branch}>
-                                    {branch}
+                            {branches.map(branch => (
+                                <SelectItem key={branch.$id} value={branch.name}>
+                                    {branch.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>

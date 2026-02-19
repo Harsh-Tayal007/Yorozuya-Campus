@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,8 +13,16 @@ import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 
 const Login = () => {
-  const { login } = useAuth()
+  const { login, authStatus, currentUser } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
+
+// useEffect(() => {
+//   console.log("Auth user:", currentUser)
+// }, [currentUser])
+
+
+  const from = location.state?.from?.pathname || "/"
 
   const [form, setForm] = useState({
     email: "",
@@ -56,6 +64,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log("Redirect from:", location.state)
 
     if (!validate()) return
 
@@ -69,7 +78,7 @@ const Login = () => {
       })
 
       // redirect after successful login
-      navigate("/", { replace: true })
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err?.message || "Login failed")
     } finally {
@@ -93,7 +102,7 @@ const Login = () => {
   animate-pulse top-[-120px] left-[-120px]
 " />
 
-<div className="
+      <div className="
   absolute w-[400px] h-[400px] rounded-full blur-3xl
   bg-indigo-400/20 dark:bg-indigo-600/20
   animate-pulse bottom-[-120px] right-[-120px]
@@ -121,7 +130,7 @@ const Login = () => {
 ">
 
             <CardHeader className="space-y-2 text-center">
-             <CardTitle className="
+              <CardTitle className="
   text-3xl font-bold
   text-slate-900 dark:text-white
 ">
@@ -150,7 +159,7 @@ const Login = () => {
                     value={form.email}
                     onChange={handleChange}
                     disabled={loading}
-                   className="
+                    className="
   bg-white dark:bg-white/5
   border-slate-300 dark:border-white/10
   text-slate-900 dark:text-white
