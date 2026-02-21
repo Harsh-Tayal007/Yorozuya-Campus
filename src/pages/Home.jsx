@@ -10,12 +10,13 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Footer } from "@/components"
 import { useAuth } from "@/context/AuthContext"
+import { Skeleton } from "@/components/ui/skeleton"
 
 
 const Home = () => {
   const [showInfo, setShowInfo] = useState(false)
 
-  const { user } = useAuth()
+  const { currentUser, isLoading } = useAuth()
   const navigate = useNavigate()
 
   const { data: publicStats } = useQuery({
@@ -128,15 +129,28 @@ const Home = () => {
 
 
             {/* 👉 CTA */}
-            <div className="pt-4">
-              <Link to={user ? "/dashboard" : "/universities"}>
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:scale-105 transition duration-300"
-                >
-                  {user ? "Visit Dashboard" : "Browse Universities"}
-                </Button>
-              </Link>
+            <div className="pt-4 flex justify-center min-h-[48px]">
+              {isLoading ? (
+                <Skeleton className="h-12 w-56 rounded-md" />
+              ) : currentUser ? (
+                <Link to="/dashboard">
+                  <Button
+                    size="lg"
+                    className="w-56 bg-gradient-to-r from-blue-500 to-indigo-500 hover:scale-105 transition duration-300"
+                  >
+                    Visit Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/universities">
+                  <Button
+                    size="lg"
+                    className="w-56 bg-gradient-to-r from-blue-500 to-indigo-500 hover:scale-105 transition duration-300"
+                  >
+                    Browse Universities
+                  </Button>
+                </Link>
+              )}
             </div>
 
             {/* 🧭 Helper text */}

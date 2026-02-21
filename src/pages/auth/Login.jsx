@@ -78,7 +78,7 @@ const Login = () => {
       })
 
       // redirect after successful login
-      navigate(from, { replace: true })
+      navigate("/dashboard", { replace: true })
     } catch (err) {
       setError(err?.message || "Login failed")
     } finally {

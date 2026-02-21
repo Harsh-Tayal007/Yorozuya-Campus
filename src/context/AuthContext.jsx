@@ -155,32 +155,30 @@ export const AuthProvider = ({ children }) => {
   const completeSignup = async (data) => {
     const { name, email, password, universityId, programId, branchId } = data
 
-    // 🧹 1️⃣ Try deleting existing session
     try {
       await account.deleteSession("current")
     } catch (err) {
-      // ignore if no session exists
+      // ignore
     }
 
     // 1️⃣ Create auth account
-    const user = await account.create(
+    const authUser = await account.create(
       ID.unique(),
       email,
       password,
       name
     )
 
-    
-    // 3️⃣ Generate username
+    // 2️⃣ Generate username
     const username = await generateAvailableUsername(name)
-    
-    // 4️⃣ Create DB profile
+
+    // 3️⃣ Create DB profile
     await databases.createDocument(
       DATABASE_ID,
       USERS_TABLE_ID,
       ID.unique(),
       {
-        userId: user.$id,
+        userId: authUser.$id,
         email,
         name,
         username,
@@ -191,11 +189,29 @@ export const AuthProvider = ({ children }) => {
         profileCompleted: true,
       }
     )
-    
-    // // 2️⃣ Create session
+
+    // 4️⃣ Create session (log them in)
     await account.createEmailPasswordSession(email, password)
-    
-    // return user
+
+    // 5️⃣ Fetch auth user again
+    const loggedInUser = await account.get()
+
+    // 6️⃣ Fetch DB profile
+    const profileRes = await databases.listDocuments(
+      DATABASE_ID,
+      USERS_TABLE_ID,
+      [Query.equal("userId", loggedInUser.$id)]
+    )
+
+    const profile = profileRes.documents[0] || null
+
+    // 7️⃣ Merge and set in context
+    setCurrentUser({
+      ...loggedInUser,
+      ...profile,
+    })
+
+    return loggedInUser
   }
 
 

@@ -3,6 +3,7 @@ import { Settings } from "lucide-react"
 import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
 import { useSidebar } from "@/context/SidebarContext"
 import { useEffect } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const DashboardContent = () => {
   const navigate = useNavigate()
@@ -19,10 +20,31 @@ const DashboardContent = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-sm text-muted-foreground">
-          Loading your dashboard...
-        </p>
+      <div className="animate-in fade-in duration-300">
+        <div className="flex min-h-screen">
+          <div className="flex-1 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-[#0f172a] dark:to-[#020617]">
+            <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+              {/* Header Skeleton */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-56" />
+                  <Skeleton className="h-4 w-72" />
+                </div>
+                <Skeleton className="h-8 w-40 rounded-md" />
+              </div>
+
+              <div className="border-b border-border" />
+
+              {/* Outlet Skeleton */}
+              <div className="space-y-6">
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+              </div>
+
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
