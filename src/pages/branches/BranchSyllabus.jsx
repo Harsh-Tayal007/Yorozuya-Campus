@@ -1,10 +1,11 @@
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getAvailableSyllabusSemesters } from "@/services/syllabusService"
 import { BackButton, Breadcrumbs, LoadingCard } from "@/components"
 import { ArrowUpRight } from "lucide-react"
 import SemesterCard from "@/components/academic/SemesterCard"
+import { getProgramById } from "@/services/programService"
 
 const BranchSyllabus = ({
   programId,
@@ -34,25 +35,16 @@ const BranchSyllabus = ({
   })
 
 
-  const breadcrumbItems = isDashboard
-    ? [
-      { label: "Dashboard", href: "/dashboard" },
-      { label: "Syllabus" },
-    ]
-    : [
-      { label: "B.Tech", href: "/" },
-      {
-        label: decodedBranch,
-        href: `/programs/${finalProgramId}/branches/${finalBranchName}`,
-      },
-      {
-        label: "Syllabus",
-      },
-    ]
+const { data: program } = useQuery({
+  queryKey: ["program", finalProgramId],
+  queryFn: () => getProgramById(finalProgramId),
+  enabled: !!finalProgramId,
+  staleTime: 1000 * 60 * 10,
+})
 
 
   return (
-   <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
       {isDashboard ? (
         <BackButton
@@ -66,7 +58,11 @@ const BranchSyllabus = ({
         />
       )}
 
-      <Breadcrumbs items={breadcrumbItems} />
+      <Breadcrumbs
+  overrides={{
+    [finalProgramId]: program?.name
+  }}
+/>
 
       {/* Header */}
       <div>
@@ -93,10 +89,10 @@ const BranchSyllabus = ({
               semester={sem}
               onClick={() => {
                 if (isDashboard) {
-                  navigate(`/dashboard/syllabus/${sem}`)
+                  navigate(`/dashboard/syllabus/semester/${sem}`)
                 } else {
                   navigate(
-                    `/programs/${finalProgramId}/branches/${encodeURIComponent(finalBranchName)}/syllabus/${sem}`
+                    `/programs/${finalProgramId}/branches/${encodeURIComponent(finalBranchName)}/syllabus/semester/${sem}`
                   )
                 }
               }}

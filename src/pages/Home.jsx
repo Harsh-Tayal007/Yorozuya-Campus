@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Construction } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -9,10 +9,14 @@ import { getPublicStats } from "@/services/statsService"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Footer } from "@/components"
+import { useAuth } from "@/context/AuthContext"
 
 
 const Home = () => {
   const [showInfo, setShowInfo] = useState(false)
+
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
   const { data: publicStats } = useQuery({
     queryKey: ["public-stats"],
@@ -125,12 +129,12 @@ const Home = () => {
 
             {/* 👉 CTA */}
             <div className="pt-4">
-              <Link to="/universities">
+              <Link to={user ? "/dashboard" : "/universities"}>
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:scale-105 transition duration-300"
                 >
-                  Browse Universities
+                  {user ? "Visit Dashboard" : "Browse Universities"}
                 </Button>
               </Link>
             </div>

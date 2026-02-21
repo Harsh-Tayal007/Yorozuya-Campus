@@ -78,6 +78,87 @@ const AppRoutes = () => {
         <Route path="/forum/:threadId" element={<ThreadDetail />} />
         <Route path="/tools" element={<Tools />} />
 
+        <Route path="/universities" element={<Universities />} />
+
+        <Route
+          path="/university/:universityId"
+          element={<UniversityDetail />}
+        />
+
+        <Route
+          path="/programs/:programId"
+          element={<ProgramDetail />}
+        />
+
+        <Route
+          path="/programs/:programId/syllabus"
+          element={<ProgramSyllabus />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName"
+          element={<BranchDetail />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/syllabus"
+          element={<BranchSyllabus />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/syllabus/semester/:semester"
+          element={<SyllabusUserView />}
+        />
+        <Route
+          path="/programs/:programId/branches/:branchName/resources"
+          element={<ResourcesUserView />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/resources"
+          element={<ResourcesUserView />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/resources/semester/:semester"
+          element={<ResourcesUserView />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/resources/semester/:semester/subject/:subjectId"
+          element={<ResourcesUserView />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/resources/semester/:semester/subject/:subjectId/unit/:unitId"
+          element={<ResourcesUserView />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/pyqs"
+          element={<PyqUserView />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/pyqs/semester/:semester"
+          element={<PyqSemesterSubjects />}
+        />
+
+        <Route
+          path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId"
+          element={<PyqSubjectList />}
+        />
+
+        {/* Direct Access Routes */}
+        <Route
+          path="/syllabus/:syllabusId"
+          element={<SyllabusUserView />}
+        />
+
+        <Route
+          path="/resources"
+          element={<ResourcesUserView />}
+        />
       </Route>
 
 
@@ -108,14 +189,14 @@ const AppRoutes = () => {
 
               <Route path="syllabus">
                 <Route index element={<DashboardSyllabus />} />
-                <Route path=":semester" element={<DashboardSemesterSyllabus />} />
+                <Route path="semester/:semester" element={<DashboardSemesterSyllabus />} />
               </Route>
 
               <Route path="resources">
                 <Route index element={<DashboardResources />} />
-                <Route path=":semester" element={<DashboardResources />} />
-                <Route path=":semester/:subjectId" element={<DashboardResources />} />
-                <Route path=":semester/:subjectId/:unitId" element={<DashboardResources />} />
+                <Route path="semester/:semester" element={<DashboardResources />} />
+                <Route path="semester/:semester/subject/:subjectId" element={<DashboardResources />} />
+                <Route path="semester/:semester/subject/:subjectId/unit/:unitId" element={<DashboardResources />} />
               </Route>
 
               <Route path="pyqs">
@@ -125,85 +206,6 @@ const AppRoutes = () => {
               </Route>
 
             </Route>
-
-
-            <Route path="/universities" element={<Universities />} />
-
-            <Route
-              path="/university/:universityId"
-              element={<UniversityDetail />}
-            />
-
-            <Route
-              path="/programs/:programId"
-              element={<ProgramDetail />}
-            />
-
-            <Route
-              path="/programs/:programId/syllabus"
-              element={<ProgramSyllabus />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName"
-              element={<BranchDetail />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/syllabus"
-              element={<BranchSyllabus />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/syllabus/:semester"
-              element={<SyllabusUserView />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/resources"
-              element={<ResourcesUserView />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/resources/:semester"
-              element={<ResourcesUserView />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId"
-              element={<ResourcesUserView />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/resources/:semester/:subjectId/:unitId"
-              element={<ResourcesUserView />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/pyqs"
-              element={<PyqUserView />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/pyqs/semester/:semester"
-              element={<PyqSemesterSubjects />}
-            />
-
-            <Route
-              path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId"
-              element={<PyqSubjectList />}
-            />
-
-            {/* Direct Access Routes */}
-            <Route
-              path="/syllabus/:syllabusId"
-              element={<SyllabusUserView />}
-            />
-
-            <Route
-              path="/resources"
-              element={<ResourcesUserView />}
-            />
 
           </Route>
 

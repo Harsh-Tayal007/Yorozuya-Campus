@@ -19,6 +19,7 @@ import { buildSyllabusFilename } from "@/utils/filenameUtils";
 import { downloadFileXHR } from "@/services/downloadService";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { getProgramById } from "@/services/programService";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const SYLLABUS_COLLECTION = SYLLABUS_COLLECTION_ID;
@@ -44,6 +45,15 @@ export default function SyllabusUserView({
         : null
 
     const [previewFile, setPreviewFile] = useState(null)
+
+    const {
+  data: program = null,
+} = useQuery({
+  queryKey: ["program", programId],
+  queryFn: () => getProgramById(programId),
+  enabled: !!programId,
+  staleTime: 1000 * 60 * 10,
+})
 
     const {
         data: syllabus = null,
@@ -228,31 +238,6 @@ export default function SyllabusUserView({
         ? "/dashboard/syllabus"
         : `/programs/${programId}/branches/${branchName}/syllabus`
 
-    const breadcrumbItems = isDashboard
-        ? [
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Syllabus", href: "/dashboard/syllabus" },
-            { label: `Semester ${semester}` },
-        ]
-        : [
-            { label: "B.Tech", href: "/" },
-            {
-                label: decodedBranch,
-                href: `/programs/${programId}/branches/${branchName}`,
-            },
-            {
-                label: "Syllabus",
-                href: `/programs/${programId}/branches/${branchName}/syllabus`,
-            },
-            {
-                label: `Semester ${semester}`,
-            },
-        ]
-
-
-
-
-
     return (
         <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
             <div className="flex items-center gap-4">
@@ -262,7 +247,11 @@ export default function SyllabusUserView({
                 />
             </div>
 
-            <Breadcrumbs items={breadcrumbItems} />
+           <Breadcrumbs
+  overrides={{
+    [programId]: program?.name || "",
+  }}
+/>
 
             {/* 🧾 Header */}
             <div className="space-y-1">

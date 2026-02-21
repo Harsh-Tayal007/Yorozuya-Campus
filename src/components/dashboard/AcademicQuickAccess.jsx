@@ -7,6 +7,7 @@ import GlowCard from "../common/GlowCard"
 const AcademicQuickAccess = ({
   programId,
   branchName,
+  programName,
   mode = "explore", // "explore" | "dashboard"
 }) => {
   const navigate = useNavigate()
@@ -22,7 +23,13 @@ const AcademicQuickAccess = ({
       {/* Syllabus */}
       <GlowCard
         className="cursor-pointer relative"
-        onClick={() => navigate(`${basePath}/syllabus`)}
+        onClick={() => navigate(`${basePath}/syllabus`,
+          {
+    state: {
+      programName
+    }
+  }
+        )}
       >
         <CardHeader>
           <div className="flex items-center gap-3">

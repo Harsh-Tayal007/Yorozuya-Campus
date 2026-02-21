@@ -63,7 +63,12 @@ const ProgramDetail = () => {
                 className="cursor-pointer"
                 onClick={() =>
                   navigate(
-                    `/programs/${programId}/branches/${encodeURIComponent(branch)}`
+                    `/programs/${programId}/branches/${encodeURIComponent(branch)}`,
+                    {
+    state: {
+      programName: program.name
+    }
+  }
                   )
                 }
               >

@@ -34,7 +34,6 @@ const ProgramSyllabus = () => {
       }
     }
 
-    console.log("params:", useParams())
     fetchSemesters()
   }, [programId, decodedBranch])
 
@@ -64,11 +63,11 @@ const ProgramSyllabus = () => {
             <Card
               key={sem}
               onClick={() =>
-                navigate(
-                  `/programs/${programId}/branches/${encodeURIComponent(
-                    decodedBranch
-                  )}/syllabus/${sem}`
-                )
+               navigate(
+  `/programs/${programId}/branches/${encodeURIComponent(
+    decodedBranch
+  )}/syllabus/semester/${sem}`
+)
               }
               className="cursor-pointer text-center hover:shadow-lg transition"
             >

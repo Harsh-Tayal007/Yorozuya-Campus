@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -6,7 +6,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/AuthContext"
 import { DarkModeToggle } from "."
 import { usePWAInstall } from "@/hooks/usePWAInstall"
@@ -16,13 +15,11 @@ import { motion } from "framer-motion"
 
 import { useScroll, useMotionValueEvent } from "framer-motion"
 import { useState } from "react"
-
+import { useSidebar } from "@/context/SidebarContext"
 
 const Navbar = ({
   isSidebarOpen,
   setIsSidebarOpen,
-  isSidebarPinned,
-  setIsSidebarPinned
 }) => {
   const navigate = useNavigate()
   const { isInstallable, install } = usePWAInstall();
@@ -30,20 +27,30 @@ const Navbar = ({
   const { scrollY } = useScroll()
   const [isScrolled, setIsScrolled] = useState(false)
 
+  const location = useLocation()
+
+ const sidebar = useSidebar()
+
+ const toggleSidebar = () => {
+  const isDesktop = window.innerWidth >= 1024
+
+  if (!isDesktop) {
+    sidebar.setIsOpen(prev => !prev)
+    return
+  }
+
+  if (sidebar.isPinned) {
+    sidebar.setIsPinned(false)
+    sidebar.setIsOpen(false)
+  } else {
+    sidebar.setIsPinned(true)
+    sidebar.setIsOpen(true)
+  }
+}
+
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > 20)
   })
-
-  const toggleSidebar = () => {
-    if (isSidebarPinned) {
-      setIsSidebarPinned(false)
-      setIsSidebarOpen(false)
-    } else {
-      setIsSidebarPinned(true)
-      setIsSidebarOpen(true)
-    }
-  }
-
 
   const {
     authStatus,
@@ -58,10 +65,9 @@ const Navbar = ({
     window.matchMedia("(display-mode: standalone)").matches;
 
   const handleLogout = async () => {
-    await logout()
-    navigate("/login")
-  }
-
+  await logout()
+  navigate("/", { replace: true })
+}
   return (
     <nav
       className={`
@@ -71,7 +77,7 @@ const Navbar = ({
     border-b border-white/10 dark:border-white/10
     shadow-[0_8px_30px_rgba(0,0,0,0.12)]
     transition-all duration-300
-    ${isSidebarOpen ? "brightness-75 pointer-events-none" : ""}
+    ${sidebar?.isOpen ? "brightness-75 pointer-events-none" : ""}
   `}
     >
       {/* Top subtle gradient highlight */}
@@ -85,9 +91,9 @@ const Navbar = ({
         <div className="flex items-center gap-3">
 
           {/* Sidebar Trigger */}
-          <button
-            onClick={toggleSidebar}
-            className="
+            <button
+              onClick={toggleSidebar}
+              className="
     p-2 rounded-lg
     cursor-pointer
     relative
@@ -110,8 +116,8 @@ const Navbar = ({
     focus-visible:ring-2
     focus-visible:ring-indigo-500/60
   "
-          >
-            <span className="
+            >
+              <span className="
   absolute inset-0 rounded-lg
   bg-gradient-to-r from-indigo-500/0 via-indigo-500/20 to-indigo-500/0
   opacity-0 hover:opacity-100
@@ -119,9 +125,8 @@ const Navbar = ({
   pointer-events-none
 " />
 
-            <Menu size={18} />
-          </button>
-
+              <Menu size={18} />
+            </button>
 
           {/* Logo */}
           <motion.div

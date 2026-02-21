@@ -13,6 +13,7 @@ import {
 } from "@/services/pyqService"
 import { DATABASE_ID, SUBJECTS_COLLECTION_ID } from "@/config/appwrite"
 import { isMobileDevice } from "@/utils/isMobileDevice"
+import { useQuery } from "@tanstack/react-query"
 
 
 const PyqSubjectList = ({
@@ -41,16 +42,21 @@ const PyqSubjectList = ({
         initialSubjectName ? { subjectName: initialSubjectName } : null
     )
 
+
+
     useEffect(() => {
         if (!subjectId || initialSubjectName) return
 
         const fetchSubject = async () => {
+
             const res = await databases.getDocument(
                 DATABASE_ID,
                 SUBJECTS_COLLECTION_ID,
                 subjectId
             )
+            console.log("Fetched subject:", res)
             setCurrentSubject(res)
+
         }
 
         fetchSubject()
@@ -71,6 +77,14 @@ const PyqSubjectList = ({
     const branchBasePath = isDashboard
         ? "/dashboard"
         : programBase
+
+    const {
+        data: program
+    } = useQuery({
+        queryKey: ["program", programId],
+        queryFn: () => getProgramById(programId),
+        enabled: !!programId,
+    })
 
 
     useEffect(() => {
@@ -110,53 +124,6 @@ const PyqSubjectList = ({
         window.open(url, "_blank")
     }
 
-   const breadcrumbItems = isDashboard
-  ? [
-      { label: "Dashboard", href: "/dashboard" },
-      { label: "PYQs", href: "/dashboard/pyqs" },
-      {
-        label: `Semester ${semester}`,
-        href: `/dashboard/pyqs/semester/${semester}`,
-      },
-      {
-        label: currentSubject
-          ? currentSubject.subjectName
-          : "…",
-      },
-    ]
-  : [
-      { label: "B.Tech", href: "/" },
-      {
-        label: decodedBranch,
-        href: branchBasePath,
-      },
-      {
-        label: "PYQs",
-        href: basePyqPath,
-      },
-      {
-        label: `Semester ${semester}`,
-        href: `${basePyqPath}/semester/${semester}`,
-      },
-      {
-        label: currentSubject
-          ? currentSubject.subjectName
-          : "…",
-      },
-    ]
-
-
-    if (error) {
-        return (
-            <ErrorState
-                message="Failed to load PYQs."
-                onRetry={() => {
-                    setError(null)
-                    setLoading(true)
-                }}
-            />
-        )
-    }
 
     return (
         <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -166,7 +133,16 @@ const PyqSubjectList = ({
                 label={`Semester ${semester}`}
             />
 
-            <Breadcrumbs items={breadcrumbItems} />
+            <Breadcrumbs
+  overrides={{
+    ...(program?.name && {
+      [programId]: program.name,
+    }),
+    ...(currentSubject?.subjectName && {
+      [subjectId]: currentSubject.subjectName,
+    }),
+  }}
+/>
 
             {/* 📝 Page Header */}
             <div>

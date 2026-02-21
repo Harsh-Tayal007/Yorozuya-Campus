@@ -76,26 +76,8 @@ const PyqSemesterSubjects = ({
         ? "/dashboard"
         : programBase
 
-    const breadcrumbItems = isDashboard
-        ? [
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "PYQs", href: "/dashboard/pyqs" },
-            { label: `Semester ${semester}` },
-        ]
-        : [
-            { label: "B.Tech", href: "/" },
-            {
-                label: decodedBranch,
-                href: branchBasePath,
-            },
-            {
-                label: "PYQs",
-                href: basePyqPath,
-            },
-            {
-                label: `Semester ${semester}`,
-            },
-        ]
+    
+
 
     return (
         <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -105,7 +87,13 @@ const PyqSemesterSubjects = ({
                 label="PYQs"
             />
 
-            <Breadcrumbs items={breadcrumbItems} />
+            <Breadcrumbs
+  overrides={{
+    ...(program?.name && {
+      [programId]: program.name,
+    }),
+  }}
+/>
 
             <div>
                 <h1 className="text-2xl font-bold">

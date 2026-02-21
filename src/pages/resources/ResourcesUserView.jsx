@@ -91,6 +91,15 @@ export default function ResourcesUserView({
   });
 
   const {
+    data: program = null,
+  } = useQuery({
+    queryKey: ["program", programId],
+    queryFn: () => getProgramById(programId),
+    enabled: !!programId,
+    staleTime: 1000 * 60 * 10,
+  })
+
+  const {
     data: subjects = [],
     isLoading: loading,
     error: subjectsError,
@@ -197,42 +206,6 @@ export default function ResourcesUserView({
     return subjectsRes.documents
   }
 
- const breadcrumbItems = isDashboard
-  ? [
-      { label: "Dashboard", href: "/dashboard" },
-      {
-        label: "Resources",
-        href: semester ? "/dashboard/resources" : undefined,
-      },
-    ]
-  : [
-      { label: "B.Tech", href: "/" },
-      {
-        label: decodedBranch,
-        href: branchBasePath,
-      },
-      {
-        label: "Resources",
-        href: semester ? baseResourcesPath : undefined,
-      },
-    ]
-
-
-  if (semester) {
-    breadcrumbItems.push({
-      label: `Semester ${semester}`,
-      href: subjectId
-        ? `${baseResourcesPath}/${semester}`
-        : undefined,
-    })
-  }
-
-  if (subjectId && currentSubject) {
-    breadcrumbItems.push({
-      label: currentSubject.subjectName,
-    })
-  }
-
 
   if (subjectsError || resourcesError) {
     return (
@@ -268,13 +241,27 @@ export default function ResourcesUserView({
 
       {semester && subjectId && (
         <BackButton
-          to={`${baseResourcesPath}/${semester}`}
+          to={`${baseResourcesPath}/semester/${semester}`}
           label={`Semester ${semester}`}
         />
       )}
 
       {/* 🧭 Breadcrumb */}
-      <Breadcrumbs items={breadcrumbItems} />
+      {program && (
+  <Breadcrumbs
+    overrides={{
+      ...(program?.name && {
+        [programId]: program.name,
+      }),
+      ...(currentSubject?.subjectName && {
+        [subjectId]: currentSubject.subjectName,
+      }),
+      ...(currentUnit?.title && {
+        [unitId]: `Unit ${currentUnit.order}`,
+      }),
+    }}
+  />
+)}
 
       {/* 🧾 Header */}
       <div className="space-y-1">
@@ -302,7 +289,7 @@ export default function ResourcesUserView({
                   key={sem}
                   className="cursor-pointer"
                   onClick={() =>
-                    navigate(`${baseResourcesPath}/${sem}`)
+                    navigate(`${baseResourcesPath}/semester/${sem}`)
                   }
                 >
                   <CardHeader>
@@ -352,7 +339,7 @@ export default function ResourcesUserView({
                   key={subject.$id}
                   className="cursor-pointer"
                   onClick={() =>
-                    navigate(`${baseResourcesPath}/${semester}/${subject.$id}`)
+                    navigate(`${baseResourcesPath}/semester/${semester}/subject/${subject.$id}`)
                   }
                 >
                   <CardHeader>

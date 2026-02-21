@@ -6,6 +6,9 @@ import { BackButton, Breadcrumbs, ErrorState, LoadingCard } from "@/components"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowUpRight } from "lucide-react"
 import GlowCard from "@/components/common/GlowCard"
+import { DATABASE_ID, PROGRAMS_COLLECTION_ID } from "@/config/appwrite"
+import { useEffect, useState } from "react"
+import { databases } from "@/lib/appwrite"
 
 
 const PyqUserView = ({
@@ -38,54 +41,39 @@ const PyqUserView = ({
         : programBase
 
     const {
-        data: semesters = [],
-        isLoading: loadingSemesters,
-        error: semestersError,
-    } = useQuery({
-        queryKey: ["pyq-semesters", programId],
-        queryFn: () => getSemestersWithPyqs(programId),
-        enabled: !!programId,
-    })
+  data: semesters = [],
+  isLoading: loadingSemesters,
+  error: semestersError,
+  refetch: refetchSemesters,
+} = useQuery({
+  queryKey: ["pyq-semesters", programId],
+  queryFn: () => getSemestersWithPyqs(programId),
+  enabled: !!programId,
+})
 
-    const {
-        data: program = null,
-        isLoading: loadingProgram,
-        error: programError,
-    } = useQuery({
-        queryKey: ["program", programId],
-        queryFn: () => getProgramById(programId),
-        enabled: !!programId,
-    })
+const {
+  data: program,
+  isLoading: loadingProgram,
+  error: programError,
+  refetch: refetchProgram,
+} = useQuery({
+  queryKey: ["program", programId],
+  queryFn: () => getProgramById(programId),
+  enabled: !!programId,
+  staleTime: 1000 * 60 * 10,
+})
 
     if (semestersError || programError) {
-  return (
-    <ErrorState
-      message="Failed to load PYQs."
-      onRetry={() => {
-        refetchSemesters()
-        refetchProgram()
-      }}
-    />
-  )
-}
-
-
-    const breadcrumbItems = isDashboard
-  ? [
-      { label: "Dashboard", href: "/dashboard" },
-      { label: "PYQs" },
-    ]
-  : [
-      { label: "B.Tech", href: "/" },
-      {
-        label: decodedBranch,
-        href: branchBasePath,
-      },
-      {
-        label: "PYQs",
-      },
-    ]
-
+        return (
+            <ErrorState
+                message="Failed to load PYQs."
+                onRetry={() => {
+                    refetchSemesters()
+                    refetchProgram()
+                }}
+            />
+        )
+    }
 
     return (
         <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -94,8 +82,13 @@ const PyqUserView = ({
                 label={decodedBranch}
             />
 
-
-            <Breadcrumbs items={breadcrumbItems} />
+            {program && (
+                <Breadcrumbs
+                    overrides={{
+                        [programId]: program.name,
+                    }}
+                />
+            )}
 
             <div>
                 <h1 className="text-2xl font-bold">PYQs</h1>

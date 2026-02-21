@@ -5,7 +5,6 @@ const ProtectedRoute = () => {
   const { currentUser, isLoading } = useAuth()
   const location = useLocation()
 
-  // ⏳ Wait until session restore completes
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -14,7 +13,6 @@ const ProtectedRoute = () => {
     )
   }
 
-  // 🚫 Not authenticated → redirect to login
   if (!currentUser) {
     return (
       <Navigate
@@ -25,7 +23,6 @@ const ProtectedRoute = () => {
     )
   }
 
-  // ✅ Authenticated → render route
   return <Outlet />
 }
 
