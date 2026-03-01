@@ -21,7 +21,9 @@ const Signup = () => {
     programId: "",
     branchId: "",
   })
+  
   const [signupSuccess, setSignupSuccess] = useState(false)
+
 
   const steps = [1, 2, 3]
 
@@ -169,6 +171,22 @@ const Signup = () => {
 
             </motion.div>
 
+            {/* Login Redirect */}
+            <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+              Already have an account?{" "}
+              <button
+                onClick={() => navigate("/login")}
+                className="
+      font-semibold
+      bg-gradient-to-r from-blue-600 to-indigo-500
+      bg-clip-text text-transparent
+      hover:opacity-80
+      transition
+    "
+              >
+                Login
+              </button>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

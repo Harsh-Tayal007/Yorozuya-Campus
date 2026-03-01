@@ -2,6 +2,7 @@ import { Outlet, NavLink } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useState } from "react"
 
+
 import { PERMISSIONS } from "@/config/permissions"
 
 import {
@@ -77,6 +78,7 @@ const adminNav = [
 export default function AdminLayout() {
   const { hasPermission } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
+
 
   return (
     <div className="flex min-h-screen bg-muted/40">

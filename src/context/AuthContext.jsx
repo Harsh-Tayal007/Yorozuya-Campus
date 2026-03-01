@@ -211,13 +211,11 @@ export const AuthProvider = ({ children }) => {
       ...profile,
     })
 
+    setRole(profile.role)
+    setAuthStatus(true)
+
     return loggedInUser
   }
-
-
-
-
-
 
   // function to update academic profile.
   const completeAcademicProfile = async ({
@@ -280,6 +278,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const isAdmin = hasRole("admin")
+
 
   return (
     <AuthContext.Provider

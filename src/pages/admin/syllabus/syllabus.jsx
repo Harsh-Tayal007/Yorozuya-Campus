@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+
+import { useEffect, useMemo, useState } from "react"
 
 import { getUniversities } from "@/services/universityService"
 import { getProgramsByUniversity } from "@/services/programService"
@@ -20,18 +22,14 @@ import {
 import { getSubjectsBySyllabusIds } from "@/services/subjectService"
 
 import { useAuth } from "@/context/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 
 const SyllabusAdmin = () => {
-    const [universities, setUniversities] = useState([])
-    const [programs, setPrograms] = useState([])
 
     const [selectedUniversity, setSelectedUniversity] = useState("")
     const [selectedProgram, setSelectedProgram] = useState("")
 
-    const [loading, setLoading] = useState(false)
-
-    const [syllabusList, setSyllabusList] = useState([])
     const [editingSyllabus, setEditingSyllabus] = useState(null)
 
     const [statusMessage, setStatusMessage] = useState("")
@@ -40,9 +38,9 @@ const SyllabusAdmin = () => {
     const [filterSemester, setFilterSemester] = useState("ALL")
     const [filterSubject, setFilterSubject] = useState("ALL")
 
-    const [allSubjects, setAllSubjects] = useState([])
+    const queryClient = useQueryClient()
 
-
+    const navigate = useNavigate()
 
     const { user, role } = useAuth()
 
@@ -52,181 +50,158 @@ const SyllabusAdmin = () => {
     const canCreateOrEdit = isAdmin || isMod
     const canDelete = isAdmin
 
-    const [refreshKey, setRefreshKey] = useState(0)
-
-    const reload = () => setRefreshKey(prev => prev + 1)
-
-    const fetchSyllabus = async () => {
-        if (!selectedProgram) return
-
-        try {
-            const list = await getSyllabusByProgram(selectedProgram)
-            setSyllabusList(list)
-        } catch (err) {
-            console.error("Failed to load syllabus", err)
-        }
-    }
-
-
-    useEffect(() => {
-        fetchSyllabus()
-    }, [refreshKey, selectedProgram])
-
-
-    useEffect(() => {
-        if (!syllabusList.length) {
-            setAllSubjects([])
-            return
-        }
-
-        const syllabusIds = syllabusList.map(s => s.$id)
-
-        const loadSubjects = async () => {
-            const subjects = await getSubjectsBySyllabusIds(syllabusIds)
-            setAllSubjects(subjects)
-        }
-
-        loadSubjects()
-    }, [syllabusList])
-
-
-
 
     /* ------------------ Fetch Universities ------------------ */
-    useEffect(() => {
-        const fetchUniversities = async () => {
-            try {
-                const list = await getUniversities()
-                setUniversities(list)
-            } catch (err) {
-                console.error("Failed to load universities", err)
-            }
-        }
+    const { data: universities = [], error: uniError } = useQuery({
+        queryKey: ["universities"],
+        queryFn: getUniversities,
+        staleTime: 1000 * 60 * 10, // 10 mins
+        gcTime: 1000 * 60 * 30,
+    })
 
-        fetchUniversities()
-    }, [])
+    useEffect(() => {
+        setSelectedProgram("")
+        setEditingSyllabus(null)
+        setFilterBranch("ALL")
+        setFilterSemester("ALL")
+        setFilterSubject("ALL")
+        setStatusMessage("")
+    }, [selectedUniversity])
+
 
     /* ------------------ Fetch Programs (on University change) ------------------ */
-    useEffect(() => {
-        if (!selectedUniversity) {
-            setPrograms([])
-            setSelectedProgram("")
-            return
-        }
-
-        const fetchPrograms = async () => {
-            setLoading(true)
-            try {
-                const list = await getProgramsByUniversity(selectedUniversity)
-                setPrograms(list)
-
-            } catch (err) {
-                console.error("Failed to load programs", err)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchPrograms()
-    }, [selectedUniversity])
+    const {
+        data: programs = [],
+        isLoading: programsLoading
+    } = useQuery({
+        queryKey: ["programs", selectedUniversity],
+        queryFn: () => getProgramsByUniversity(selectedUniversity),
+        enabled: !!selectedUniversity,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+    })
 
 
     /* ------------------ Fetch syllabus (on program change) ------------------ */
 
-    useEffect(() => {
-        if (!selectedProgram) {
-            setSyllabusList([])
-            setEditingSyllabus(null)
-            return
-        }
+    const {
+        data: syllabusList = [],
+        isLoading: syllabusLoading,
+        isFetching: syllabusFetching,
+    } = useQuery({
+        queryKey: ["syllabus", selectedProgram],
+        queryFn: () => getSyllabusByProgram(selectedProgram),
+        enabled: !!selectedProgram,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+    })
+    
+  // both false means refecth not happening, caching working
+    // console.log("loading:", syllabusLoading)
+    // console.log("fetching:", syllabusFetching)
 
-        fetchSyllabus()
+    // Fetch Subjects
+    const syllabusIds = useMemo(
+        () => syllabusList.map((s) => s.$id).sort(),
+        [syllabusList]
+    )
+
+    const { data: allSubjects = [] } = useQuery({
+        queryKey: ["subjects", syllabusIds],
+        queryFn: () => getSubjectsBySyllabusIds(syllabusIds),
+        enabled: syllabusIds.length > 0,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+    })
+
+    /* ------------------ Handlers ------------------ */
+
+    const createMutation = useMutation({
+        mutationFn: createSyllabus,
+        onSuccess: () => {
+            queryClient.invalidateQueries(["syllabus", selectedProgram])
+            setStatusMessage("Syllabus added successfully.")
+            setEditingSyllabus(null)
+        },
+    })
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }) => updateSyllabus(id, data, user),
+        onSuccess: () => {
+            queryClient.invalidateQueries(["syllabus", selectedProgram])
+            setStatusMessage("Syllabus updated successfully.")
+            setEditingSyllabus(null)
+        },
+    })
+
+    useEffect(() => {
         setEditingSyllabus(null)
     }, [selectedProgram])
 
 
 
-    useEffect(() => {
-        if (!statusMessage) return
-
-        const timer = setTimeout(() => {
-            setStatusMessage("")
-        }, 3000)
-
-        return () => clearTimeout(timer)
-    }, [statusMessage])
-
-
-    /* ------------------ Handlers ------------------ */
-
-    const handleCreate = async (data) => {
-        if (!canCreateOrEdit) return
-
-        const syllabus = await createSyllabus({
-            title: data.title,
-            semester: data.semester,
-            branch: data.branch,
-            programId: selectedProgram,
-            description: data.description,
-        })
-
-        setEditingSyllabus(null)
-        setStatusMessage("Syllabus added successfully.")
-        reload()
-
-        return syllabus
-    }
-
-    const handleUpdate = async (data) => {
-        if (!canCreateOrEdit) return
-
-        try {
-            await updateSyllabus(editingSyllabus.$id, data, user)
-            setEditingSyllabus(null)
-            setStatusMessage("Syllabus updated successfully.")
-            reload()
-        } catch (err) {
-            console.error(err)
-        }
-    }
-
-
-
-    const handleDelete = async (syllabus) => {
-        if (!canDelete || !confirm("Delete this syllabus?")) return
-
-        try {
-            await deleteSyllabus(syllabus.$id, user, syllabus?.title)
+    const deleteMutation = useMutation({
+        mutationFn: (syllabus) =>
+            deleteSyllabus(syllabus.$id, user, syllabus?.title),
+        onSuccess: () => {
+            queryClient.invalidateQueries(["syllabus", selectedProgram])
             setStatusMessage("Syllabus deleted successfully.")
-            reload()
-        } catch (err) {
-            console.error(err)
-        }
-    }
-
-
-    const filteredSyllabus = syllabusList.filter(syllabus => {
-        if (filterSubject === "ALL") return true
-
-        return allSubjects.some(
-            subj =>
-                subj.syllabusId === syllabus.$id &&
-                subj.subjectName === filterSubject
-        )
+        },
     })
 
+    // For O(1) complexity instead of O(nXm)
+    const subjectsMap = useMemo(() => {
+        const map = {}
+
+        allSubjects.forEach((subj) => {
+            if (!map[subj.syllabusId]) {
+                map[subj.syllabusId] = []
+            }
+            map[subj.syllabusId].push(subj)
+        })
+
+        return map
+    }, [allSubjects])
 
 
-    const availableBranches = Array.from(
-        new Set(
-            syllabusList
-                .map((s) => s.branch)
-                .filter(Boolean)
-        )
+    const filteredSyllabus = useMemo(() => {
+        return syllabusList.filter((syllabus) => {
+            const branchMatch =
+                filterBranch === "ALL" || syllabus.branch === filterBranch
+
+            const semesterMatch =
+                filterSemester === "ALL" ||
+                String(syllabus.semester) === filterSemester
+
+            const subjectMatch =
+                filterSubject === "ALL" ||
+                allSubjects.some(
+                    (subj) =>
+                        subj.syllabusId === syllabus.$id &&
+                        subj.subjectName === filterSubject
+                )
+
+            return branchMatch && semesterMatch && subjectMatch
+        })
+    }, [syllabusList, allSubjects, filterBranch, filterSemester, filterSubject])
+
+
+    const availableBranches = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    syllabusList.map((s) => s.branch).filter(Boolean)
+                )
+            ),
+        [syllabusList]
     )
 
-    const availableSubjects = Array.from(
-        new Set(allSubjects.map(s => s.subjectName))
+    const availableSubjects = useMemo(
+        () =>
+            Array.from(
+                new Set(allSubjects.map((s) => s.subjectName))
+            ),
+        [allSubjects]
     )
 
 
@@ -253,6 +228,13 @@ const SyllabusAdmin = () => {
                     </CardHeader>
 
                     <CardContent className="space-y-4">
+
+                        {uniError && (
+                            <p className="text-sm text-red-500">
+                                {uniError.message || "Failed to load universities."}
+                            </p>
+                        )}
+
                         {/* University Select */}
                         <Select
                             value={selectedUniversity}
@@ -275,7 +257,7 @@ const SyllabusAdmin = () => {
                         <Select
                             value={selectedProgram}
                             onValueChange={setSelectedProgram}
-                            disabled={!selectedUniversity || loading || !!editingSyllabus}
+                            disabled={!selectedUniversity || programsLoading || !!editingSyllabus}
                         >
                             <SelectTrigger>
                                 <SelectValue
@@ -344,8 +326,22 @@ const SyllabusAdmin = () => {
                             programId={selectedProgram}
                             editingSyllabus={editingSyllabus}
                             onCancelEdit={() => setEditingSyllabus(null)}
-                            onSubmit={editingSyllabus ? handleUpdate : handleCreate}
-                            onSuccess={reload}
+                            onSubmit={(data) => {
+                                if (editingSyllabus) {
+                                    updateMutation.mutate({
+                                        id: editingSyllabus.$id,
+                                        data,
+                                    })
+                                } else {
+                                    createMutation.mutate({
+                                        title: data.title,
+                                        semester: data.semester,
+                                        branch: data.branch,
+                                        programId: selectedProgram,
+                                        description: data.description,
+                                    })
+                                }
+                            }}
                         />
                     )}
                     {/* Filters */}
@@ -423,7 +419,11 @@ const SyllabusAdmin = () => {
                             </span>
                         </h2>
 
-                        {filteredSyllabus.length === 0 ? (
+                        {syllabusLoading && !syllabusList.length ? (
+                            <p className="text-sm text-muted-foreground">
+                                Loading syllabus...
+                            </p>
+                        ) : filteredSyllabus.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
                                 No syllabus matches the selected filters.
                             </p>
@@ -432,13 +432,21 @@ const SyllabusAdmin = () => {
                                 <SyllabusCard
                                     key={syllabus.$id}
                                     syllabus={syllabus}
-                                    onEdit={canCreateOrEdit ? setEditingSyllabus : null}
-                                    onDelete={canDelete ? handleDelete : null}
+                                    subjects={subjectsMap[syllabus.$id] || []}
+                                    onEdit={
+                                        canCreateOrEdit
+                                            ? (syllabus) => setEditingSyllabus(syllabus)
+                                            : null
+                                    }
+                                    onDelete={
+                                        canDelete
+                                            ? (syllabus) => deleteMutation.mutate(syllabus)
+                                            : null
+                                    }
                                     onView={(s) => navigate(`/admin/syllabus/${s.$id}`)}
                                 />
                             ))
                         )}
-
                     </div>
 
                 </div>

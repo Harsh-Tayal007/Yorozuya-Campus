@@ -11,15 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Link } from "react-router-dom"
 
 import { motion } from "framer-motion"
-
 const Login = () => {
-  const { login, authStatus, currentUser } = useAuth()
+  const { login } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-
-// useEffect(() => {
-//   console.log("Auth user:", currentUser)
-// }, [currentUser])
 
 
   const from = location.state?.from?.pathname || "/"

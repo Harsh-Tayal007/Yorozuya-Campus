@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/context/AuthContext"
-import { DarkModeToggle } from "."
+import { DarkModeToggle } from ".."
 import { usePWAInstall } from "@/hooks/usePWAInstall"
 import { Download, Menu } from "lucide-react"
 
@@ -29,24 +29,24 @@ const Navbar = ({
 
   const location = useLocation()
 
- const sidebar = useSidebar()
+  const sidebar = useSidebar()
 
- const toggleSidebar = () => {
-  const isDesktop = window.innerWidth >= 1024
+  const toggleSidebar = () => {
+    const isDesktop = window.innerWidth >= 1024
 
-  if (!isDesktop) {
-    sidebar.setIsOpen(prev => !prev)
-    return
+    if (!isDesktop) {
+      sidebar.setIsOpen(prev => !prev)
+      return
+    }
+
+    if (sidebar.isPinned) {
+      sidebar.setIsPinned(false)
+      sidebar.setIsOpen(false)
+    } else {
+      sidebar.setIsPinned(true)
+      sidebar.setIsOpen(true)
+    }
   }
-
-  if (sidebar.isPinned) {
-    sidebar.setIsPinned(false)
-    sidebar.setIsOpen(false)
-  } else {
-    sidebar.setIsPinned(true)
-    sidebar.setIsOpen(true)
-  }
-}
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > 20)
@@ -65,9 +65,9 @@ const Navbar = ({
     window.matchMedia("(display-mode: standalone)").matches;
 
   const handleLogout = async () => {
-  await logout()
-  navigate("/", { replace: true })
-}
+    await logout()
+    navigate("/", { replace: true })
+  }
   return (
     <nav
       className={`
@@ -91,9 +91,9 @@ const Navbar = ({
         <div className="flex items-center gap-3">
 
           {/* Sidebar Trigger */}
-            <button
-              onClick={toggleSidebar}
-              className="
+          <button
+            onClick={toggleSidebar}
+            className="
     p-2 rounded-lg
     cursor-pointer
     relative
@@ -116,8 +116,8 @@ const Navbar = ({
     focus-visible:ring-2
     focus-visible:ring-indigo-500/60
   "
-            >
-              <span className="
+          >
+            <span className="
   absolute inset-0 rounded-lg
   bg-gradient-to-r from-indigo-500/0 via-indigo-500/20 to-indigo-500/0
   opacity-0 hover:opacity-100
@@ -125,8 +125,8 @@ const Navbar = ({
   pointer-events-none
 " />
 
-              <Menu size={18} />
-            </button>
+            <Menu size={18} />
+          </button>
 
           {/* Logo */}
           <motion.div
@@ -210,17 +210,19 @@ const Navbar = ({
                 {hasAnyPermission(["view:admin-dashboard"]) && (
                   <>
                     <DropdownMenuItem asChild>
-                      <Link
-                        to="/admin/dashboard"
+                      <a
+                        href="/admin/dashboard"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="
-          flex items-center rounded-lg px-3 py-2 text-sm
-          text-slate-800 dark:text-white
-          hover:bg-white/60 dark:hover:bg-white/10
-          transition-colors duration-150
-        "
+      flex items-center rounded-lg px-3 py-2 text-sm
+      text-slate-800 dark:text-white
+      hover:bg-white/60 dark:hover:bg-white/10
+      transition-colors duration-150
+    "
                       >
                         Admin Dashboard
-                      </Link>
+                      </a>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="my-1 bg-white/20 dark:bg-white/10" />
                   </>

@@ -1,71 +1,52 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useEffect, useState } from "react"
-import { getSubjectsBySyllabus } from "@/services/subjectService"
 import { storage } from "@/lib/appwrite"
-import { LoadingCard } from "@/components"
 
 const BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID
 
+const SyllabusCard = ({
+  syllabus,
+  subjects = [],   // 👈 now coming from parent
+  onView,
+  onEdit,
+  onDelete,
+}) => {
 
-const SyllabusCard = ({ syllabus, onView, onEdit, onDelete }) => {
-  const [subjects, setSubjects] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let mounted = true
-
-    const fetchSubjects = async () => {
-      try {
-        const res = await getSubjectsBySyllabus(syllabus.$id)
-        if (mounted) setSubjects(res)
-      } catch (err) {
-        console.error("Failed to fetch subjects", err)
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-
-    fetchSubjects()
-    return () => (mounted = false)
-  }, [syllabus.$id])
-
-  // handler
-
-  const handleView = async () => {
+  const handleView = () => {
     if (subjects.length === 0) {
       alert("No subject PDF available")
       return
     }
 
     const pdfFileId = subjects[0].pdfFileId
-
     const fileUrl = storage.getFileView(BUCKET_ID, pdfFileId)
-
     window.open(fileUrl, "_blank")
   }
-
 
   return (
     <Card>
       <CardContent className="p-4 flex justify-between items-start gap-6">
         <div className="space-y-2 max-w-[75%]">
-          <h3 className="text-base font-semibold">{syllabus.title}</h3>
+          <h3 className="text-base font-semibold">
+            {syllabus.title}
+          </h3>
 
           <p className="text-sm">
             <span className="font-medium">Branch:</span>{" "}
-            <span className="text-muted-foreground">{syllabus.branch}</span>
+            <span className="text-muted-foreground">
+              {syllabus.branch}
+            </span>
           </p>
 
           <p className="text-sm">
             <span className="font-medium">Semester:</span>{" "}
-            <span className="text-muted-foreground">{syllabus.semester}</span>
+            <span className="text-muted-foreground">
+              {syllabus.semester}
+            </span>
           </p>
 
           {/* Subjects preview */}
-          {loading ? (
-            <LoadingCard count={4} />
-          ) : subjects.length === 0 ? (
+          {subjects.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No subjects added yet
             </p>
@@ -81,24 +62,29 @@ const SyllabusCard = ({ syllabus, onView, onEdit, onDelete }) => {
 
         {(onEdit || onDelete || onView) && (
           <div className="flex gap-2 shrink-0">
-            <div className="flex gap-2 shrink-0">
-              <Button size="sm" onClick={handleView}>
-                View
+            <Button size="sm" onClick={handleView}>
+              View
+            </Button>
+
+            {onEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onEdit(syllabus)}
+              >
+                Edit
               </Button>
+            )}
 
-              {onEdit && (
-                <Button size="sm" variant="outline" onClick={() => onEdit(syllabus)}>
-                  Edit
-                </Button>
-              )}
-
-              {onDelete && (
-                <Button size="sm" variant="destructive" onClick={() => onDelete(syllabus)}>
-                  Delete
-                </Button>
-              )}
-            </div>
-
+            {onDelete && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onDelete(syllabus)}
+              >
+                Delete
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

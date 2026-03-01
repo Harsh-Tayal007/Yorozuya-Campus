@@ -12,6 +12,8 @@ const DashboardContent = () => {
 
   const location = useLocation();
 
+  
+
   useEffect(() => {
     if (location.pathname !== "/dashboard") {
       localStorage.setItem("lastDashboardRoute", location.pathname);
