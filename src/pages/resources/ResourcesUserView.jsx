@@ -18,13 +18,13 @@ import { getResolvedResourcesForSubject }
 import { Button } from "@/components/ui/button"
 import { formatFileSize } from "@/utils/formatFileSize"
 import { Badge } from "@/components/ui/badge"
-import PdfPreviewModal from "@/components/common/PdfPreviewModal"
+import PdfPreviewModal from "@/components/common/display/PdfPreviewModal"
 import { STORAGE_BUCKET_ID } from "@/config/appwrite"
 import { buildResourceFilename } from "@/utils/filenameUtils"
 import { downloadFileXHR } from "@/services/downloadService"
 import { isMobileDevice } from "@/utils/isMobileDevice"
 import { useQuery } from "@tanstack/react-query"
-import GlowCard from "@/components/common/GlowCard"
+import GlowCard from "@/components/common/display/GlowCard"
 import { ArrowUpRight } from "lucide-react"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID

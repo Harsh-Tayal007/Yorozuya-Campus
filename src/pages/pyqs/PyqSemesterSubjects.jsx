@@ -4,7 +4,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { getSubjectsForPyqSemester } from "@/services/pyqUserResolver"
 import { getProgramById } from "@/services/programService"
 import { BackButton, Breadcrumbs, ErrorState, LoadingCard } from "@/components"
-import GlowCard from "@/components/common/GlowCard"
+import GlowCard from "@/components/common/display/GlowCard"
 import { ArrowUpRight } from "lucide-react"
 
 

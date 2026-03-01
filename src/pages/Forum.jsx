@@ -6,7 +6,7 @@ import { threads } from "@/data/threads"
 
 import { ThreadCard } from "@/components"
 import { ForumTabs } from "@/components/forum"
-import PageWrapper from "@/components/common/PageWrapper"
+import PageWrapper from "@/components/common/layout/PageWrapper"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

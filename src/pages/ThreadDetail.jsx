@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { threads } from "@/data/threads"
 
-import PageWrapper from "@/components/common/PageWrapper"
-import Breadcrumbs from "@/components/common/Breadcrumbs"
+import PageWrapper from "@/components/common/layout/PageWrapper"
+import Breadcrumbs from "@/components/common/navigation/Breadcrumbs"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

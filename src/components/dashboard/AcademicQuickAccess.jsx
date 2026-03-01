@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { BookOpen, Library, FileText, ArrowUpRight } from "lucide-react"
 
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import GlowCard from "../common/GlowCard"
+import GlowCard from "../common/display/GlowCard"
 
 const AcademicQuickAccess = ({
   programId,

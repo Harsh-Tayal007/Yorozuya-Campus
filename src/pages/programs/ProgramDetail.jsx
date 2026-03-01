@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { getBranchesForProgram } from "@/utils/getBranchesForProgram"
 import { getAvailableBranchesForProgram } from "@/services/branchAvailabilityService"
 import { useQuery } from "@tanstack/react-query"
-import GlowCard from "@/components/common/GlowCard"
+import GlowCard from "@/components/common/display/GlowCard"
 import { ArrowUpRight } from "lucide-react"
 
 const ProgramDetail = () => {
