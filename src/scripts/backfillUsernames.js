@@ -5,7 +5,7 @@ import {
 } from "@/config/appwrite"
 import {
   generateAvailableUsername,
-} from "@/services/authService"
+} from "@/services/admin/authService"
 
 const USERS_TABLE_ID = "users"
 

@@ -3,6 +3,7 @@ import AppRoutes from "./routes/AppRoutes"
 
 import { SidebarProvider } from "@/context/SidebarContext"
 import { useAuth } from "./context/AuthContext"
+import ScrollToTop from "./components/common/navigation/ScrollToTop"
 
 const App = () => {
   const { isLoading } = useAuth()
@@ -16,6 +17,7 @@ const App = () => {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <SidebarProvider>
         <AppRoutes />
       </SidebarProvider>

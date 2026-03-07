@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { getBranchesByProgram } from "@/services/branchService";
+import { getBranchesByProgram } from "@/services/university/branchService";
 
 import {
     Select,
@@ -25,8 +25,8 @@ import {
     createSubject,
     getSubjectsBySyllabus,
     updateSubjectPdf
-} from "@/services/subjectService"
-import { updateSyllabus } from "@/services/syllabusService"
+} from "@/services/syllabus/subjectService"
+import { updateSyllabus } from "@/services/syllabus/syllabusService"
 
 
 const initialState = {

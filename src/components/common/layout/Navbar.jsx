@@ -76,7 +76,7 @@ const Navbar = ({
     bg-white/40 dark:bg-[#0b1220]/40
     border-b border-white/10 dark:border-white/10
     shadow-[0_8px_30px_rgba(0,0,0,0.12)]
-    transition-all duration-300
+    transition-[filter,opacity] duration-300
     ${sidebar?.isOpen ? "brightness-75 pointer-events-none" : ""}
   `}
     >
@@ -110,7 +110,7 @@ const Navbar = ({
     hover:scale-110
     active:scale-95
 
-    transition-all duration-200 ease-out
+    transition-[color,border-color,box-shadow,transform] duration-200 ease-out
 
     focus:outline-none
     focus-visible:ring-2
@@ -129,18 +129,14 @@ const Navbar = ({
           </button>
 
           {/* Logo */}
-          <motion.div
-            initial="rest"
-            whileHover="hover"
-            className="relative"
-          >
+          
             <Link
               to="/"
               className="relative inline-block text-xl md:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white transition-colors duration-300 hover:text-indigo-500"
             >
               Unizuya
             </Link>
-          </motion.div>
+ 
 
         </div>
 
@@ -157,7 +153,7 @@ const Navbar = ({
             rounded-lg px-3 py-1.5 text-sm
             bg-blue-600 text-white
             shadow-md hover:shadow-lg
-            transition-all duration-200
+            transition-shadow duration-200
           "
             >
               <Download className="h-4 w-4" />
@@ -181,7 +177,7 @@ const Navbar = ({
                 rounded-full px-2.5 py-1.5
                 bg-white/70 dark:bg-white/5
                 hover:bg-white/90 dark:hover:bg-white/10
-                transition-all duration-200
+                transition-colors duration-200
                 shadow-sm
               "
                 >
@@ -256,7 +252,7 @@ const Navbar = ({
       hover:bg-slate-800 dark:hover:bg-slate-200
       focus:outline-none focus-visible:ring-2
       focus-visible:ring-indigo-500/60
-      transition-all duration-200
+      transition-colors duration-200
       shadow-sm
     "
               >

@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { useEffect, useMemo, useState } from "react"
 
-import { getUniversities } from "@/services/universityService"
-import { getProgramsByUniversity } from "@/services/programService"
+import { getUniversities } from "@/services/university/universityService"
+import { getProgramsByUniversity } from "@/services/university/programService"
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,9 +17,9 @@ import {
     getSyllabusByProgram,
     updateSyllabus,
     deleteSyllabus,
-} from "@/services/syllabusService"
+} from "@/services/syllabus/syllabusService"
 
-import { getSubjectsBySyllabusIds } from "@/services/subjectService"
+import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
 
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate } from "react-router-dom"

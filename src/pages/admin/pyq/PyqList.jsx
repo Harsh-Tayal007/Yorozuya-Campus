@@ -17,7 +17,7 @@ import {
     UNITS_COLLECTION_ID,
     PROGRAMS_COLLECTION_ID
 } from "@/config/appwrite"
-import { getSubjectsByIds } from "@/services/subjectService"
+import { getSubjectsByIds } from "@/services/syllabus/subjectService"
 
 export default function PyqList({
     limit = 6,

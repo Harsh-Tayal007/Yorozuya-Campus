@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
-import { universities } from '../data/universities'
-import { BranchCard, PageWrapper } from '../components'
+import { universities } from '../../data/universities'
+import { BranchCard, PageWrapper } from '../../components'
 import { Separator } from "@/components/ui/separator"
 import {
   Empty,

@@ -21,7 +21,7 @@ import {
     ACTIVITIES_COLLECTION_ID,
 } from "@/config/appwrite"
 import PyqList from "./PyqList"
-import { getSubjectsBySyllabusIds } from "@/services/subjectService"
+import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
 
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID

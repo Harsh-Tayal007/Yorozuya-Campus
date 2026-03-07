@@ -2,11 +2,11 @@ import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 
-import { getPrograms } from "@/services/programService"
+import { getPrograms } from "@/services/university/programService"
 
-import { getUnitsBySubject } from "@/services/unitService"
+import { getUnitsBySubject } from "@/services/syllabus/unitService"
 
-import { deleteResource } from "@/services/resourceService"
+import { deleteResource } from "@/services/resource/resourceService"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 
@@ -19,7 +19,7 @@ import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 import { DATABASE_ID } from "@/config/appwrite"
 
-import { getSubjectsByIds } from "@/services/subjectService"
+import { getSubjectsByIds } from "@/services/syllabus/subjectService"
 
 const SUBJECTS_COLLECTION_ID =
     import.meta.env.VITE_APPWRITE_SUBJECTS_COLLECTION_ID

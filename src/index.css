@@ -44,6 +44,7 @@
 }
 
 :root {
+  color-scheme: light;         /* ← tells browser this is a light page */
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
@@ -79,6 +80,7 @@
 }
 
 .dark {
+  color-scheme: dark;          /* ← tells browser this is a dark page */
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -107,45 +109,116 @@
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
   --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  /* ── KEY FIX ──────────────────────────────────────────────────────────────
+     The original `* { @apply border-border outline-ring/50 }` causes every
+     element to be style-recalculated when .dark toggles on <html>.
+     Moving border/outline to a cheaper selector avoids the full-page repaint.
+  ───────────────────────────────────────────────────────────────────────── */
+  *, *::before, *::after {
+    border-color: var(--border);
+    outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  html {
+    scrollbar-gutter: stable;
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
+    /* Smooth dark/light transition on the body level only — not * selector */
+    transition: background-color 180ms ease, color 180ms ease;
   }
 }
 
+/* ── Scrollbar ── */
+html {
+  scrollbar-gutter: stable;
+}
 
+/* ── Text selection ── */
+::selection {
+  background-color: #3b82f6;
+  color: white;
+}
+.dark ::selection {
+  background-color: #6366f1;
+  color: white;
+}
+
+/* ── Reply thread lines ── */
+.reply-node {
+  position: relative;
+  padding-left: 28px;
+}
+
+.reply-node.has-parent::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: -8px;
+  bottom: -8px;
+  width: 1px;
+  background: hsl(var(--border));
+}
+
+.reply-node.has-parent::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 22px;
+  width: 14px;
+  height: 14px;
+  border-left: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  border-bottom-left-radius: 10px;
+}
+
+/* ── Animations ── */
 @keyframes border-beam {
-  0% {
-    background-position: 200% 0%;
-  }
-  100% {
-    background-position: -200% 0%;
-  }
+  0%   { background-position:  200% 0%; }
+  100% { background-position: -200% 0%; }
 }
 
 .animate-border-beam {
   animation: border-beam 6s linear infinite;
 }
 
-::selection {
-  background-color: #3b82f6; /* blue-500 */
-  color: white;
+@keyframes dropdown {
+  to { transform: scale(1); opacity: 1; }
 }
 
-.dark ::selection {
-  background-color: #6366f1; /* indigo-500 */
-  color: white;
+/* ── View Transition (dark mode cross-fade) ──────────────────────────────────
+   The browser composites old/new page states as textures on the GPU.
+   No main-thread style recalculation — smooth regardless of DOM size.
+──────────────────────────────────────────────────────────────────────────── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: ease;
+  mix-blend-mode: normal;
 }
 
-html {
-  scrollbar-gutter: stable;
+::view-transition-old(root) {
+  animation-name: theme-fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: theme-fade-in;
+}
+
+@keyframes theme-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes theme-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }

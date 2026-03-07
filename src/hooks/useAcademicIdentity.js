@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 
-import { getUniversityById } from "@/services/universityService";
-import { getProgramById } from "@/services/programService";
-import { getBranchById } from "@/services/branchService";
+import { getUniversityById } from "@/services/university/universityService";
+import { getProgramById } from "@/services/university/programService";
+import { getBranchById } from "@/services/university/branchService";
 
 export const useAcademicIdentity = () => {
   const { user } = useAuth();

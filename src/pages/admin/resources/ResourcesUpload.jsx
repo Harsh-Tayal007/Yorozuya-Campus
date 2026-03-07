@@ -5,17 +5,17 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUnitsBySubject } from "@/services/unitService"
-import { getSyllabusByProgram } from "@/services/syllabusService"
-import { getPrograms } from "@/services/programService"
-import { createResource, updateResource } from "@/services/resourceService"
+import { getUnitsBySubject } from "@/services/syllabus/unitService"
+import { getSyllabusByProgram } from "@/services/syllabus/syllabusService"
+import { getPrograms } from "@/services/university/programService"
+import { createResource, updateResource } from "@/services/resource/resourceService"
 import { Loader2 } from "lucide-react"
 import ResourcesList from "./ResourcesList"
 import { databases } from "@/lib/appwrite"
 import { DATABASE_ID, RESOURCES_COLLECTION_ID } from "@/config/appwrite"
 
 import { useAuth } from "@/context/AuthContext"
-import { getSubjectsBySyllabusIds } from "@/services/subjectService"
+import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
 
 
 export default function ResourcesUpload() {

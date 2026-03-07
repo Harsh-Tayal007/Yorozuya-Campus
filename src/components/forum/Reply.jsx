@@ -1,264 +1,457 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  ArrowBigUp,
-  ArrowBigDown,
-  Image as ImageIcon,
-  X,
-  Pin,
-} from "lucide-react"
+// =============================================================================
+// Reply.jsx — Threaded comments with mobile support
+// Sections: CONSTANTS → CONTEXT → HOOKS → HELPERS → COMPOSE STATE →
+//           GIF PICKER → OPTIONS MENU → MOBILE MODAL → DESKTOP BOX → TOP BOX → REPLY
+// =============================================================================
 
-const formatDateTime = (iso) =>
-  new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
+import React, { useState, useRef, useCallback, useContext } from "react"
+import { ArrowBigUp, ArrowBigDown, Pin, MoreVertical } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { useNavigate, useParams } from "react-router-dom"
 
-const formatVotes = (count) => {
-  if (count < 1000) return count
-  if (count < 1_000_000)
-    return (count / 1000).toFixed(1).replace(".0", "") + "k"
-  return (count / 1_000_000).toFixed(1).replace(".0", "") + "M"
-}
+import { fmt, fmtVotes, initials } from "@/utils/replyUtils"
+import GlowCtx from "@/context/GlowContext"
+import { useIsMobile } from "@/hooks/use-mobile"
 
-const getInitials = (name = "") =>
-  name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
+import useReplyActions from "@/hooks/useReplyActions"
 
-const Reply = ({ reply, depth = 0, replyingTo, threadAuthor }) => {
-  const [showReplyBox, setShowReplyBox] = useState(false)
-  const [showGifPicker, setShowGifPicker] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+import DesktopReplyBox from "./DesktopReplyBox"
+import MobileReplyModal from "./MobileReplyModal"
+import OptionsMenu from "./OptionsMenu"
+import useVote from "@/hooks/useVote"
 
-  const isOP =
-    reply.author?.trim().toLowerCase() ===
-    threadAuthor?.trim().toLowerCase()
+import useComposeState from "@/hooks/useComposeState"
+import { useRepliesContext } from "./RepliesProvider"
+import ReplyMedia from "./ReplyMedia"
+import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 
+// =============================================================================
+// CONSTANTS
+// Thread line geometry: AV=28, AV_H=14, GAP=8, GUTTER=36
+// Bar x = AV_H-1 = 13px inside both avatar-col and child gutter → same absolute x ✓
+// =============================================================================
+const AV = 28
+const AV_H = AV / 2
+const GAP = 8
+const GUTTER = AV + GAP
+const MAX_DEPTH_DESKTOP = 5
+const MAX_DEPTH_MOBILE = 3
+
+
+// =============================================================================
+// REPLY — recursive threaded comment component
+// =============================================================================
+const Reply = ({
+  replyId,
+  depth = 0,
+  threadAuthor,
+  disableChildren = false,
+  disableDepthLimit = false
+}) => {
+  const { replies } = useRepliesContext()
+
+  const reply = replies?.byId?.[replyId]
+  const children = replies.children[replyId] ?? []
+
+  // ─── Derived flags (no hooks, pure computation) ───────────────────────────
+  const isDeleted = reply?.deleted === true
+  const hasChildren = children.length > 0
+  const isOP = reply.author?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
   const isPinned = reply.isPinned === true
 
-  const [vote, setVote] = useState(null)
-  const [score, setScore] = useState(reply.upvotes ?? 0)
+  // ─── Hooks (must come after context/derived values they depend on) ─────────
+  const notifyParent = useContext(GlowCtx)
+  const isMobile = useIsMobile()
+  const { user } = useAuth()
+  const { threadId } = useParams()
+  const navigate = useNavigate()
 
-  const hasChildren = reply.replies?.length > 0
+  // ─── State (collapsed depends on isDeleted) ────────────────────────────────
+  const [showReplyBox, setShowReplyBox] = useState(false)
+  const [collapsed, setCollapsed] = useState(isDeleted)   // ← isDeleted defined above
+  const [glow, setGlow] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(reply?.content ?? "")
 
-  const handleVote = (type) => {
-    if (vote === type) {
-      setVote(null)
-      setScore((s) => s + (type === "up" ? -1 : 1))
-    } else {
-      if (vote === "up") setScore((s) => s - 1)
-      if (vote === "down") setScore((s) => s + 1)
-      setVote(type)
-      setScore((s) => s + (type === "up" ? 1 : -1))
-    }
-  }
+  // ─── Refs ──────────────────────────────────────────────────────────────────
+  const dotsRef = useRef(null)
+
+  // ─── More derived (depends on state) ──────────────────────────────────────
+  const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
+  const isTooDeep = !disableDepthLimit && depth >= maxDepth
+  const shouldShowChildren = hasChildren && !collapsed && !isDeleted
+
+  // ─── Other hooks ──────────────────────────────────────────────────────────
+  const { vote, score, handleVote } = useVote(reply.upvotes ?? 0, reply.$id)
+  const composeState = useComposeState()
+
+
+
+  // GLOW (desktop hover only)
+  const onEnter = useCallback(() => {
+    if (isMobile || depth === 0) return
+    setGlow(true); notifyParent?.(true)
+  }, [isMobile, depth, notifyParent])
+
+  const onLeave = useCallback(() => {
+    if (isMobile || depth === 0) return
+    setGlow(false); notifyParent?.(false)
+  }, [isMobile, depth, notifyParent])
+
+  const childGlowCb = useCallback((on) => {
+    setGlow(on); notifyParent?.(on)
+  }, [notifyParent])
+
+  // SUBMIT REPLY
+  const { createReply, deleteReply, updateReply } = useReplyActions(threadId)
+
+  const handleSubmit = useCallback((text, gifUrl, imageUrl) => {
+    if (!text.trim() && !gifUrl && !imageUrl) return
+
+    createReply.mutate({
+      threadId,
+      content: text,
+      gifUrl,
+      imageUrl,                              // ← add this
+      imagePublicId: composeState.uploadedImagePublicId,  // ← add this
+      authorId: user.$id,
+      authorName: user.username,
+      parentReplyId: reply.$id ?? reply.id,
+    })
+
+  }, [createReply, threadId, user, reply])
+
+  // DELETE — calls service then invalidates (stub: you can wire deleteReply service)
+  const handleDelete = useCallback(async () => {
+    const id = reply.$id ?? reply.id
+    const publicId = reply.imagePublicId
+    const hasChildren = (replies.children?.[id] ?? []).length > 0
+
+    // Delete from Cloudinary first
+    await deleteCloudinaryImage(publicId)
+
+    // Smart delete: hard if no children, soft if has children
+    await deleteReply.mutateAsync({ replyId: id, hasChildren })
+
+    setShowOptions(false)
+  }, [reply, deleteReply, replies.children])
+
+
+  // EDIT SAVE
+  const handleEditSave = useCallback(() => {
+    if (!editText.trim()) return
+
+    const id = reply.$id ?? reply.id
+
+    updateReply.mutate({
+      id,
+      content: editText
+    })
+
+    setEditing(false)
+
+  }, [editText, reply, updateReply])
+  const isOwn = user?.$id === reply.authorId
+
+  // Thread line color class
+  const lc = `absolute rounded-full transition-colors duration-200 ${glow && !isMobile ? "bg-primary" : "bg-border"}`
+
+  const gifMaxWidth = isMobile
+    ? Math.max(140, 220 - depth * 35)
+    : Math.max(220, 320 - depth * 40)
 
   return (
-    <div
-      className={`relative pl-4 ${depth > 0 ? "ml-6 border-l border-border" : ""}`}
-      style={{ marginLeft: Math.min(depth * 12, 48) }}
-    >
-      <div
-        className={`
-          py-3 px-3 rounded-md transition-colors hover:bg-muted/50
-          ${
-            isPinned
-              ? "bg-yellow-50 border border-yellow-200"
-              : isOP
-              ? "bg-primary/5"
-              : depth === 0
-              ? "bg-muted/40"
-              : "bg-muted/25"
-          }
-        `}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          {reply.authorAvatar ? (
-            <img
-              src={reply.authorAvatar}
-              alt={reply.author}
-              className="h-8 w-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-              {getInitials(reply.author)}
-            </div>
-          )}
+    <GlowCtx.Provider value={childGlowCb}>
 
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">{reply.author}</span>
+      {/* Mobile reply modal */}
+      {showReplyBox && isMobile && (
+        <MobileReplyModal
+          replyingTo={reply}
+          onSubmit={handleSubmit}
+          onClose={() => setShowReplyBox(false)}
+        />
+      )}
 
-              {isOP && (
-                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                  OP
-                </span>
-              )}
+      <div id={`reply-${reply.$id}`} className="flex flex-col">
 
-              {isPinned && (
-                <span className="flex items-center gap-1 rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700">
-                  <Pin size={10} /> Pinned
-                </span>
-              )}
+        {/* MAIN ROW */}
+        <div className="flex" style={{ gap: GAP }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
 
-              <span className="text-muted-foreground text-xs">
-                • {formatDateTime(reply.createdAt)}
-              </span>
+          {/* AVATAR COLUMN */}
+          <div className="relative shrink-0 flex flex-col items-center" style={{ width: AV }}>
+            <div
+              className={`rounded-full bg-muted flex items-center justify-center font-bold
+                          shrink-0 z-10 select-none transition-all duration-200
+                          ${glow && !isMobile ? "ring-2 ring-primary/40" : ""}`}
+              style={{ width: AV, height: AV, fontSize: 10 }}
+            >
+              {initials(reply.authorName)}
             </div>
 
-            {replyingTo && (
-              <span className="text-xs text-muted-foreground">
-                Replying to <span className="font-medium">@{replyingTo}</span>
-              </span>
+            {/* Vertical bar — flex-1 ends exactly where children-wrap begins */}
+            {shouldShowChildren && (
+              <button
+                className="flex-1 w-full flex justify-center pt-px group/vbar cursor-pointer"
+                onClick={() => setCollapsed(true)}
+                title="Collapse"
+                style={{ width: AV }}
+              >
+                <div className={`w-0.5 h-full rounded-full transition-colors duration-200
+                                 ${glow && !isMobile ? "bg-primary" : "bg-border group-hover/vbar:bg-primary/50"}`} />
+              </button>
             )}
           </div>
-        </div>
 
-        {/* Content */}
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          {reply.content}
-        </p>
-
-        {/* Actions */}
-        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleVote("up")}
-              className={`p-1 rounded hover:bg-red-100/40 ${
-                vote === "up" ? "text-red-500" : ""
-              }`}
-            >
-              <ArrowBigUp size={18} />
-            </button>
-
-            <span className="min-w-7 text-center font-medium text-sm">
-              {formatVotes(score)}
-            </span>
-
-            <button
-              onClick={() => handleVote("down")}
-              className={`p-1 rounded hover:bg-blue-100/40 ${
-                vote === "down" ? "text-blue-500" : ""
-              }`}
-            >
-              <ArrowBigDown size={18} />
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowReplyBox((v) => !v)}
-            className="hover:underline"
-          >
-            Reply
-          </button>
-
-          {hasChildren && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="hover:underline"
-            >
-              {expanded
-                ? "Hide replies"
-                : `View ${reply.replies.length} replies`}
-            </button>
-          )}
-
-          {/* Future pin action (disabled) */}
-          <button
-            disabled
-            className="cursor-not-allowed text-muted-foreground/60"
-          >
-            Pin
-          </button>
-        </div>
-
-        {/* Reply box */}
-        {showReplyBox && (
-          <div className="mt-3 space-y-2">
-            <Textarea placeholder="Write a reply…" rows={3} />
-
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <ImageIcon size={16} />
-              <button
-                onClick={() => setShowGifPicker((v) => !v)}
-                className="text-xs font-medium hover:text-foreground"
-              >
-                GIF
-              </button>
+          {/* BODY */}
+          <div className="flex-1 min-w-0 pb-1">
+            {/* Meta */}
+            <div className="flex items-center gap-1.5 flex-wrap mb-px">
+              <span className="font-semibold text-sm leading-snug">{reply.authorName}</span>
+              {isOP && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-px rounded-md">OP</span>}
+              {isPinned && (
+                <span className="text-[10px] bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-1.5 py-px rounded-md flex items-center gap-0.5">
+                  <Pin size={8} /> Pinned
+                </span>
+              )}
+              <span className="text-muted-foreground text-[11px]">· {fmt(reply.$createdAt)}</span>
             </div>
 
-            {showGifPicker && (
-              <div className="mt-2 rounded-md border bg-muted/30 p-3">
-                <div className="flex justify-between mb-2 text-xs font-medium">
-                  GIFs (Powered by Tenor / GIPHY)
-                  <button onClick={() => setShowGifPicker(false)}>
-                    <X size={14} />
+            {/* Collapsed state */}
+            {collapsed ? (
+              <button
+                className="text-xs text-muted-foreground hover:text-primary transition-colors py-0.5"
+                onClick={() => setCollapsed(false)}
+              >
+                {isDeleted
+                  ? "deleted · tap to expand"
+                  : `${children.length} ${children.length === 1 ? "reply" : "replies"} hidden · tap to expand`
+                }
+              </button>
+            ) : (
+              <>
+                {/* EDIT MODE */}
+                {editing ? (
+                  <div className="mt-1 mb-1">
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-muted/10 text-sm p-2
+                                 resize-none outline-none focus:border-primary transition-colors"
+                      rows={3}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 mt-1.5">
+                      <button onClick={handleEditSave}
+                        className="rounded-full px-3 py-1 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                        Save
+                      </button>
+                      <button onClick={() => { setEditing(false); setEditText(reply.content) }}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground border border-border hover:bg-muted/50 transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+
+                    {reply.deleted ? (
+                      <p className="text-sm leading-relaxed text-foreground/85 break-words">
+                        [deleted]
+                      </p>
+                    ) : (
+                      <>
+                        {reply.content && (
+                          <p className="text-sm leading-relaxed text-foreground/85 break-words">
+                            {reply.content}
+                          </p>
+                        )}
+
+                        <ReplyMedia
+                          gifUrl={reply.gifUrl}
+                          imageUrl={reply.imageUrl}
+                          deleted={reply.deleted}
+                          maxWidth={gifMaxWidth}
+                        />
+                      </>
+                    )}
+
+                  </div>
+                )}
+
+                {/* OPTIONS SHEET */}
+                {showOptions && (
+                  <OptionsMenu
+                    reply={reply}
+                    isOwn={isOwn}
+                    anchorRef={dotsRef}
+                    onCollapse={() => setCollapsed(true)}
+                    onDelete={handleDelete}
+                    onEdit={() => { setEditing(true); setShowOptions(false) }}
+                    onClose={() => setShowOptions(false)}
+                  />
+                )}
+
+                {/* ACTION BAR — vote · reply · ⋮ */}
+                <div className="flex items-center -ml-1 mt-px gap-x-0">
+                  <div className="flex items-center gap-0.5">
+
+                    {/* UPVOTE */}
+                    <button
+                      disabled={isDeleted}
+                      onClick={() => { if (isDeleted) return; handleVote("up") }}
+                      className={`
+                        relative p-1 rounded-lg
+                        transition-all duration-150
+                        active:scale-75
+                        ${isDeleted
+                          ? "text-muted-foreground/40 cursor-not-allowed"
+                          : vote === "up"
+                            ? "text-red-500 bg-red-500/10"
+                            : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                        }
+                      `}
+                    >
+                      <ArrowBigUp
+                        size={18}
+                        className="transition-transform duration-150"
+                        style={{ fill: vote === "up" ? "currentColor" : "none" }}
+                      />
+                    </button>
+
+                    {/* SCORE */}
+                    <span className={`
+                      text-xs font-bold min-w-[20px] text-center tabular-nums select-none
+                      transition-colors duration-150
+                      ${vote === "up" ? "text-red-500" : vote === "down" ? "text-blue-500" : "text-muted-foreground"}
+                    `}>
+                      {fmtVotes(score)}
+                    </span>
+
+                    {/* DOWNVOTE */}
+                    <button
+                      disabled={isDeleted}
+                      onClick={() => { if (isDeleted) return; handleVote("down") }}
+                      className={`
+                        relative p-1 rounded-lg
+                        transition-all duration-150
+                        active:scale-75
+                        ${isDeleted
+                          ? "text-muted-foreground/40 cursor-not-allowed"
+                          : vote === "down"
+                            ? "text-blue-500 bg-blue-500/10"
+                            : "text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"
+                        }
+                      `}
+                    >
+                      <ArrowBigDown
+                        size={18}
+                        className="transition-transform duration-150"
+                        style={{ fill: vote === "down" ? "currentColor" : "none" }}
+                      />
+                    </button>
+
+                  </div>
+
+                  <button
+                    disabled={isDeleted}
+                    onClick={() => { if (isDeleted) return; setShowReplyBox(v => !v) }}
+                    className={`
+                      text-[11px] font-semibold px-2 py-1 rounded-lg
+                      transition-colors duration-150 active:scale-95
+                      ${isDeleted
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }
+                    `}
+                  >
+                    Reply
+                  </button>
+
+                  <button
+                    ref={dotsRef}
+                    disabled={isDeleted}
+                    onClick={() => { if (isDeleted) return; setShowOptions(v => !v) }}
+                    className={`
+                      p-1.5 rounded-lg transition-colors duration-150 ml-0.5 active:scale-95
+                      ${isDeleted
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }
+                    `}
+                  >
+                    <MoreVertical size={14} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  {[...Array(6)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-20 rounded bg-muted flex items-center justify-center text-xs"
-                    >
-                      GIF
-                    </div>
-                  ))}
-                </div>
-              </div>
+                {/* Desktop inline reply box */}
+                {showReplyBox && !isMobile && !isDeleted && (
+                  <DesktopReplyBox cs={composeState} onSubmit={handleSubmit} onCancel={() => setShowReplyBox(false)} />
+                )}
+              </>
             )}
+          </div>
+        </div>
 
-            <div className="flex gap-2">
-              <Button size="sm">Reply</Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowReplyBox(false)}
-              >
-                Cancel
-              </Button>
-            </div>
+        {/* CHILDREN */}
+        {!disableChildren && shouldShowChildren && !isTooDeep && (
+          <div className="flex flex-col">
+            {children.map((childId, i) => {
+              const isLast = i === children.length - 1
+
+              return (
+                <div key={childId} className="flex">
+
+                  {/* Gutter */}
+                  <div className="relative shrink-0 self-stretch" style={{ width: GUTTER }}>
+                    <div
+                      className={lc}
+                      style={{
+                        width: 2,
+                        left: AV_H - 1,
+                        top: 0,
+                        ...(isLast ? { height: AV_H } : { bottom: 0 }),
+                      }}
+                    />
+                    <div
+                      className={lc}
+                      style={{
+                        height: 2,
+                        left: AV_H - 1,
+                        top: AV_H - 1,
+                        width: GUTTER - (AV_H - 1),
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <Reply
+                      replyId={childId}
+                      depth={depth + 1}
+                      threadAuthor={threadAuthor}
+                    />
+                  </div>
+
+                </div>
+              )
+            })}
           </div>
         )}
+
+        {/* CONTINUE THREAD */}
+        {isTooDeep && shouldShowChildren && (
+          <div style={{ paddingLeft: GUTTER }}>
+            <button
+              className="text-xs font-semibold text-primary hover:underline mt-0.5 mb-1"
+              onClick={() => navigate(`/forum/${threadId}?focus=${reply.$id}`)}>
+              Continue this thread →
+            </button>
+          </div>
+        )}
+
       </div>
-
-      {/* Nested replies */}
-      {expanded && !hasChildren && (
-        <div className="ml-6 mt-2 text-xs text-muted-foreground">
-          No replies yet.
-        </div>
-      )}
-
-      {hasChildren && (
-        <div
-          className={`mt-2 space-y-2 overflow-hidden transition-all duration-300 ${
-            expanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          {reply.replies.map((child) => (
-            <Reply
-              key={child.id}
-              reply={child}
-              depth={depth + 1}
-              replyingTo={reply.author}
-              threadAuthor={threadAuthor}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    </GlowCtx.Provider>
   )
 }
 
-export default Reply
+export default React.memo(Reply)

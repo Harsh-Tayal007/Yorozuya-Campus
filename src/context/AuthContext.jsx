@@ -4,7 +4,7 @@ import {
   logoutUser,
   getCurrentUser,
   generateAvailableUsername
-} from "@/services/authService"
+} from "@/services/admin/authService"
 
 import { USERS_COLLECTION_ID } from "@/config/appwrite"
 import { ID, Query } from "appwrite"

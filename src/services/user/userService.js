@@ -1,6 +1,6 @@
 import { DATABASE_ID, USERS_COLLECTION_ID } from "@/config/appwrite";
 import { databases } from "@/lib/appwrite";
-import { createAuditLog } from "./activityService";
+import { createAuditLog } from "../shared/activityService";
 
 export async function updateUserRole(targetUserId, role, actor, targetMeta) {
   if (actor.role !== "admin") {

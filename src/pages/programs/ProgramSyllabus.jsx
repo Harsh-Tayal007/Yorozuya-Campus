@@ -6,7 +6,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card"
-import { getAvailableSyllabusSemesters } from "@/services/syllabusAvailabilityService"
+import { getAvailableSyllabusSemesters } from "@/services/syllabus/syllabusAvailabilityService"
 
 const ProgramSyllabus = () => {
   const { programId, branchName } = useParams()

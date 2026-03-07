@@ -9,9 +9,9 @@ import {
     SelectItem,
 } from "@/components/ui/select"
 
-import { getUniversities } from "@/services/universityService"
-import { getProgramsByUniversity } from "@/services/programService"
-import { getBranchesByProgram } from "@/services/branchService"
+import { getUniversities } from "@/services/university/universityService"
+import { getProgramsByUniversity } from "@/services/university/programService"
+import { getBranchesByProgram } from "@/services/university/branchService"
 
 const AcademicStep = ({ data, setData, onNext, onBack }) => {
     const [universities, setUniversities] = useState([])

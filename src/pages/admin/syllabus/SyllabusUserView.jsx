@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { getSyllabusByContext } from "@/services/syllabusService"
+import { getSyllabusByContext } from "@/services/syllabus/syllabusService"
 
-import { getPdfViewUrl } from "@/services/storageService"
+import { getPdfViewUrl } from "@/services/shared/storageService"
 
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
@@ -16,10 +16,10 @@ import { PdfPreviewModal } from "@/components";
 import { storage } from "@/lib/appwrite";
 import { STORAGE_BUCKET_ID, SUBJECTS_COLLECTION_ID, SYLLABUS_COLLECTION_ID } from "@/config/appwrite";
 import { buildSyllabusFilename } from "@/utils/filenameUtils";
-import { downloadFileXHR } from "@/services/downloadService";
+import { downloadFileXHR } from "@/services/shared/downloadService";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { getProgramById } from "@/services/programService";
+import { getProgramById } from "@/services/university/programService";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const SYLLABUS_COLLECTION = SYLLABUS_COLLECTION_ID;

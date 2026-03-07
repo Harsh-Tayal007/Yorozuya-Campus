@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
-import { getSyllabusByProgram } from "@/services/syllabusService"
+import { getSyllabusByProgram } from "@/services/syllabus/syllabusService"
 import {
     createUnit,
     getUnitsBySubject,
     deleteUnit,
     updateUnit
-} from "@/services/unitService"
+} from "@/services/syllabus/unitService"
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,11 +18,11 @@ import {
     SelectValue
 } from "@/components/ui/select"
 
-import { getPrograms } from "@/services/programService"
+import { getPrograms } from "@/services/university/programService"
 
 import { useAuth } from "@/context/AuthContext"
 
-import { getSubjectsBySyllabusIds } from "@/services/subjectService"
+import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
 
 
 export default function UnitsAdmin() {

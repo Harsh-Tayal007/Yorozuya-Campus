@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { BorderBeam } from "@/components/ui/border-beam"
 import { LandingStatsSection, TestimonialsSection } from "@/components/landing"
 
-import { getPublicStats } from "@/services/statsService"
+import { getPublicStats } from "@/services/admin/statsService"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Footer } from "@/components"

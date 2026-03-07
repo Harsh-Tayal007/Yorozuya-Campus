@@ -48,6 +48,8 @@ export function downloadFileXHR({
   xhr.responseType = "blob";
 
   xhr.open("GET", url, true);
+  xhr.withCredentials = false
+  xhr.setRequestHeader("Accept", "*/*");
 
   xhr.onprogress = (event) => {
     if (!onProgress) return;

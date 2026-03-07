@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/context/AuthContext"
-import { getUsers, updateUserRole } from "@/services/userService"
+import { getUsers, updateUserRole } from "@/services/user/userService"
 import { ROLES } from "@/config/roles"
 import { toast } from "sonner"
 

@@ -1,16 +1,30 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const ForumTabs = ({ tab, onChange, canUseUniversity, canUseBranch }) => {
+const ForumTabs = ({
+  tab,
+  canUseUniversity,
+  canUseCourse,
+  canUseBranch,
+}) => {
   return (
-    <Tabs value={tab} onValueChange={onChange}>
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="all">All</TabsTrigger>
+    <Tabs value={tab}>
+      <TabsList className="grid w-full grid-cols-4 h-11 rounded-xl bg-muted/40">
+        <TabsTrigger value="all">
+          All
+        </TabsTrigger>
 
         <TabsTrigger
           value="university"
           disabled={!canUseUniversity}
         >
           University
+        </TabsTrigger>
+
+        <TabsTrigger
+          value="course"
+          disabled={!canUseCourse}
+        >
+          Course
         </TabsTrigger>
 
         <TabsTrigger

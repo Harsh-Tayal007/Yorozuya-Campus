@@ -10,7 +10,7 @@ import PyqPreviewModal from "./PyqPreviewModal"
 
 import {
     getPyqsForSubject,
-} from "@/services/pyqService"
+} from "@/services/syllabus/pyqService"
 import { DATABASE_ID, SUBJECTS_COLLECTION_ID } from "@/config/appwrite"
 import { isMobileDevice } from "@/utils/isMobileDevice"
 import { useQuery } from "@tanstack/react-query"

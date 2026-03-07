@@ -10,18 +10,18 @@ import {
 import { Query } from "appwrite"
 import { databases } from "@/lib/appwrite"
 
-import { getPdfViewUrl } from "@/services/storageService"
-import { getAvailableResourceSemesters } from "@/services/resourceAvailabilityService"
+import { getPdfViewUrl } from "@/services/shared/storageService"
+import { getAvailableResourceSemesters } from "@/services/resource/resourceAvailabilityService"
 import { BackButton, Breadcrumbs, ErrorState, FileTypeBadge, LoadingCard, SyllabusListSkeleton } from "@/components"
 import { getResolvedResourcesForSubject }
-  from "@/services/resourceUserResolver";
+  from "@/services/resource/resourceUserResolver";
 import { Button } from "@/components/ui/button"
 import { formatFileSize } from "@/utils/formatFileSize"
 import { Badge } from "@/components/ui/badge"
 import PdfPreviewModal from "@/components/common/display/PdfPreviewModal"
 import { STORAGE_BUCKET_ID } from "@/config/appwrite"
 import { buildResourceFilename } from "@/utils/filenameUtils"
-import { downloadFileXHR } from "@/services/downloadService"
+import { downloadFileXHR } from "@/services/shared/downloadService"
 import { isMobileDevice } from "@/utils/isMobileDevice"
 import { useQuery } from "@tanstack/react-query"
 import GlowCard from "@/components/common/display/GlowCard"

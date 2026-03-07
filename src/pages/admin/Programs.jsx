@@ -4,8 +4,8 @@ import {
     getPrograms,
     updateProgram,
     deleteProgram,
-} from "@/services/programService"
-import { getUniversities } from "@/services/universityService"
+} from "@/services/university/programService"
+import { getUniversities } from "@/services/university/universityService"
 import { useAuth } from "@/context/AuthContext"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
