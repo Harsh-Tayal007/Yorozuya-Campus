@@ -72,7 +72,7 @@ const ThreadDetail = () => {
   return (
     <PageWrapper>
       <div className="space-y-6 animate-in fade-in-50 duration-300 overflow-visible">
-         <Breadcrumbs
+        <Breadcrumbs
           items={[
             { label: "Forum", href: "/forum" },
             thread.universityId && { label: thread.universityId },
@@ -116,7 +116,7 @@ const ThreadDetail = () => {
         </Card>
 
         {/* Replies Section */}
-        <RepliesProvider threadId={threadId}>
+        <RepliesProvider threadId={threadId} pinnedReplyId={thread.pinnedReplyId ?? null}>
           <RepliesSection
             threadAuthor={thread.authorName}
             focusReplyId={focusReplyId}

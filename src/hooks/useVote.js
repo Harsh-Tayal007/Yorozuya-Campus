@@ -4,18 +4,22 @@ import { useAuth } from "@/context/AuthContext"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const REPLIES_COL = import.meta.env.VITE_APPWRITE_REPLIES_COLLECTION_ID
-const VOTES_COL = import.meta.env.VITE_APPWRITE_VOTES_COLLECTION_ID
+const VOTES_COL   = import.meta.env.VITE_APPWRITE_VOTES_COLLECTION_ID
 
-export default function useVote(initialScore = 0, replyId) {
+export default function useVote(initialUpvotes = 0, initialDownvotes = 0, replyId) {
   const { currentUser } = useAuth()
   const userId = currentUser?.$id
 
-  const [vote, setVote]           = useState(null)  // "up" | "down" | null
-  const [voteDocId, setVoteDocId] = useState(null)  // Appwrite $id of vote doc
-  const [score, setScore]         = useState(initialScore)
-  const [loading, setLoading]     = useState(false)
+  const [vote, setVote]             = useState(null)
+  const [voteDocId, setVoteDocId]   = useState(null)
+  const [upvotes, setUpvotes]       = useState(initialUpvotes)
+  const [downvotes, setDownvotes]   = useState(initialDownvotes)
+  const [loading, setLoading]       = useState(false)
 
-  // On mount: load this user's existing vote for this reply from Appwrite
+  // Net score for display
+  const score = upvotes - downvotes
+
+  // On mount: load existing vote for this user+reply
   useEffect(() => {
     if (!replyId || !userId || replyId.startsWith("temp-")) return
     let cancelled = false
@@ -43,50 +47,53 @@ export default function useVote(initialScore = 0, replyId) {
   const handleVote = useCallback(async (type) => {
     if (!userId || loading) return
 
-    let scoreDelta = 0
-    let newVote    = null
+    // ── Compute upvote/downvote deltas ──────────────────────────────────────
+    let upDelta   = 0
+    let downDelta = 0
+    let newVote   = null
 
     if (vote === type) {
-      // Undo
-      scoreDelta = type === "up" ? -1 : 1
-      newVote    = null
+      // Undo existing vote
+      if (type === "up")   upDelta   = -1
+      if (type === "down") downDelta = -1
+      newVote = null
     } else {
-      // Switch or fresh
-      if (vote === "up")   scoreDelta -= 1
-      if (vote === "down") scoreDelta += 1
-      scoreDelta += type === "up" ? 1 : -1
+      // Undo previous vote first
+      if (vote === "up")   upDelta   = -1
+      if (vote === "down") downDelta = -1
+      // Apply new vote
+      if (type === "up")   upDelta   += 1
+      if (type === "down") downDelta += 1
       newVote = type
     }
 
     const prevVote      = vote
-    const prevScore     = score
+    const prevUpvotes   = upvotes
+    const prevDownvotes = downvotes
     const prevVoteDocId = voteDocId
 
     // Optimistic update
     setVote(newVote)
-    setScore(s => s + scoreDelta)
+    setUpvotes(u => u + upDelta)
+    setDownvotes(d => d + downDelta)
     setLoading(true)
 
     try {
-      // 1. Persist new score to replies collection
+      // 1. Update both upvotes + downvotes on the reply doc
       await databases.updateDocument(DATABASE_ID, REPLIES_COL, replyId, {
-        upvotes: prevScore + scoreDelta,
+        upvotes:   prevUpvotes   + upDelta,
+        downvotes: prevDownvotes + downDelta,
       })
 
       // 2. Create / update / delete vote doc
       if (newVote === null) {
-        // Undid vote → delete doc
         if (voteDocId) {
           await databases.deleteDocument(DATABASE_ID, VOTES_COL, voteDocId)
           setVoteDocId(null)
         }
       } else if (voteDocId) {
-        // Switched vote → update existing doc
-        await databases.updateDocument(DATABASE_ID, VOTES_COL, voteDocId, {
-          vote: newVote,
-        })
+        await databases.updateDocument(DATABASE_ID, VOTES_COL, voteDocId, { vote: newVote })
       } else {
-        // Fresh vote → create new doc
         const doc = await databases.createDocument(
           DATABASE_ID, VOTES_COL, ID.unique(),
           { replyId, userId, vote: newVote }
@@ -96,13 +103,14 @@ export default function useVote(initialScore = 0, replyId) {
     } catch (err) {
       console.error("Vote failed, rolling back:", err)
       setVote(prevVote)
-      setScore(prevScore)
+      setUpvotes(prevUpvotes)
+      setDownvotes(prevDownvotes)
       setVoteDocId(prevVoteDocId)
     } finally {
       setLoading(false)
     }
 
-  }, [vote, score, voteDocId, replyId, userId, loading])
+  }, [vote, upvotes, downvotes, voteDocId, replyId, userId, loading])
 
-  return { vote, score, handleVote, loading }
+  return { vote, score, upvotes, downvotes, handleVote, loading }
 }

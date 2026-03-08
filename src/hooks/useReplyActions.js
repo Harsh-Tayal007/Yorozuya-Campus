@@ -6,6 +6,8 @@ import {
   updateReply,
 } from "@/services/forum/replyService";
 
+import { pinReply, unpinReply } from "@/services/forum/replyService";
+
 export default function useReplyActions(threadId) {
   const queryClient = useQueryClient();
 
@@ -42,7 +44,7 @@ export default function useReplyActions(threadId) {
           byId: { ...old.byId, [tempId]: optimisticReply },
           children: {
             ...newChildren,
-            [parent]: [tempId, ...newChildren[parent]],  // prepend = newest first
+            [parent]: [tempId, ...newChildren[parent]], // prepend = newest first
           },
         };
       });
@@ -66,7 +68,7 @@ export default function useReplyActions(threadId) {
         const newChildren = { ...old.children };
         for (const parent in newChildren) {
           newChildren[parent] = newChildren[parent].map((id) =>
-            id === tempId ? serverReply.$id : id
+            id === tempId ? serverReply.$id : id,
           );
         }
 
@@ -113,7 +115,9 @@ export default function useReplyActions(threadId) {
 
           const newChildren = { ...old.children };
           for (const parent in newChildren) {
-            newChildren[parent] = newChildren[parent].filter((id) => id !== replyId);
+            newChildren[parent] = newChildren[parent].filter(
+              (id) => id !== replyId,
+            );
           }
           // Clean up this reply's own children bucket
           delete newChildren[replyId];
@@ -127,7 +131,10 @@ export default function useReplyActions(threadId) {
 
     onError: (err, variables, context) => {
       if (context?.previousReplies) {
-        queryClient.setQueryData(["replies", threadId], context.previousReplies);
+        queryClient.setQueryData(
+          ["replies", threadId],
+          context.previousReplies,
+        );
       }
     },
 
@@ -153,7 +160,8 @@ export default function useReplyActions(threadId) {
               ...old.byId[updatedReply.$id],
               content: updatedReply.content,
               gifUrl: updatedReply.gifUrl ?? old.byId[updatedReply.$id].gifUrl,
-              imageUrl: updatedReply.imageUrl ?? old.byId[updatedReply.$id].imageUrl,
+              imageUrl:
+                updatedReply.imageUrl ?? old.byId[updatedReply.$id].imageUrl,
             },
           },
         };
@@ -161,9 +169,46 @@ export default function useReplyActions(threadId) {
     },
   });
 
+  const pinReplyMutation = useMutation({
+    mutationFn: ({ replyId, threadId, currentPinnedReplyId }) =>
+      pinReply(replyId, threadId, currentPinnedReplyId),
+
+    onSuccess: (_, { replyId, threadId }) => {
+      // Update thread cache so pinnedReplyId stays fresh for next pin
+      queryClient.setQueryData(["thread", threadId], (old) => {
+        if (!old) return old;
+        return { ...old, pinnedReplyId: replyId };
+      });
+      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
+    },
+
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
+    },
+  });
+
+  const unpinReplyMutation = useMutation({
+    mutationFn: ({ replyId, threadId }) => unpinReply(replyId, threadId),
+
+    onSuccess: (_, { threadId }) => {
+      // Clear pinnedReplyId from thread cache
+      queryClient.setQueryData(["thread", threadId], (old) => {
+        if (!old) return old;
+        return { ...old, pinnedReplyId: null };
+      });
+      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
+    },
+
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
+    },
+  });
+
   return {
     createReply: createReplyMutation,
     deleteReply: deleteReplyMutation,
     updateReply: updateReplyMutation,
+    pinReply: pinReplyMutation,
+    unpinReply: unpinReplyMutation,
   };
 }

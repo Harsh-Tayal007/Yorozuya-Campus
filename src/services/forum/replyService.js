@@ -2,7 +2,9 @@ import { databases } from "@/lib/appwrite";
 import { Query, ID } from "appwrite";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-const REPLIES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_REPLIES_COLLECTION_ID;
+const REPLIES_COLLECTION_ID = import.meta.env
+  .VITE_APPWRITE_REPLIES_COLLECTION_ID;
+
 
 export const fetchRepliesByThread = async (threadId) => {
   const response = await databases.listDocuments(
@@ -47,7 +49,7 @@ export const createReply = async ({
       parentReplyId,
       upvotes: 0,
       isPinned: false,
-    }
+    },
   );
 
   return res;
@@ -72,11 +74,7 @@ export const deleteReply = async (replyId) => {
 
 // Hard delete — completely removes the document (used when reply has no children)
 export const hardDeleteReply = async (replyId) => {
-  await databases.deleteDocument(
-    DATABASE_ID,
-    REPLIES_COLLECTION_ID,
-    replyId,
-  );
+  await databases.deleteDocument(DATABASE_ID, REPLIES_COLLECTION_ID, replyId);
   return replyId;
 };
 
@@ -98,8 +96,44 @@ export const updateReply = async ({
       content,
       gifUrl,
       imageUrl,
-    }
+    },
   );
 
   return res;
+};
+
+// ── Add to bottom of replyService.js ─────────────────────────────────────────
+
+const THREADS_COLLECTION_ID = import.meta.env
+  .VITE_APPWRITE_THREADS_COLLECTION_ID;
+
+export const pinReply = async (replyId, threadId, currentPinnedReplyId) => {
+  if (currentPinnedReplyId && currentPinnedReplyId !== replyId) {
+    await databases.updateDocument(
+      DATABASE_ID,
+      REPLIES_COLLECTION_ID,
+      currentPinnedReplyId,
+      {
+        isPinned: false,
+      },
+    );
+  }
+
+  await databases.updateDocument(DATABASE_ID, REPLIES_COLLECTION_ID, replyId, {
+    isPinned: true,
+  });
+
+  await databases.updateDocument(DATABASE_ID, THREADS_COLLECTION_ID, threadId, {
+    pinnedReplyId: replyId,
+  });
+};
+
+export const unpinReply = async (replyId, threadId) => {
+  await databases.updateDocument(DATABASE_ID, REPLIES_COLLECTION_ID, replyId, {
+    isPinned: false,
+  });
+
+  await databases.updateDocument(DATABASE_ID, THREADS_COLLECTION_ID, threadId, {
+    pinnedReplyId: null,
+  });
 };

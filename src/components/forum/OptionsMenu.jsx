@@ -2,17 +2,18 @@
 // OPTIONS MENU
 // Desktop: small positioned dropdown (like Reddit web, Image 1)
 // Mobile:  bottom sheet (like Reddit app)
-// Props: reply, isOwn, anchorRef, onCollapse, onDelete, onEdit, onClose
+// Props: reply, isOwn, canPin, onPin, anchorRef, onCollapse, onDelete, onEdit, onClose
 // =============================================================================
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import useResolvedColors from "@/hooks/useResolvedColors"
-import { ChevronsDownUp, Copy, Pencil, Trash2 } from "lucide-react"
+import { ChevronsDownUp, Copy, Pencil, Trash2, Pin, PinOff } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 
-function OptionsMenu({ reply, isOwn, anchorRef, onCollapse, onDelete, onEdit, onClose }) {
+export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse, onDelete, onEdit, onClose }) {
+
   const colors = useResolvedColors()
   const isMobile = useIsMobile()
   const menuRef = useRef(null)
@@ -49,17 +50,13 @@ function OptionsMenu({ reply, isOwn, anchorRef, onCollapse, onDelete, onEdit, on
       const r = anchorRef.current.getBoundingClientRect()
 
       const menuW = 220
-      const menuH = 160
+      const menuH = 200  // slightly taller now to account for pin button
       const padding = 8
 
       let left = r.right - menuW
-
-      // keep menu inside screen horizontally
       left = Math.max(padding, Math.min(left, window.innerWidth - menuW - padding))
 
       let top = r.bottom + 4
-
-      // flip above if bottom overflow
       if (top + menuH > window.innerHeight) {
         top = r.top - menuH - 4
       }
@@ -68,42 +65,39 @@ function OptionsMenu({ reply, isOwn, anchorRef, onCollapse, onDelete, onEdit, on
       setReady(true)
     }
 
-    // initial positioning
     updatePos()
-
-    // reposition when scrolling or resizing
     window.addEventListener("scroll", updatePos, true)
     window.addEventListener("resize", updatePos)
-
     return () => {
       window.removeEventListener("scroll", updatePos, true)
       window.removeEventListener("resize", updatePos)
     }
-
   }, [isMobile, anchorRef])
 
   if (!isMobile && (!pos || !ready)) return null
 
   const handleCopyText = () => {
     if (!reply?.content) return
-
     navigator.clipboard.writeText(reply.content)
     onClose()
   }
 
   // Shared Row component
-  const Row = ({ icon: Icon, label, onClick, danger }) => {
+  const Row = ({ icon: Icon, label, onClick, danger, highlight }) => {
     const rowStyle = isMobile
       ? {
         display: "flex", alignItems: "center", gap: 16, width: "100%", height: 52,
         background: "none", border: "none", cursor: "pointer", padding: "0 20px",
-        textAlign: "left", color: danger ? "#ef4444" : "inherit", fontSize: 16
+        textAlign: "left",
+        color: danger ? "#ef4444" : highlight ? "#eab308" : "inherit",
+        fontSize: 16
       }
       : {
         display: "flex", alignItems: "center", gap: 10, width: "100%",
         background: "none", border: "none", cursor: "pointer",
         padding: "9px 14px", textAlign: "left",
-        color: danger ? "#ef4444" : "inherit", fontSize: 13,
+        color: danger ? "#ef4444" : highlight ? "#eab308" : "inherit",
+        fontSize: 13,
         borderRadius: 6, transition: "background 0.1s"
       }
 
@@ -144,6 +138,20 @@ function OptionsMenu({ reply, isOwn, anchorRef, onCollapse, onDelete, onEdit, on
       >
         <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
         <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
+
+        {/* Pin / Unpin — visible to admin, moderator, OP */}
+        {canPin && !reply.deleted && (
+          <>
+            <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
+            <Row
+              icon={reply.isPinned ? PinOff : Pin}
+              label={reply.isPinned ? "Unpin comment" : "Pin comment"}
+              onClick={onPin}
+              highlight={!reply.isPinned}   // yellow tint when pinning
+            />
+          </>
+        )}
+
         <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
         {isOwn ? (
           <>
@@ -192,6 +200,20 @@ function OptionsMenu({ reply, isOwn, anchorRef, onCollapse, onDelete, onEdit, on
 
         <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
         <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
+
+        {/* Pin / Unpin — visible to admin, moderator, OP */}
+        {canPin && !reply.deleted && (
+          <>
+            <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
+            <Row
+              icon={reply.isPinned ? PinOff : Pin}
+              label={reply.isPinned ? "Unpin" : "Pin comment"}
+              onClick={onPin}
+              highlight={!reply.isPinned}
+            />
+          </>
+        )}
+
         <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
         {isOwn ? (
           <>

@@ -48,47 +48,58 @@ const Reply = ({
   disableChildren = false,
   disableDepthLimit = false
 }) => {
-  const { replies } = useRepliesContext()
 
-  const reply = replies?.byId?.[replyId]
-  const children = replies.children[replyId] ?? []
-
-  // ─── Derived flags (no hooks, pure computation) ───────────────────────────
-  const isDeleted = reply?.deleted === true
-  const hasChildren = children.length > 0
-  const isOP = reply.author?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
-  const isPinned = reply.isPinned === true
-
-  // ─── Hooks (must come after context/derived values they depend on) ─────────
+  // ─── ALL HOOKS FIRST — no exceptions ──────────────────────────────────────
+  const { replies, pinnedReplyId } = useRepliesContext()
+  const { user, hasPermission } = useAuth()           // ← moved up before any use
   const notifyParent = useContext(GlowCtx)
   const isMobile = useIsMobile()
-  const { user } = useAuth()
   const { threadId } = useParams()
   const navigate = useNavigate()
 
-  // ─── State (collapsed depends on isDeleted) ────────────────────────────────
   const [showReplyBox, setShowReplyBox] = useState(false)
-  const [collapsed, setCollapsed] = useState(isDeleted)   // ← isDeleted defined above
+  const [collapsed, setCollapsed] = useState(() => {
+    // lazy initializer — avoids depending on isDeleted before hooks
+    const r = replies?.byId?.[replyId]
+    return r?.deleted === true
+  })
   const [glow, setGlow] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [editText, setEditText] = useState(reply?.content ?? "")
+  const [editText, setEditText] = useState(() => replies?.byId?.[replyId]?.content ?? "")
 
-  // ─── Refs ──────────────────────────────────────────────────────────────────
   const dotsRef = useRef(null)
 
-  // ─── More derived (depends on state) ──────────────────────────────────────
+  const { vote, score, handleVote, loading } = useVote(
+    replies?.byId?.[replyId]?.upvotes ?? 0,
+    replies?.byId?.[replyId]?.downvotes ?? 0,
+    replyId
+  )
+  const composeState = useComposeState()
+  const { createReply, deleteReply, updateReply, pinReply, unpinReply } = useReplyActions(threadId)
+
+  // ─── Derived values (safe — all hooks are above) ──────────────────────────
+  const reply = replies?.byId?.[replyId]
+  const children = replies.children[replyId] ?? []
+
+  const isDeleted = reply?.deleted === true
+  const hasChildren = children.length > 0
+  const isPinned = reply?.isPinned === true
+  const isOwn = user?.$id === reply?.authorId
+  const isOP = reply?.authorName?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
+  const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
+
   const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
   const isTooDeep = !disableDepthLimit && depth >= maxDepth
   const shouldShowChildren = hasChildren && !collapsed && !isDeleted
 
-  // ─── Other hooks ──────────────────────────────────────────────────────────
-  const { vote, score, handleVote } = useVote(reply.upvotes ?? 0, reply.$id)
-  const composeState = useComposeState()
+  const lc = `absolute rounded-full transition-colors duration-200 ${glow && !isMobile ? "bg-primary" : "bg-border"}`
 
+  const gifMaxWidth = isMobile
+    ? Math.max(140, 220 - depth * 35)
+    : Math.max(220, 320 - depth * 40)
 
-
-  // GLOW (desktop hover only)
+  // ─── Callbacks ────────────────────────────────────────────────────────────
   const onEnter = useCallback(() => {
     if (isMobile || depth === 0) return
     setGlow(true); notifyParent?.(true)
@@ -103,64 +114,62 @@ const Reply = ({
     setGlow(on); notifyParent?.(on)
   }, [notifyParent])
 
-  // SUBMIT REPLY
-  const { createReply, deleteReply, updateReply } = useReplyActions(threadId)
-
   const handleSubmit = useCallback((text, gifUrl, imageUrl) => {
     if (!text.trim() && !gifUrl && !imageUrl) return
-
     createReply.mutate({
       threadId,
       content: text,
       gifUrl,
-      imageUrl,                              // ← add this
-      imagePublicId: composeState.uploadedImagePublicId,  // ← add this
+      imageUrl,
+      imagePublicId: composeState.uploadedImagePublicId,
       authorId: user.$id,
       authorName: user.username,
       parentReplyId: reply.$id ?? reply.id,
     })
+  }, [createReply, threadId, user, reply, composeState])
 
-  }, [createReply, threadId, user, reply])
-
-  // DELETE — calls service then invalidates (stub: you can wire deleteReply service)
   const handleDelete = useCallback(async () => {
     const id = reply.$id ?? reply.id
     const publicId = reply.imagePublicId
-    const hasChildren = (replies.children?.[id] ?? []).length > 0
-
-    // Delete from Cloudinary first
+    const replyHasChildren = (replies.children?.[id] ?? []).length > 0
     await deleteCloudinaryImage(publicId)
-
-    // Smart delete: hard if no children, soft if has children
-    await deleteReply.mutateAsync({ replyId: id, hasChildren })
-
+    await deleteReply.mutateAsync({ replyId: id, hasChildren: replyHasChildren })
     setShowOptions(false)
   }, [reply, deleteReply, replies.children])
 
-
-  // EDIT SAVE
   const handleEditSave = useCallback(() => {
     if (!editText.trim()) return
-
     const id = reply.$id ?? reply.id
-
-    updateReply.mutate({
-      id,
-      content: editText
-    })
-
+    updateReply.mutate({ id, content: editText })
     setEditing(false)
-
   }, [editText, reply, updateReply])
-  const isOwn = user?.$id === reply.authorId
 
-  // Thread line color class
-  const lc = `absolute rounded-full transition-colors duration-200 ${glow && !isMobile ? "bg-primary" : "bg-border"}`
+  const handlePin = useCallback(async () => {
+    const id = reply.$id ?? reply.id
+    if (isPinned) {
+      await unpinReply.mutateAsync({ replyId: id, threadId })
+    } else {
+      const scrollY = window.scrollY
 
-  const gifMaxWidth = isMobile
-    ? Math.max(140, 220 - depth * 35)
-    : Math.max(220, 320 - depth * 40)
+      await pinReply.mutateAsync({ replyId: id, threadId, currentPinnedReplyId: pinnedReplyId })
 
+      // Server updated + cache invalidated + React re-rendered — now snap back
+      window.scrollTo({ top: scrollY, behavior: "instant" })
+
+      setTimeout(() => {
+        document.getElementById("replies-section")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        })
+      }, 100)
+    }
+    setShowOptions(false)
+  }, [reply, isPinned, pinReply, unpinReply, threadId, pinnedReplyId])
+
+  // ─── Guard — after all hooks ───────────────────────────────────────────────
+  if (!reply) return null
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <GlowCtx.Provider value={childGlowCb}>
 
@@ -189,7 +198,6 @@ const Reply = ({
               {initials(reply.authorName)}
             </div>
 
-            {/* Vertical bar — flex-1 ends exactly where children-wrap begins */}
             {shouldShowChildren && (
               <button
                 className="flex-1 w-full flex justify-center pt-px group/vbar cursor-pointer"
@@ -205,10 +213,13 @@ const Reply = ({
 
           {/* BODY */}
           <div className="flex-1 min-w-0 pb-1">
+
             {/* Meta */}
             <div className="flex items-center gap-1.5 flex-wrap mb-px">
               <span className="font-semibold text-sm leading-snug">{reply.authorName}</span>
-              {isOP && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-px rounded-md">OP</span>}
+              {isOP && (
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-px rounded-md">OP</span>
+              )}
               {isPinned && (
                 <span className="text-[10px] bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-1.5 py-px rounded-md flex items-center gap-0.5">
                   <Pin size={8} /> Pinned
@@ -242,23 +253,24 @@ const Reply = ({
                       autoFocus
                     />
                     <div className="flex gap-2 mt-1.5">
-                      <button onClick={handleEditSave}
-                        className="rounded-full px-3 py-1 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                      <button
+                        onClick={handleEditSave}
+                        className="rounded-full px-3 py-1 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
                         Save
                       </button>
-                      <button onClick={() => { setEditing(false); setEditText(reply.content) }}
-                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground border border-border hover:bg-muted/50 transition-colors">
+                      <button
+                        onClick={() => { setEditing(false); setEditText(reply.content) }}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                      >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
-
                     {reply.deleted ? (
-                      <p className="text-sm leading-relaxed text-foreground/85 break-words">
-                        [deleted]
-                      </p>
+                      <p className="text-sm leading-relaxed text-foreground/85 break-words">[deleted]</p>
                     ) : (
                       <>
                         {reply.content && (
@@ -266,7 +278,6 @@ const Reply = ({
                             {reply.content}
                           </p>
                         )}
-
                         <ReplyMedia
                           gifUrl={reply.gifUrl}
                           imageUrl={reply.imageUrl}
@@ -275,15 +286,16 @@ const Reply = ({
                         />
                       </>
                     )}
-
                   </div>
                 )}
 
-                {/* OPTIONS SHEET */}
+                {/* OPTIONS MENU */}
                 {showOptions && (
                   <OptionsMenu
                     reply={reply}
                     isOwn={isOwn}
+                    canPin={canPin}
+                    onPin={handlePin}
                     anchorRef={dotsRef}
                     onCollapse={() => setCollapsed(true)}
                     onDelete={handleDelete}
@@ -301,9 +313,7 @@ const Reply = ({
                       disabled={isDeleted}
                       onClick={() => { if (isDeleted) return; handleVote("up") }}
                       className={`
-                        relative p-1 rounded-lg
-                        transition-all duration-150
-                        active:scale-75
+                        relative p-1 rounded-lg transition-all duration-150 active:scale-75
                         ${isDeleted
                           ? "text-muted-foreground/40 cursor-not-allowed"
                           : vote === "up"
@@ -333,9 +343,7 @@ const Reply = ({
                       disabled={isDeleted}
                       onClick={() => { if (isDeleted) return; handleVote("down") }}
                       className={`
-                        relative p-1 rounded-lg
-                        transition-all duration-150
-                        active:scale-75
+                        relative p-1 rounded-lg transition-all duration-150 active:scale-75
                         ${isDeleted
                           ? "text-muted-foreground/40 cursor-not-allowed"
                           : vote === "down"
@@ -386,7 +394,11 @@ const Reply = ({
 
                 {/* Desktop inline reply box */}
                 {showReplyBox && !isMobile && !isDeleted && (
-                  <DesktopReplyBox cs={composeState} onSubmit={handleSubmit} onCancel={() => setShowReplyBox(false)} />
+                  <DesktopReplyBox
+                    cs={composeState}
+                    onSubmit={handleSubmit}
+                    onCancel={() => setShowReplyBox(false)}
+                  />
                 )}
               </>
             )}
@@ -398,11 +410,8 @@ const Reply = ({
           <div className="flex flex-col">
             {children.map((childId, i) => {
               const isLast = i === children.length - 1
-
               return (
                 <div key={childId} className="flex">
-
-                  {/* Gutter */}
                   <div className="relative shrink-0 self-stretch" style={{ width: GUTTER }}>
                     <div
                       className={lc}
@@ -423,7 +432,6 @@ const Reply = ({
                       }}
                     />
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <Reply
                       replyId={childId}
@@ -431,7 +439,6 @@ const Reply = ({
                       threadAuthor={threadAuthor}
                     />
                   </div>
-
                 </div>
               )
             })}
@@ -443,7 +450,8 @@ const Reply = ({
           <div style={{ paddingLeft: GUTTER }}>
             <button
               className="text-xs font-semibold text-primary hover:underline mt-0.5 mb-1"
-              onClick={() => navigate(`/forum/${threadId}?focus=${reply.$id}`)}>
+              onClick={() => navigate(`/forum/${threadId}?focus=${reply.$id}`)}
+            >
               Continue this thread →
             </button>
           </div>

@@ -3,11 +3,11 @@ import { useReplies } from "@/hooks/useReplies"
 
 const RepliesContext = createContext(null)
 
-export const RepliesProvider = ({ threadId, children }) => {
+export const RepliesProvider = ({ threadId, pinnedReplyId, children }) => {
   const repliesState = useReplies(threadId)
 
   return (
-    <RepliesContext.Provider value={repliesState}>
+    <RepliesContext.Provider value={{ ...repliesState, pinnedReplyId }}>
       {children}
     </RepliesContext.Provider>
   )

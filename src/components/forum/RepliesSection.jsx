@@ -15,26 +15,63 @@ const sortReplies = (ids, byId, sortBy) => {
   return [...ids].sort((a, b) => {
     const ra = byId[a]
     const rb = byId[b]
+
+
+    // Pinned always floats to top, regardless of sort
+    if (ra?.isPinned && !rb?.isPinned) return -1
+    if (!ra?.isPinned && rb?.isPinned) return 1
+
     if (ra?.deleted && !rb?.deleted) return 1
     if (!ra?.deleted && rb?.deleted) return -1
-    const scoreA = ra?.upvotes ?? 0
-    const scoreB = rb?.upvotes ?? 0
+
     const timeA = new Date(ra?.$createdAt ?? 0)
     const timeB = new Date(rb?.$createdAt ?? 0)
+
     switch (sortBy) {
-      case "best":   return scoreB !== scoreA ? scoreB - scoreA : timeB - timeA
-      case "top":    return scoreB - scoreA
-      case "new":    return timeB - timeA
-      case "controversial": return Math.abs(scoreA) - Math.abs(scoreB)
-      default:       return timeB - timeA
+      case "best": {
+        // Net score + recency tiebreak
+        const scoreA = (ra?.upvotes ?? 0) - (ra?.downvotes ?? 0)
+        const scoreB = (rb?.upvotes ?? 0) - (rb?.downvotes ?? 0)
+        return scoreB !== scoreA ? scoreB - scoreA : timeB - timeA
+      }
+      case "top": {
+        // Pure net score
+        const scoreA = (ra?.upvotes ?? 0) - (ra?.downvotes ?? 0)
+        const scoreB = (rb?.upvotes ?? 0) - (rb?.downvotes ?? 0)
+        return scoreB - scoreA
+      }
+      case "new":
+        return timeB - timeA
+
+      case "controversial": {
+        // Real Reddit-style controversial:
+        // High total votes AND near-equal up/down split ranks highest.
+        // ratio = min(up,down) / total — closer to 0.5 = more controversial
+        // weighted by total so low-engagement ties don't beat high-engagement
+        const upA = ra?.upvotes ?? 0
+        const downA = ra?.downvotes ?? 0
+        const upB = rb?.upvotes ?? 0
+        const downB = rb?.downvotes ?? 0
+        const totalA = upA + downA
+        const totalB = upB + downB
+        const ratioA = totalA === 0 ? 0 : Math.min(upA, downA) / totalA
+        const ratioB = totalB === 0 ? 0 : Math.min(upB, downB) / totalB
+        // controversy score = closeness to 0.5 × total engagement
+        const csA = ratioA * totalA
+        const csB = ratioB * totalB
+        return csB - csA
+      }
+
+      default:
+        return timeB - timeA
     }
   })
 }
 
 const SORT_OPTIONS = [
-  { key: "best",          label: "Best",          icon: Flame },
-  { key: "top",           label: "Top",           icon: TrendingUp },
-  { key: "new",           label: "New",           icon: Clock },
+  { key: "best", label: "Best", icon: Flame },
+  { key: "top", label: "Top", icon: TrendingUp },
+  { key: "new", label: "New", icon: Clock },
   { key: "controversial", label: "Controversial", icon: Zap },
 ]
 
@@ -43,17 +80,16 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
   const navigate = useNavigate()
   const { threadId } = useParams()
 
-  const [sortBy, setSortBy]             = useState("best")
+  const [sortBy, setSortBy] = useState("best")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [searchActive, setSearchActive] = useState(false)
-  const [search, setSearch]             = useState("")
+  const [search, setSearch] = useState("")
 
   const dropdownRef = useRef(null)
-  const searchRef   = useRef(null)
+  const searchRef = useRef(null)
   const isFocusMode = !!focusReplyId
   const currentSort = SORT_OPTIONS.find(o => o.key === sortBy)
 
-  // Close on outside click
   useEffect(() => {
     if (!dropdownOpen) return
     const handler = (e) => {
@@ -64,13 +100,12 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
     return () => document.removeEventListener("mousedown", handler)
   }, [dropdownOpen])
 
-  // Auto-focus search input
   useEffect(() => {
     if (searchActive) setTimeout(() => searchRef.current?.focus(), 50)
   }, [searchActive])
 
   const rootReplies = useMemo(() => {
-    const raw    = replies?.children?.[null] ?? []
+    const raw = replies?.children?.[null] ?? []
     const sorted = sortReplies(raw, replies.byId, sortBy)
     if (!search.trim()) return sorted
     const q = search.trim().toLowerCase()
@@ -95,24 +130,20 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
     return (
       <div className="space-y-4">
 
-        <h2 className="text-lg font-semibold">
-          {rootReplies.length} {rootReplies.length === 1 ? "Reply" : "Replies"}
-        </h2>
+        <h2 id="replies-section" className="text-lg font-semibold">
+  {rootReplies.length} {rootReplies.length === 1 ? "Reply" : "Replies"}
+</h2>
 
         <CreateReplyBox />
 
-        {/* Sort + Search */}
         <div className="flex items-center gap-2 h-9">
 
-          {/* ── Sort dropdown
-              KEY FIX: no overflow-hidden on the wrapper div,
-              so the menu is never clipped                      */}
           <div
             ref={dropdownRef}
             className="relative shrink-0 transition-all duration-300 ease-in-out"
             style={{
-              opacity:       searchActive ? 0 : 1,
-              maxWidth:      searchActive ? 0 : 220,
+              opacity: searchActive ? 0 : 1,
+              maxWidth: searchActive ? 0 : 220,
               pointerEvents: searchActive ? "none" : "auto",
             }}
           >
@@ -156,7 +187,6 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
             )}
           </div>
 
-          {/* ── Search */}
           <div
             className="relative flex items-center transition-all duration-300 ease-in-out"
             style={{ flex: searchActive ? 1 : "0 0 36px" }}
@@ -227,7 +257,7 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
       </div>
       <div className="flex flex-col">
         {allItems.map(({ id, type }, i) => {
-          const isLast   = i === allItems.length - 1
+          const isLast = i === allItems.length - 1
           const isFocused = type === "focus"
           return (
             <div key={id} className="flex">
