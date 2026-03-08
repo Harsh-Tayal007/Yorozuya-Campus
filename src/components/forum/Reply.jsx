@@ -22,6 +22,8 @@ import useComposeState from "@/hooks/useComposeState"
 import { useRepliesContext } from "./RepliesProvider"
 import ReplyMedia from "./ReplyMedia"
 import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
+import ReplyContent from "./ReplyContent"
+import TiptapEditor from "./TiptapEditor"
 
 // =============================================================================
 // CONSTANTS
@@ -113,7 +115,7 @@ const Reply = ({
   const hasChildren = children.length > 0
   const isPinned    = reply?.isPinned === true
   const isOwn       = user?.$id === reply?.authorId
-  const isOP = reply?.authorId === threadAuthor
+  const isOP        = reply?.authorName?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
   const canPin      = (hasPermission("pin:reply") || isOP) && depth === 0
 
   // Role flair — live from authorRoles map, never stale
@@ -278,14 +280,15 @@ const Reply = ({
               <>
                 {editing ? (
                   <div className="mt-1 mb-1">
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-muted/10 text-sm p-2
-                                 resize-none outline-none focus:border-primary transition-colors"
-                      rows={3}
-                      autoFocus
-                    />
+                    <div className="rounded-lg border border-border bg-muted/10 overflow-hidden">
+                      <TiptapEditor
+                        content={editText}
+                        onChange={setEditText}
+                        onSubmit={handleEditSave}
+                        placeholder="Edit your reply…"
+                        autoFocus
+                      />
+                    </div>
                     <div className="flex gap-2 mt-1.5">
                       <button onClick={handleEditSave}
                         className="rounded-full px-3 py-1 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
@@ -304,9 +307,7 @@ const Reply = ({
                     ) : (
                       <>
                         {reply.content && (
-                          <p className="text-sm leading-relaxed text-foreground/85 break-words">
-                            {reply.content}
-                          </p>
+                          <ReplyContent content={reply.content} />
                         )}
                         <ReplyMedia
                           gifUrl={reply.gifUrl}
