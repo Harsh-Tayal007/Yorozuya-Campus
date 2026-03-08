@@ -118,7 +118,7 @@ const ThreadDetail = () => {
         {/* Replies Section */}
         <RepliesProvider threadId={threadId} pinnedReplyId={thread.pinnedReplyId ?? null}>
           <RepliesSection
-            threadAuthor={thread.authorName}
+            threadAuthor={thread.authorId}
             focusReplyId={focusReplyId}
           />
         </RepliesProvider>

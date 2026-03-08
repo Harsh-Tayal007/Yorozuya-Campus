@@ -205,10 +205,16 @@ export const AuthProvider = ({ children }) => {
 
     const profile = profileRes.documents[0] || null
 
-    // 7️⃣ Merge and set in context
+    // TO this — explicitly keep auth $id, never let profile overwrite it:
     setCurrentUser({
       ...loggedInUser,
-      ...profile,
+      username: profile.username,
+      universityId: profile.universityId ?? null,
+      programId: profile.programId ?? null,
+      branchId: profile.branchId ?? null,
+      profileCompleted: profile.profileCompleted ?? false,
+      role: profile.role,
+      // $id stays as loggedInUser.$id (auth account ID) — never overwritten
     })
 
     setRole(profile.role)

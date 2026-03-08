@@ -1,0 +1,73 @@
+// src/hooks/useAuthorRoles.js
+// Fetches roles for all unique authors in a thread.
+//
+// Data inconsistency: some replies store auth account ID as authorId,
+// others store users document $id. We handle both with a dual lookup.
+//
+// Returns { [authorId]: role } map for flair display.
+
+import { useEffect, useState } from "react"
+import { databases } from "@/lib/appwrite"
+import { Query } from "appwrite"
+
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
+
+async function resolveRole(id) {
+  // 1. Try by userId field (auth account ID) — works for most users
+  try {
+    const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [
+      Query.equal("userId", id),
+      Query.limit(1),
+    ])
+    if (res.documents.length > 0) return res.documents[0].role
+  } catch { /* continue */ }
+
+  // 2. Fallback: try by document $id — works for users where $id was stored
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, USERS_COL, id)
+    if (doc) return doc.role
+  } catch { /* not found */ }
+
+  return null
+}
+
+export default function useAuthorRoles(replies) {
+  const [authorRoles, setAuthorRoles] = useState({})
+
+  useEffect(() => {
+    if (!replies?.byId) return
+
+    const authorIds = [
+      ...new Set(
+        Object.values(replies.byId)
+          .map(r => r?.authorId)
+          .filter(Boolean)
+      )
+    ]
+
+    if (authorIds.length === 0) return
+
+    let cancelled = false
+
+    ;(async () => {
+      // Resolve all authors in parallel
+      const roles = await Promise.all(
+        authorIds.map(id => resolveRole(id))
+      )
+
+      if (cancelled) return
+
+      const map = {}
+      for (let i = 0; i < authorIds.length; i++) {
+        if (roles[i]) map[authorIds[i]] = roles[i]
+      }
+
+      setAuthorRoles(map)
+    })()
+
+    return () => { cancelled = true }
+  }, [replies?.byId])
+
+  return authorRoles
+}

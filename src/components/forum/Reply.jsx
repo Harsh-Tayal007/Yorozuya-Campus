@@ -1,11 +1,9 @@
 // =============================================================================
 // Reply.jsx — Threaded comments with mobile support
-// Sections: CONSTANTS → CONTEXT → HOOKS → HELPERS → COMPOSE STATE →
-//           GIF PICKER → OPTIONS MENU → MOBILE MODAL → DESKTOP BOX → TOP BOX → REPLY
 // =============================================================================
 
 import React, { useState, useRef, useCallback, useContext } from "react"
-import { ArrowBigUp, ArrowBigDown, Pin, MoreVertical } from "lucide-react"
+import { ArrowBigUp, ArrowBigDown, Pin, MoreVertical, Shield, Star, Pencil as PencilIcon } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate, useParams } from "react-router-dom"
 
@@ -27,8 +25,6 @@ import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 
 // =============================================================================
 // CONSTANTS
-// Thread line geometry: AV=28, AV_H=14, GAP=8, GUTTER=36
-// Bar x = AV_H-1 = 13px inside both avatar-col and child gutter → same absolute x ✓
 // =============================================================================
 const AV = 28
 const AV_H = AV / 2
@@ -37,6 +33,38 @@ const GUTTER = AV + GAP
 const MAX_DEPTH_DESKTOP = 5
 const MAX_DEPTH_MOBILE = 3
 
+// =============================================================================
+// FLAIR CONFIG — only shown for non-user roles
+// =============================================================================
+const FLAIR_CONFIG = {
+  admin: {
+    label: "Admin",
+    icon: Shield,
+    className: "bg-red-500/10 text-red-500 border border-red-500/20",
+  },
+  moderator: {
+    label: "Mod",
+    icon: Star,
+    className: "bg-purple-500/10 text-purple-500 border border-purple-500/20",
+  },
+  editor: {
+    label: "Editor",
+    icon: PencilIcon,
+    className: "bg-blue-500/10 text-blue-500 border border-blue-500/20",
+  },
+}
+
+function RoleFlair({ role }) {
+  const config = FLAIR_CONFIG[role]
+  if (!config) return null  // "user" role — no flair
+  const Icon = config.icon
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-px rounded-md ${config.className}`}>
+      <Icon size={8} />
+      {config.label}
+    </span>
+  )
+}
 
 // =============================================================================
 // REPLY — recursive threaded comment component
@@ -49,9 +77,9 @@ const Reply = ({
   disableDepthLimit = false
 }) => {
 
-  // ─── ALL HOOKS FIRST — no exceptions ──────────────────────────────────────
-  const { replies, pinnedReplyId } = useRepliesContext()
-  const { user, hasPermission } = useAuth()           // ← moved up before any use
+  // ─── ALL HOOKS FIRST ──────────────────────────────────────────────────────
+  const { replies, pinnedReplyId, authorRoles } = useRepliesContext()
+  const { user, hasPermission } = useAuth()
   const notifyParent = useContext(GlowCtx)
   const isMobile = useIsMobile()
   const { threadId } = useParams()
@@ -59,38 +87,41 @@ const Reply = ({
 
   const [showReplyBox, setShowReplyBox] = useState(false)
   const [collapsed, setCollapsed] = useState(() => {
-    // lazy initializer — avoids depending on isDeleted before hooks
     const r = replies?.byId?.[replyId]
     return r?.deleted === true
   })
-  const [glow, setGlow] = useState(false)
+  const [glow, setGlow]               = useState(false)
   const [showOptions, setShowOptions] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editText, setEditText] = useState(() => replies?.byId?.[replyId]?.content ?? "")
+  const [editing, setEditing]         = useState(false)
+  const [editText, setEditText]       = useState(() => replies?.byId?.[replyId]?.content ?? "")
 
   const dotsRef = useRef(null)
 
   const { vote, score, handleVote, loading } = useVote(
-    replies?.byId?.[replyId]?.upvotes ?? 0,
+    replies?.byId?.[replyId]?.upvotes   ?? 0,
     replies?.byId?.[replyId]?.downvotes ?? 0,
     replyId
   )
   const composeState = useComposeState()
   const { createReply, deleteReply, updateReply, pinReply, unpinReply } = useReplyActions(threadId)
 
-  // ─── Derived values (safe — all hooks are above) ──────────────────────────
-  const reply = replies?.byId?.[replyId]
-  const children = replies.children[replyId] ?? []
+  // ─── Derived values ────────────────────────────────────────────────────────
+  const reply      = replies?.byId?.[replyId]
+  const children   = replies.children[replyId] ?? []
 
-  const isDeleted = reply?.deleted === true
+  const isDeleted   = reply?.deleted === true
   const hasChildren = children.length > 0
-  const isPinned = reply?.isPinned === true
-  const isOwn = user?.$id === reply?.authorId
-  const isOP = reply?.authorName?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
-  const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
+  const isPinned    = reply?.isPinned === true
+  const isOwn       = user?.$id === reply?.authorId
+  const isOP = reply?.authorId === threadAuthor
+  const canPin      = (hasPermission("pin:reply") || isOP) && depth === 0
 
-  const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
-  const isTooDeep = !disableDepthLimit && depth >= maxDepth
+  // Role flair — live from authorRoles map, never stale
+  const authorRole  = authorRoles?.[reply?.authorId] ?? null
+  const showFlair   = authorRole && authorRole !== "user"
+
+  const maxDepth           = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
+  const isTooDeep          = !disableDepthLimit && depth >= maxDepth
   const shouldShowChildren = hasChildren && !collapsed && !isDeleted
 
   const lc = `absolute rounded-full transition-colors duration-200 ${glow && !isMobile ? "bg-primary" : "bg-border"}`
@@ -150,12 +181,8 @@ const Reply = ({
       await unpinReply.mutateAsync({ replyId: id, threadId })
     } else {
       const scrollY = window.scrollY
-
       await pinReply.mutateAsync({ replyId: id, threadId, currentPinnedReplyId: pinnedReplyId })
-
-      // Server updated + cache invalidated + React re-rendered — now snap back
       window.scrollTo({ top: scrollY, behavior: "instant" })
-
       setTimeout(() => {
         document.getElementById("replies-section")?.scrollIntoView({
           behavior: "smooth",
@@ -166,14 +193,13 @@ const Reply = ({
     setShowOptions(false)
   }, [reply, isPinned, pinReply, unpinReply, threadId, pinnedReplyId])
 
-  // ─── Guard — after all hooks ───────────────────────────────────────────────
+  // ─── Guard ────────────────────────────────────────────────────────────────
   if (!reply) return null
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <GlowCtx.Provider value={childGlowCb}>
 
-      {/* Mobile reply modal */}
       {showReplyBox && isMobile && (
         <MobileReplyModal
           replyingTo={reply}
@@ -184,7 +210,6 @@ const Reply = ({
 
       <div id={`reply-${reply.$id}`} className="flex flex-col">
 
-        {/* MAIN ROW */}
         <div className="flex" style={{ gap: GAP }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
 
           {/* AVATAR COLUMN */}
@@ -214,17 +239,27 @@ const Reply = ({
           {/* BODY */}
           <div className="flex-1 min-w-0 pb-1">
 
-            {/* Meta */}
+            {/* ── META ROW ── */}
             <div className="flex items-center gap-1.5 flex-wrap mb-px">
               <span className="font-semibold text-sm leading-snug">{reply.authorName}</span>
+
+              {/* Role flair — admin / mod / editor only */}
+              {showFlair && <RoleFlair role={authorRole} />}
+
+              {/* OP badge */}
               {isOP && (
-                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-px rounded-md">OP</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-px rounded-md font-semibold">
+                  OP
+                </span>
               )}
+
+              {/* Pinned badge */}
               {isPinned && (
                 <span className="text-[10px] bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-1.5 py-px rounded-md flex items-center gap-0.5">
                   <Pin size={8} /> Pinned
                 </span>
               )}
+
               <span className="text-muted-foreground text-[11px]">· {fmt(reply.$createdAt)}</span>
             </div>
 
@@ -241,7 +276,6 @@ const Reply = ({
               </button>
             ) : (
               <>
-                {/* EDIT MODE */}
                 {editing ? (
                   <div className="mt-1 mb-1">
                     <textarea
@@ -253,16 +287,12 @@ const Reply = ({
                       autoFocus
                     />
                     <div className="flex gap-2 mt-1.5">
-                      <button
-                        onClick={handleEditSave}
-                        className="rounded-full px-3 py-1 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                      >
+                      <button onClick={handleEditSave}
+                        className="rounded-full px-3 py-1 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
                         Save
                       </button>
-                      <button
-                        onClick={() => { setEditing(false); setEditText(reply.content) }}
-                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                      >
+                      <button onClick={() => { setEditing(false); setEditText(reply.content) }}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold text-muted-foreground border border-border hover:bg-muted/50 transition-colors">
                         Cancel
                       </button>
                     </div>
@@ -289,7 +319,6 @@ const Reply = ({
                   </div>
                 )}
 
-                {/* OPTIONS MENU */}
                 {showOptions && (
                   <OptionsMenu
                     reply={reply}
@@ -304,59 +333,37 @@ const Reply = ({
                   />
                 )}
 
-                {/* ACTION BAR — vote · reply · ⋮ */}
+                {/* ACTION BAR */}
                 <div className="flex items-center -ml-1 mt-px gap-x-0">
                   <div className="flex items-center gap-0.5">
 
-                    {/* UPVOTE */}
                     <button
                       disabled={isDeleted}
                       onClick={() => { if (isDeleted) return; handleVote("up") }}
-                      className={`
-                        relative p-1 rounded-lg transition-all duration-150 active:scale-75
-                        ${isDeleted
-                          ? "text-muted-foreground/40 cursor-not-allowed"
-                          : vote === "up"
-                            ? "text-red-500 bg-red-500/10"
-                            : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
-                        }
-                      `}
+                      className={`relative p-1 rounded-lg transition-all duration-150 active:scale-75
+                        ${isDeleted ? "text-muted-foreground/40 cursor-not-allowed"
+                          : vote === "up" ? "text-red-500 bg-red-500/10"
+                          : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"}`}
                     >
-                      <ArrowBigUp
-                        size={18}
-                        className="transition-transform duration-150"
-                        style={{ fill: vote === "up" ? "currentColor" : "none" }}
-                      />
+                      <ArrowBigUp size={18} className="transition-transform duration-150"
+                        style={{ fill: vote === "up" ? "currentColor" : "none" }} />
                     </button>
 
-                    {/* SCORE */}
-                    <span className={`
-                      text-xs font-bold min-w-[20px] text-center tabular-nums select-none
-                      transition-colors duration-150
-                      ${vote === "up" ? "text-red-500" : vote === "down" ? "text-blue-500" : "text-muted-foreground"}
-                    `}>
+                    <span className={`text-xs font-bold min-w-[20px] text-center tabular-nums select-none transition-colors duration-150
+                      ${vote === "up" ? "text-red-500" : vote === "down" ? "text-blue-500" : "text-muted-foreground"}`}>
                       {fmtVotes(score)}
                     </span>
 
-                    {/* DOWNVOTE */}
                     <button
                       disabled={isDeleted}
                       onClick={() => { if (isDeleted) return; handleVote("down") }}
-                      className={`
-                        relative p-1 rounded-lg transition-all duration-150 active:scale-75
-                        ${isDeleted
-                          ? "text-muted-foreground/40 cursor-not-allowed"
-                          : vote === "down"
-                            ? "text-blue-500 bg-blue-500/10"
-                            : "text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"
-                        }
-                      `}
+                      className={`relative p-1 rounded-lg transition-all duration-150 active:scale-75
+                        ${isDeleted ? "text-muted-foreground/40 cursor-not-allowed"
+                          : vote === "down" ? "text-blue-500 bg-blue-500/10"
+                          : "text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"}`}
                     >
-                      <ArrowBigDown
-                        size={18}
-                        className="transition-transform duration-150"
-                        style={{ fill: vote === "down" ? "currentColor" : "none" }}
-                      />
+                      <ArrowBigDown size={18} className="transition-transform duration-150"
+                        style={{ fill: vote === "down" ? "currentColor" : "none" }} />
                     </button>
 
                   </div>
@@ -364,14 +371,9 @@ const Reply = ({
                   <button
                     disabled={isDeleted}
                     onClick={() => { if (isDeleted) return; setShowReplyBox(v => !v) }}
-                    className={`
-                      text-[11px] font-semibold px-2 py-1 rounded-lg
-                      transition-colors duration-150 active:scale-95
-                      ${isDeleted
-                        ? "text-muted-foreground/40 cursor-not-allowed"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }
-                    `}
+                    className={`text-[11px] font-semibold px-2 py-1 rounded-lg transition-colors duration-150 active:scale-95
+                      ${isDeleted ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                   >
                     Reply
                   </button>
@@ -380,19 +382,14 @@ const Reply = ({
                     ref={dotsRef}
                     disabled={isDeleted}
                     onClick={() => { if (isDeleted) return; setShowOptions(v => !v) }}
-                    className={`
-                      p-1.5 rounded-lg transition-colors duration-150 ml-0.5 active:scale-95
-                      ${isDeleted
-                        ? "text-muted-foreground/40 cursor-not-allowed"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }
-                    `}
+                    className={`p-1.5 rounded-lg transition-colors duration-150 ml-0.5 active:scale-95
+                      ${isDeleted ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                   >
                     <MoreVertical size={14} />
                   </button>
                 </div>
 
-                {/* Desktop inline reply box */}
                 {showReplyBox && !isMobile && !isDeleted && (
                   <DesktopReplyBox
                     cs={composeState}
@@ -413,31 +410,11 @@ const Reply = ({
               return (
                 <div key={childId} className="flex">
                   <div className="relative shrink-0 self-stretch" style={{ width: GUTTER }}>
-                    <div
-                      className={lc}
-                      style={{
-                        width: 2,
-                        left: AV_H - 1,
-                        top: 0,
-                        ...(isLast ? { height: AV_H } : { bottom: 0 }),
-                      }}
-                    />
-                    <div
-                      className={lc}
-                      style={{
-                        height: 2,
-                        left: AV_H - 1,
-                        top: AV_H - 1,
-                        width: GUTTER - (AV_H - 1),
-                      }}
-                    />
+                    <div className={lc} style={{ width: 2, left: AV_H - 1, top: 0, ...(isLast ? { height: AV_H } : { bottom: 0 }) }} />
+                    <div className={lc} style={{ height: 2, left: AV_H - 1, top: AV_H - 1, width: GUTTER - (AV_H - 1) }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Reply
-                      replyId={childId}
-                      depth={depth + 1}
-                      threadAuthor={threadAuthor}
-                    />
+                    <Reply replyId={childId} depth={depth + 1} threadAuthor={threadAuthor} />
                   </div>
                 </div>
               )
