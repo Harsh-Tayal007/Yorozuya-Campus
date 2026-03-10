@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from "react"
+import { createContext, useContext, useEffect, useState, useMemo, useRef } from "react"
 import {
   loginUser,
   logoutUser,
@@ -47,9 +47,14 @@ export const AuthProvider = ({ children }) => {
 
 
 
+  const sessionRestored = useRef(false)
 
   // 🔁 Restore session
   useEffect(() => {
+
+    if (sessionRestored.current) return  // ← guard against StrictMode double-invoke
+    sessionRestored.current = true
+    
     const restoreSession = async () => {
       try {
         const accountUser = await getCurrentUser()
