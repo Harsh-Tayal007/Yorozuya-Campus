@@ -80,7 +80,7 @@ const Reply = ({
 }) => {
 
   // ─── ALL HOOKS FIRST ──────────────────────────────────────────────────────
-  const { replies, pinnedReplyId, authorRoles } = useRepliesContext()
+  const { replies, pinnedReplyId, authorRoles, votesMap, updateVote } = useRepliesContext()
   const { user, hasPermission } = useAuth()
   const notifyParent = useContext(GlowCtx)
   const isMobile = useIsMobile()
@@ -92,38 +92,41 @@ const Reply = ({
     const r = replies?.byId?.[replyId]
     return r?.deleted === true
   })
-  const [glow, setGlow]               = useState(false)
+  const [glow, setGlow] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
-  const [editing, setEditing]         = useState(false)
-  const [editText, setEditText]       = useState(() => replies?.byId?.[replyId]?.content ?? "")
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(() => replies?.byId?.[replyId]?.content ?? "")
 
   const dotsRef = useRef(null)
 
   const { vote, score, handleVote, loading } = useVote(
-    replies?.byId?.[replyId]?.upvotes   ?? 0,
+    replies?.byId?.[replyId]?.upvotes ?? 0,
     replies?.byId?.[replyId]?.downvotes ?? 0,
-    replyId
+    replyId,
+    votesMap?.[replyId]?.vote ?? null,  // ← pre-fetched
+    votesMap?.[replyId]?.voteDocId ?? null,  // ← pre-fetched
+    updateVote                               // ← callback
   )
   const composeState = useComposeState()
   const { createReply, deleteReply, updateReply, pinReply, unpinReply } = useReplyActions(threadId)
 
   // ─── Derived values ────────────────────────────────────────────────────────
-  const reply      = replies?.byId?.[replyId]
-  const children   = replies.children[replyId] ?? []
+  const reply = replies?.byId?.[replyId]
+  const children = replies.children[replyId] ?? []
 
-  const isDeleted   = reply?.deleted === true
+  const isDeleted = reply?.deleted === true
   const hasChildren = children.length > 0
-  const isPinned    = reply?.isPinned === true
-  const isOwn       = user?.$id === reply?.authorId
-  const isOP        = reply?.authorName?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
-  const canPin      = (hasPermission("pin:reply") || isOP) && depth === 0
+  const isPinned = reply?.isPinned === true
+  const isOwn = user?.$id === reply?.authorId
+  const isOP = reply?.authorName?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
+  const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
 
   // Role flair — live from authorRoles map, never stale
-  const authorRole  = authorRoles?.[reply?.authorId] ?? null
-  const showFlair   = authorRole && authorRole !== "user"
+  const authorRole = authorRoles?.[reply?.authorId] ?? null
+  const showFlair = authorRole && authorRole !== "user"
 
-  const maxDepth           = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
-  const isTooDeep          = !disableDepthLimit && depth >= maxDepth
+  const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
+  const isTooDeep = !disableDepthLimit && depth >= maxDepth
   const shouldShowChildren = hasChildren && !collapsed && !isDeleted
 
   const lc = `absolute rounded-full transition-colors duration-200 ${glow && !isMobile ? "bg-primary" : "bg-border"}`
@@ -344,7 +347,7 @@ const Reply = ({
                       className={`relative p-1 rounded-lg transition-all duration-150 active:scale-75
                         ${isDeleted ? "text-muted-foreground/40 cursor-not-allowed"
                           : vote === "up" ? "text-red-500 bg-red-500/10"
-                          : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"}`}
+                            : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"}`}
                     >
                       <ArrowBigUp size={18} className="transition-transform duration-150"
                         style={{ fill: vote === "up" ? "currentColor" : "none" }} />
@@ -361,7 +364,7 @@ const Reply = ({
                       className={`relative p-1 rounded-lg transition-all duration-150 active:scale-75
                         ${isDeleted ? "text-muted-foreground/40 cursor-not-allowed"
                           : vote === "down" ? "text-blue-500 bg-blue-500/10"
-                          : "text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"}`}
+                            : "text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"}`}
                     >
                       <ArrowBigDown size={18} className="transition-transform duration-150"
                         style={{ fill: vote === "down" ? "currentColor" : "none" }} />
