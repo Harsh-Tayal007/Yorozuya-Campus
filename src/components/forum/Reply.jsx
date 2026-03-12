@@ -118,8 +118,9 @@ const Reply = ({
   const hasChildren = children.length > 0
   const isPinned = reply?.isPinned === true
   const isOwn = user?.$id === reply?.authorId
-  const isOP = reply?.authorName?.trim().toLowerCase() === threadAuthor?.trim().toLowerCase()
+  const isOP = reply?.authorId === threadAuthor
   const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
+  
 
   // Role flair — live from authorRoles map, never stale
   const authorRole = authorRoles?.[reply?.authorId] ?? null

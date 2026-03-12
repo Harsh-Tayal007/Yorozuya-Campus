@@ -4,9 +4,11 @@ import AppRoutes from "./routes/AppRoutes"
 import { SidebarProvider } from "@/context/SidebarContext"
 import { useAuth } from "./context/AuthContext"
 import ScrollToTop from "./components/common/navigation/ScrollToTop"
+import { usePWAInstall } from "./hooks/usePWAInstall"
 
 const App = () => {
   const { isLoading } = useAuth()
+  usePWAInstall()
   if (isLoading) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0b1220]">

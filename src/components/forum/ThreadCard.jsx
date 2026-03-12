@@ -27,6 +27,7 @@ const highlightMatch = (text = "", query) => {
 
 const ThreadCard = ({ thread, searchQuery }) => {
   const navigate = useNavigate()
+  
 
 
   return (

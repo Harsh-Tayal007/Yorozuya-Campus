@@ -29,8 +29,6 @@ const ThreadDetail = () => {
     enabled: !!threadId,
   })
 
-
-
   if (isLoading) {
     return (
       <PageWrapper>
@@ -117,10 +115,7 @@ const ThreadDetail = () => {
 
         {/* Replies Section */}
         <RepliesProvider threadId={threadId} pinnedReplyId={thread.pinnedReplyId ?? null}>
-          <RepliesSection
-            threadAuthor={thread.authorId}
-            focusReplyId={focusReplyId}
-          />
+         <RepliesSection threadAuthor={thread.authorId} focusReplyId={focusReplyId} />
         </RepliesProvider>
       </div>
     </PageWrapper>

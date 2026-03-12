@@ -4,7 +4,6 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     tailwindcss(),
@@ -12,17 +11,23 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       devOptions: {
-    enabled: false
-  },
+        enabled: true,
+        type: "module",
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
+      },
       manifest: {
-        id: '/',
+        id: "/",
         name: "UniZuya",
         short_name: "UniZuya",
         description: "University resources and PYQs platform",
         theme_color: "#0b0f19",
         background_color: "#0b0f19",
         display: "standalone",
+        orientation: "portrait",
         start_url: "/",
+        scope: "/",
         icons: [
           {
             src: "pwa-192.png",
@@ -34,10 +39,21 @@ export default defineConfig({
             sizes: "512x512",
             type: "image/png",
           },
+          {
+            src: "pwa-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
         ],
       },
     }),
   ],
+
+  define: {
+    // Inject build timestamp at build time — used as cache buster in main.jsx
+    "import.meta.env.VITE_BUILD_TIME": JSON.stringify(Date.now().toString()),
+  },
 
   resolve: {
     alias: {

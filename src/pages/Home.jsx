@@ -19,11 +19,13 @@ const Home = () => {
   const { currentUser, isLoading } = useAuth()
   const navigate = useNavigate()
 
-  const { data: publicStats } = useQuery({
-    queryKey: ["public-stats"],
-    queryFn: getPublicStats,
-  })
-
+  // This should be in Home.jsx right now:
+const { data: publicStats } = useQuery({
+  queryKey: ["public-stats"],
+  queryFn: getPublicStats,
+  staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days ← must be here
+  gcTime:    1000 * 60 * 60 * 24 * 7,
+})
 
 
 

@@ -16,15 +16,13 @@ const DarkModeToggle = () => {
   const toggleTheme = () => {
     const next = !isDark
 
-    // View Transition API delegates the visual switch to the compositor (GPU).
-    // The browser takes a screenshot of the current state, applies the class
-    // change, then cross-fades between them off the main thread.
-    // No style recalculation lag regardless of how many elements are on screen.
-    if (document.startViewTransition) {
+    // Count DOM elements — if page is heavy, skip the transition
+    const elementCount = document.querySelectorAll("*").length
+
+    if (document.startViewTransition && elementCount < 1500) {
       document.startViewTransition(() => applyTheme(next))
     } else {
-      // Graceful fallback for browsers that don't support it yet
-      applyTheme(next)
+      applyTheme(next)  // instant swap, no screenshot capture
     }
   }
 
@@ -46,7 +44,7 @@ const DarkModeToggle = () => {
       >
         {isDark
           ? <Moon className="h-4 w-4 text-blue-400" />
-          : <Sun  className="h-4 w-4 text-yellow-500" />
+          : <Sun className="h-4 w-4 text-yellow-500" />
         }
       </motion.div>
     </motion.button>

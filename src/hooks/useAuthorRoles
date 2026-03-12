@@ -1,66 +1,83 @@
 // src/hooks/useAuthorRoles.js
-import { useEffect, useState } from "react"
-import { databases } from "@/lib/appwrite"
-import { Query } from "appwrite"
+import { useEffect, useRef, useState } from "react";
+import { databases } from "@/lib/appwrite";
+import { Query } from "appwrite";
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
+const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID;
 
 export default function useAuthorRoles(replies) {
-  const [authorRoles, setAuthorRoles] = useState({})
+  const [authorRoles, setAuthorRoles] = useState({});
+
+  // ── Stable key: sorted author IDs joined as string ───────────────────────
+  // Avoids re-fetching when byId object reference changes but authors haven't.
+  const fetchedKeyRef = useRef("");
 
   useEffect(() => {
-    if (!replies?.byId) return
+    if (!replies?.byId) return;
 
     const authorIds = [
       ...new Set(
         Object.values(replies.byId)
-          .map(r => r?.authorId)
-          .filter(Boolean)
-      )
-    ]
+          .map((r) => r?.authorId)
+          .filter(Boolean),
+      ),
+    ].sort();
 
-    if (authorIds.length === 0) return
+    if (authorIds.length === 0) return;
 
-    let cancelled = false
+    // Only refetch if the set of author IDs has actually changed
+    const key = authorIds.join(",");
+    if (key === fetchedKeyRef.current) return;
+    fetchedKeyRef.current = key;
 
-    ;(async () => {
-      const map = {}
+    let cancelled = false;
+
+    (async () => {
+      const map = {};
 
       try {
-        // ── Request 1: batch lookup by userId field ──────────────────────────
+        // Request 1: batch lookup by userId field
         const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [
-          Query.equal("userId", authorIds),  // all authors in ONE request
+          Query.equal("userId", authorIds),
           Query.limit(500),
-        ])
+        ]);
 
-        const foundUserIds = new Set()
+        const foundUserIds = new Set();
         for (const doc of res.documents) {
-          map[doc.userId] = doc.role
-          foundUserIds.add(doc.userId)
+          map[doc.userId] = doc.role;
+          foundUserIds.add(doc.userId);
         }
 
-        // ── Request 2: fallback for unresolved IDs by document $id ──────────
-        const unresolved = authorIds.filter(id => !foundUserIds.has(id))
+        // Request 2: fallback for unresolved IDs by document $id
+        const unresolved = authorIds.filter((id) => !foundUserIds.has(id));
+        console.log("unresolved after request 1:", unresolved) // ← ADD HERE
         if (unresolved.length > 0) {
           const res2 = await databases.listDocuments(DATABASE_ID, USERS_COL, [
-            Query.equal("$id", unresolved),  // all unresolved in ONE request
+            Query.equal("$id", unresolved),
             Query.limit(500),
-          ])
+          ]);
           for (const doc of res2.documents) {
-            map[doc.$id] = doc.role
+            map[doc.$id] = doc.role;
           }
         }
       } catch (err) {
-        console.error("Failed to batch fetch author roles:", err)
+        console.error("Failed to batch fetch author roles:", err);
       }
 
-      if (cancelled) return
-      setAuthorRoles(map)
-    })()
+      if (cancelled) return;
+      setAuthorRoles((prev) => {
+        // Only update state if roles actually changed
+        const prevKey = JSON.stringify(prev);
+        const nextKey = JSON.stringify(map);
+        return prevKey === nextKey ? prev : map;
+      });
+    })();
 
-    return () => { cancelled = true }
-  }, [replies?.byId])
+    return () => {
+      cancelled = true;
+    };
+  }, [replies?.byId]);
 
-  return authorRoles
+  return authorRoles;
 }
