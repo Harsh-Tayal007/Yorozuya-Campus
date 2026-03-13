@@ -1,439 +1,464 @@
-// src/pages/Forum.jsx
-
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { universities } from "@/data/universities"
 
-import { ThreadCard } from "@/components"
+import ThreadCard from "@/components/forum/ThreadCard"
 import { CreateThreadModal, ForumTabs } from "@/components/forum"
 import PageWrapper from "@/components/common/layout/PageWrapper"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { filterThreads } from "@/utils/forumFilters"
-import { ArrowUpDown, ChevronDown, Search, X } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { ChevronDown, Plus, Search, SlidersHorizontal, X } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { fetchThreads } from "@/services/forum/threadService"
 import { useAuth } from "@/context/AuthContext"
 import { useLocation, useNavigate } from "react-router-dom"
 
+const SORT_OPTIONS = [
+  { value: "latest",  label: "Latest"       },
+  { value: "oldest",  label: "Oldest"       },
+  { value: "replies", label: "Most Replies" },
+]
+
 const Forum = () => {
   const [selectedUniversity, setSelectedUniversity] = useState(null)
-  const [selectedCourse, setSelectedCourse] = useState(null)
-  const [selectedBranch, setSelectedBranch] = useState(null)
+  const [selectedCourse,     setSelectedCourse]     = useState(null)
+  const [selectedBranch,     setSelectedBranch]     = useState(null)
+  const [searchQuery,        setSearchQuery]        = useState("")
+  const [debouncedQuery,     setDebouncedQuery]     = useState("")
+  const [sortBy,             setSortBy]             = useState("latest")
+  const [filtersOpen,        setFiltersOpen]        = useState(false)
+  const [searchOpen,         setSearchOpen]         = useState(false)
+  const [isCreateModalOpen,  setIsCreateModalOpen]  = useState(false)
+  const [sortOpen,           setSortOpen]           = useState(false)
+  const [uniOpen,            setUniOpen]            = useState(false)
+  const [courseOpen,         setCourseOpen]         = useState(false)
+  const [branchOpen,         setBranchOpen]         = useState(false)
 
-  const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedQuery, setDebouncedQuery] = useState("")
-
-  const [sortBy, setSortBy] = useState("latest")
-
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
-
+  const searchInputRef  = useRef(null)
+  const sortDropdownRef   = useRef(null)
+  const uniDropdownRef    = useRef(null)
+  const courseDropdownRef = useRef(null)
+  const branchDropdownRef = useRef(null)
   const { currentUser } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate        = useNavigate()
+  const location        = useLocation()
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-
-  const handleOpenCreateThread = () => {
-    if (!currentUser) {
-      navigate("/login", { state: { from: location } })
-      return
-    }
-
-    setIsCreateModalOpen(true)
-  }
-
-  // Debounce (300ms)
+  // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery)
-    }, 300)
-
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300)
+    return () => clearTimeout(t)
   }, [searchQuery])
 
-  const tabLabels = {
-    all: "All",
-    university: "University",
-    course: "Course",
-    branch: "Branch",
-  }
+  // Focus search input when opened
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50)
+  }, [searchOpen])
 
-  /* ----------------------------------
-     Derived data
-  -----------------------------------*/
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    if (!sortOpen) return
+    const handler = (e) => { if (!sortDropdownRef.current?.contains(e.target)) setSortOpen(false) }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [sortOpen])
+
+  // Close filter dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (!uniDropdownRef.current?.contains(e.target))    setUniOpen(false)
+      if (!courseDropdownRef.current?.contains(e.target)) setCourseOpen(false)
+      if (!branchDropdownRef.current?.contains(e.target)) setBranchOpen(false)
+    }
+    document.addEventListener("pointerdown", handler)
+    return () => document.removeEventListener("pointerdown", handler)
+  }, [])
+
+  const hasActiveFilters = !!(selectedUniversity || selectedCourse || selectedBranch)
+  useEffect(() => { if (hasActiveFilters) setFiltersOpen(true) }, [hasActiveFilters])
 
   const derivedTab = useMemo(() => {
-    if (selectedUniversity && selectedCourse && selectedBranch) {
-      return "branch"
-    }
-
-    if (selectedUniversity && selectedCourse) {
-      return "course"
-    }
-
-    if (selectedUniversity) {
-      return "university"
-    }
-
+    if (selectedUniversity && selectedCourse && selectedBranch) return "branch"
+    if (selectedUniversity && selectedCourse) return "course"
+    if (selectedUniversity) return "university"
     return "all"
   }, [selectedUniversity, selectedCourse, selectedBranch])
 
-  const selectedUniversityData = universities.find(
-    (u) => u.id === selectedUniversity
-  )
-
-  const selectedCourseData = selectedUniversityData?.courses.find(
-    (c) => c.id === selectedCourse
-  )
-
-
-  const canUseUniversity = Boolean(selectedUniversity)
-  const canUseCourse = Boolean(selectedUniversity && selectedCourse)
-  const canUseBranch =
-    Boolean(selectedUniversity && selectedCourse && selectedBranch)
-
-  const hasActiveFilters =
-    selectedUniversity || selectedCourse || selectedBranch
-
+  const selectedUniversityData = universities.find(u => u.id === selectedUniversity)
+  const selectedCourseData     = selectedUniversityData?.courses.find(c => c.id === selectedCourse)
 
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ["threads"],
     queryFn: fetchThreads,
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 5,
   })
 
-  /* ----------------------------------
-     Filtering logic
-  -----------------------------------*/
-  const filteredThreads = useMemo(() => {
-    return filterThreads({
-      threads,
-      tab: derivedTab,
-      universityId: selectedUniversity,
-      courseId: selectedCourse,
-      branchId: selectedBranch,
-      searchQuery: debouncedQuery,
-    })
-  }, [
-    threads,
-    derivedTab,
-    selectedUniversity,
-    selectedCourse,
-    selectedBranch,
-    debouncedQuery,
-  ])
+  const filteredThreads = useMemo(() => filterThreads({
+    threads, tab: derivedTab,
+    universityId: selectedUniversity,
+    courseId: selectedCourse,
+    branchId: selectedBranch,
+    searchQuery: debouncedQuery,
+  }), [threads, derivedTab, selectedUniversity, selectedCourse, selectedBranch, debouncedQuery])
 
-  const sortedThreads = useMemo(() => {
-    return [...filteredThreads].sort((a, b) => {
-      if (sortBy === "latest") {
-        return new Date(b.createdAt) - new Date(a.createdAt)
-      }
+  const sortedThreads = useMemo(() => [...filteredThreads].sort((a, b) => {
+    if (sortBy === "latest")  return new Date(b.$createdAt) - new Date(a.$createdAt)
+    if (sortBy === "oldest")  return new Date(a.$createdAt) - new Date(b.$createdAt)
+    if (sortBy === "replies") return (b.repliesCount ?? 0) - (a.repliesCount ?? 0)
+    return 0
+  }), [filteredThreads, sortBy])
 
-      if (sortBy === "oldest") {
-        return new Date(a.createdAt) - new Date(b.createdAt)
-      }
+  const handleCreateThread = () => {
+    if (!currentUser) { navigate("/login", { state: { from: location } }); return }
+    setIsCreateModalOpen(true)
+  }
 
-      if (sortBy === "replies") {
-        return (b.repliesCount || 0) - (a.repliesCount || 0)
-      }
+  const resetFilters = () => {
+    setSelectedUniversity(null); setSelectedCourse(null)
+    setSelectedBranch(null); setFiltersOpen(false)
+  }
 
-      return 0
-    })
-  }, [filteredThreads, sortBy])
-
-  useEffect(() => {
-    if (hasActiveFilters) {
-      setIsFiltersOpen(true)
-    }
-  }, [hasActiveFilters])
+  const activeFilterCount = [selectedUniversity, selectedCourse, selectedBranch].filter(Boolean).length
 
   return (
     <PageWrapper>
-      {/* ================= Header ================= */}
-      <div className="space-y-2 mb-6">
-        <h1 className="text-3xl font-bold">Community Forum</h1>
-        <p className="text-muted-foreground">
-          Discuss academics, exams, events, and campus life
-        </p>
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Community Forum</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Discuss academics, exams, events, and campus life
+          </p>
+        </div>
+        {/* Desktop create button */}
+        <button
+          onClick={handleCreateThread}
+          className="hidden sm:flex items-center gap-2 h-10 px-4 rounded-xl
+                     bg-primary text-primary-foreground text-sm font-semibold shrink-0
+                     hover:bg-primary/90 active:scale-95 transition-all duration-150
+                     shadow-sm shadow-primary/20"
+        >
+          <Plus size={16} /> New Thread
+        </button>
       </div>
 
-      {/* ================= STICKY CONTROLS ================= */}
-      <div className="sticky top-14 z-30">
-        <div className="bg-background/80 backdrop-blur-lg border rounded-2xl p-4 sm:p-6 shadow-sm space-y-6">
-          {/* Tabs */}
-          <ForumTabs
-            tab={derivedTab}
-            canUseUniversity={canUseUniversity}
-            canUseCourse={canUseCourse}
-            canUseBranch={canUseBranch}
-          />
+      {/* ── Sticky Controls ── */}
+      <div className="sticky top-14 z-30 mb-6 overflow-visible">
+        <div className="bg-background/80 backdrop-blur-lg border border-border/60
+                        rounded-2xl shadow-sm overflow-visible">
 
-          {/* Search bar */}
-
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            {/* Search */}
-            <div className="relative group flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
-
-              <Input
-                placeholder="Search discussions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="
-        pl-9 pr-9
-        h-11
-        rounded-xl
-        transition-all duration-200
-        focus-visible:ring-2
-        hover:border-primary/50
-        active:scale-[0.99]
-      "
-              />
-
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="
-          absolute right-3 top-1/2 -translate-y-1/2
-          text-muted-foreground
-          hover:text-destructive
-          active:scale-90
-          transition-all
-        "
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger
-                className="
-        w-full sm:w-[180px]
-        h-11
-        rounded-xl
-        transition-all
-        hover:border-primary/50
-        active:scale-[0.99]
-      "
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="latest">Latest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="replies">Most Replies</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* post discussion */}
-            <Button
-              onClick={handleOpenCreateThread}
-              className="h-11 rounded-xl sm:w-auto"
-            >
-              + Create Thread
-            </Button>
-            <CreateThreadModal
-              open={isCreateModalOpen}
-              onClose={() => setIsCreateModalOpen(false)}
-              derivedTab={derivedTab}
-              selectedUniversity={selectedUniversity}
-              selectedCourse={selectedCourse}
-              selectedBranch={selectedBranch}
-              selectedUniversityData={selectedUniversityData}
-              selectedCourseData={selectedCourseData}
-              universities={universities}
-              currentUser={currentUser}
+          {/* Tab bar */}
+          <div className="px-4 pt-3">
+            <ForumTabs
+              tab={derivedTab}
+              canUseUniversity={!!selectedUniversity}
+              canUseCourse={!!(selectedUniversity && selectedCourse)}
+              canUseBranch={!!(selectedUniversity && selectedCourse && selectedBranch)}
             />
           </div>
 
-          {/* Filters */}
+          {/* ── Controls row ── */}
+          <div className="flex items-center gap-2 px-3 py-3">
 
-          <div className="space-y-3">
+            {/* MOBILE: search icon → expands to full input */}
+            {/* DESKTOP: always shown search input */}
 
-            {/* Mobile Toggle Button */}
-            <div className="sm:hidden">
-              <button
-                onClick={() => setIsFiltersOpen((prev) => !prev)}
-                className={`
-  w-full flex items-center justify-between
-  px-4 py-2 rounded-xl border
-  text-sm font-medium
-  transition-all duration-200
-
-  ${hasActiveFilters
-                    ? "border-primary/60 bg-primary/10 shadow-sm shadow-primary/20 animate-[pulse_3s_ease-in-out_infinite]"
-                    : "bg-muted/40 hover:border-primary/40"
-                  }
-
-  active:scale-[0.98]
-`}
-              >
-                <span>
-                  Filters
-                  {hasActiveFilters && (
-                    <span className="
-  ml-2 px-2 py-0.5
-  rounded-full
-  text-[10px] font-semibold
-  bg-primary/20 text-primary
-">
-                      ({[selectedUniversity, selectedCourse, selectedBranch].filter(Boolean).length})
-                    </span>
-                  )}
-                </span>
-
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${isFiltersOpen ? "rotate-180" : ""
-                    }`}
-                />
-              </button>
+            {/* Mobile search toggle */}
+            <div className={`sm:hidden flex items-center transition-all duration-300 ease-in-out
+                            ${searchOpen ? "flex-1" : "shrink-0"}`}>
+              {!searchOpen ? (
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="w-9 h-9 rounded-xl border border-border bg-muted/40
+                             flex items-center justify-center text-muted-foreground
+                             hover:text-foreground hover:border-primary/40 transition-colors"
+                >
+                  <Search size={15} />
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 w-full">
+                  <div className="relative flex-1">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2
+                                                  text-muted-foreground pointer-events-none" />
+                    <input
+                      ref={searchInputRef}
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search discussions…"
+                      className="w-full h-9 pl-9 pr-3 text-sm rounded-xl border border-primary/50
+                                 bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/30
+                                 transition-all"
+                    />
+                  </div>
+                  <button
+                    onClick={() => { setSearchOpen(false); setSearchQuery("") }}
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Animated Filter Content */}
-            <div
-              className={`
-      overflow-hidden transition-all duration-300 ease-in-out
-      ${isFiltersOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}
-      sm:max-h-none sm:opacity-100
-    `}
-            >
+            {/* Desktop search — always visible */}
+            {!searchOpen && (
+              <div className="hidden sm:flex relative flex-1 group">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2
+                                             text-muted-foreground group-focus-within:text-primary
+                                             pointer-events-none transition-colors" />
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search discussions…"
+                  className="w-full h-9 pl-9 pr-8 text-sm rounded-xl border border-border
+                             bg-muted/40 placeholder:text-muted-foreground/60
+                             focus:outline-none focus:ring-2 focus:ring-primary/30
+                             focus:border-primary/50 transition-all"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2
+                               text-muted-foreground hover:text-foreground transition-colors">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            )}
 
-              {/* 👇 YOUR ORIGINAL FILTER CONTAINER GOES HERE 👇 */}
-
-              <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  {/* University */}
-                  <Select
-                    value={selectedUniversity ?? ""}
-                    onValueChange={(value) => {
-                      setSelectedUniversity(value)
-                      setSelectedCourse(null)
-                      setSelectedBranch(null)
-                    }}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select University" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {universities.map((uni) => (
-                        <SelectItem key={uni.id} value={uni.id}>
-                          {uni.shortName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-
-                  {/* Course */}
-                  <Select
-                    value={selectedCourse ?? ""}
-                    onValueChange={(value) => {
-                      setSelectedCourse(value)
-                      setSelectedBranch(null)
-                    }}
-                    disabled={!selectedUniversity}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select Course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedUniversityData?.courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Branch */}
-                  <Select
-                    value={selectedBranch ?? ""}
-                    onValueChange={(value) => {
-                      setSelectedBranch(value)
-                    }}
-                    disabled={!selectedCourse}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select Branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedCourseData?.branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {hasActiveFilters && (
-                  <div className="flex items-center justify-between text-xs sm:text-sm pt-2">
-                    <p className="text-muted-foreground">
-                      Viewing {tabLabels[derivedTab]} discussions
-                    </p>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2"
-                      onClick={() => {
-                        setSelectedUniversity(null)
-                        setSelectedCourse(null)
-                        setSelectedBranch(null)
-                        setIsFiltersOpen(false)
-                      }}
-                    >
-                      Reset
-                    </Button>
+            {/* Sort — hidden when mobile search open */}
+            {!searchOpen && (
+              <div ref={sortDropdownRef} className="relative shrink-0">
+                <button
+                  onClick={() => setSortOpen(v => !v)}
+                  className="h-9 px-3 rounded-xl border border-border bg-muted/40
+                             text-sm font-medium text-muted-foreground hover:text-foreground
+                             flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                >
+                  <span>{SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Sort"}</span>
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${sortOpen ? "rotate-180" : ""}`} />
+                </button>
+                {sortOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-40 z-[200] rounded-xl border border-border
+                                  bg-background shadow-xl overflow-hidden
+                                  animate-in fade-in-0 zoom-in-95 duration-100 origin-top-right">
+                    {SORT_OPTIONS.map(o => (
+                      <button
+                        key={o.value}
+                        onClick={() => { setSortBy(o.value); setSortOpen(false) }}
+                        className={`flex items-center justify-between w-full px-4 py-2.5 text-sm
+                                    transition-colors hover:bg-muted text-left
+                                    ${sortBy === o.value ? "text-primary font-semibold" : "text-foreground"}`}
+                      >
+                        {o.label}
+                        {sortBy === o.value && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
+            )}
 
-            </div>
+            {/* Filter toggle — hidden when mobile search open */}
+            {!searchOpen && (
+              <button
+                onClick={() => setFiltersOpen(v => !v)}
+                className={`h-9 px-2.5 rounded-xl border text-sm font-medium shrink-0
+                            flex items-center gap-1.5 transition-all duration-200
+                            ${filtersOpen || hasActiveFilters
+                              ? "border-primary/60 bg-primary/10 text-primary"
+                              : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
+                            }`}
+              >
+                <SlidersHorizontal size={14} />
+                <span className="hidden sm:inline text-sm">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground
+                                   text-[10px] font-bold flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
 
+          {/* Expandable filters */}
+          <div className={`transition-all duration-300 ease-in-out
+                           ${filtersOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}
+                           grid`}>
+          <div className="overflow-visible min-h-0">
+            <div className="px-3 pb-3 space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+
+                {/* University */}
+                <div ref={uniDropdownRef} className="relative">
+                  <button
+                    onClick={() => { setUniOpen(v => !v); setCourseOpen(false); setBranchOpen(false) }}
+                    className={`w-full h-9 px-3 rounded-xl border text-sm flex items-center justify-between
+                                transition-colors
+                                ${selectedUniversity
+                                  ? "border-primary/50 text-foreground"
+                                  : "border-border text-muted-foreground"
+                                } bg-muted/40 hover:border-primary/40`}
+                  >
+                    <span>{universities.find(u => u.id === selectedUniversity)?.shortName ?? "University"}</span>
+                    <ChevronDown size={13} className={`transition-transform duration-200 ${uniOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {uniOpen && (
+                    <div className="absolute left-0 top-full mt-1.5 w-full z-[200] rounded-xl border border-border
+                                    bg-background shadow-xl overflow-hidden
+                                    animate-in fade-in-0 zoom-in-95 duration-100 origin-top-left">
+                      {universities.map(u => (
+                        <button key={u.id} onClick={() => { setSelectedUniversity(u.id); setSelectedCourse(null); setSelectedBranch(null); setUniOpen(false) }}
+                          className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-muted
+                                      ${selectedUniversity === u.id ? "text-primary font-semibold" : "text-foreground"}`}>
+                          {u.shortName}
+                          {selectedUniversity === u.id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Course */}
+                <div ref={courseDropdownRef} className="relative">
+                  <button
+                    onClick={() => { if (!selectedUniversity) return; setCourseOpen(v => !v); setUniOpen(false); setBranchOpen(false) }}
+                    disabled={!selectedUniversity}
+                    className={`w-full h-9 px-3 rounded-xl border text-sm flex items-center justify-between
+                                transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+                                ${selectedCourse
+                                  ? "border-primary/50 text-foreground"
+                                  : "border-border text-muted-foreground"
+                                } bg-muted/40 hover:border-primary/40`}
+                  >
+                    <span>{selectedUniversityData?.courses.find(c => c.id === selectedCourse)?.name ?? "Course"}</span>
+                    <ChevronDown size={13} className={`transition-transform duration-200 ${courseOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {courseOpen && (
+                    <div className="absolute left-0 top-full mt-1.5 w-full z-[200] rounded-xl border border-border
+                                    bg-background shadow-xl overflow-hidden
+                                    animate-in fade-in-0 zoom-in-95 duration-100 origin-top-left">
+                      {selectedUniversityData?.courses.map(c => (
+                        <button key={c.id} onClick={() => { setSelectedCourse(c.id); setSelectedBranch(null); setCourseOpen(false) }}
+                          className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-muted
+                                      ${selectedCourse === c.id ? "text-primary font-semibold" : "text-foreground"}`}>
+                          {c.name}
+                          {selectedCourse === c.id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Branch */}
+                <div ref={branchDropdownRef} className="relative">
+                  <button
+                    onClick={() => { if (!selectedCourse) return; setBranchOpen(v => !v); setUniOpen(false); setCourseOpen(false) }}
+                    disabled={!selectedCourse}
+                    className={`w-full h-9 px-3 rounded-xl border text-sm flex items-center justify-between
+                                transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+                                ${selectedBranch
+                                  ? "border-primary/50 text-foreground"
+                                  : "border-border text-muted-foreground"
+                                } bg-muted/40 hover:border-primary/40`}
+                  >
+                    <span>{selectedCourseData?.branches.find(b => b.id === selectedBranch)?.name ?? "Branch"}</span>
+                    <ChevronDown size={13} className={`transition-transform duration-200 ${branchOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {branchOpen && (
+                    <div className="absolute left-0 top-full mt-1.5 w-full z-[200] rounded-xl border border-border
+                                    bg-background shadow-xl overflow-hidden
+                                    animate-in fade-in-0 zoom-in-95 duration-100 origin-top-left">
+                      {selectedCourseData?.branches.map(b => (
+                        <button key={b.id} onClick={() => { setSelectedBranch(b.id); setBranchOpen(false) }}
+                          className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-muted
+                                      ${selectedBranch === b.id ? "text-primary font-semibold" : "text-foreground"}`}>
+                          {b.name}
+                          {selectedBranch === b.id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {hasActiveFilters && (
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-xs text-muted-foreground capitalize">Viewing {derivedTab} discussions</p>
+                  <button onClick={resetFilters}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                    <X size={11} /> Reset
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          </div>
         </div>
       </div>
 
-      <div className="mt-8">
-
-        {/* ================= Count ================= */}
-        <p className="text-sm text-muted-foreground mb-4">
-          Showing {sortedThreads.length} discussion
-          {filteredThreads.length !== 1 && "s"}
+      {/* ── Thread list ── */}
+      <div className="space-y-2.5 pb-24 sm:pb-6">
+        <p className="text-xs text-muted-foreground px-1">
+          {isLoading ? "Loading…" : `${sortedThreads.length} discussion${sortedThreads.length !== 1 ? "s" : ""}`}
         </p>
 
-        {/* ================= Thread List ================= */}
-        <div className="space-y-4 animate-in fade-in-50 duration-300 overflow-visible">
-          {sortedThreads.length > 0 ? (
-            sortedThreads.map((thread) => (
-              <ThreadCard
-                key={thread.$id}
-                thread={thread}
-                searchQuery={debouncedQuery}
-              />
-            ))
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="py-10 text-center text-muted-foreground">
-                No discussions found.
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
+        {isLoading ? (
+          <div className="space-y-2.5">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card px-5 py-4 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-muted shrink-0" />
+                  <div className="flex-1 space-y-2.5 pt-0.5">
+                    <div className="h-3.5 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-full" />
+                    <div className="h-3 bg-muted rounded w-1/3" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sortedThreads.length > 0 ? (
+          <div className="space-y-2.5">
+            {sortedThreads.map(thread => (
+              <ThreadCard key={thread.$id} thread={thread} searchQuery={debouncedQuery} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border py-16 text-center">
+            <p className="text-muted-foreground text-sm">
+              {debouncedQuery ? `No discussions match "${debouncedQuery}"` : "No discussions yet — start one!"}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* ── Mobile FAB ── */}
+      <button
+        onClick={handleCreateThread}
+        className="sm:hidden fixed bottom-6 right-5 z-50
+                   w-14 h-14 rounded-full bg-primary text-primary-foreground
+                   shadow-lg shadow-primary/40
+                   flex items-center justify-center
+                   active:scale-90 hover:scale-105
+                   transition-transform duration-150"
+        style={{ WebkitTapHighlightColor: "transparent" }}
+      >
+        <Plus size={24} strokeWidth={2.5} />
+      </button>
+
+      <CreateThreadModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        derivedTab={derivedTab}
+        selectedUniversity={selectedUniversity}
+        selectedCourse={selectedCourse}
+        selectedBranch={selectedBranch}
+        selectedUniversityData={selectedUniversityData}
+        selectedCourseData={selectedCourseData}
+        universities={universities}
+        currentUser={currentUser}
+      />
     </PageWrapper>
   )
 }

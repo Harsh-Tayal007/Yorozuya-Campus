@@ -1,25 +1,27 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-
 import PageWrapper from "@/components/common/layout/PageWrapper"
 import Breadcrumbs from "@/components/common/navigation/Breadcrumbs"
-
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-
 import { useQuery } from "@tanstack/react-query"
-
 import { fetchThreadById } from "@/services/forum/threadService"
-
-import { Loader2 } from "lucide-react"
-
+import { Loader2, Clock, ArrowLeft } from "lucide-react"
 import { RepliesProvider } from "@/components/forum/RepliesProvider"
 import RepliesSection from "@/components/forum/RepliesSection"
+
+const timeAgo = (dateStr) => {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1)  return "just now"
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d < 7)  return `${d}d ago`
+  return new Date(dateStr).toLocaleDateString()
+}
 
 const ThreadDetail = () => {
   const { threadId } = useParams()
   const navigate = useNavigate()
-
   const [searchParams] = useSearchParams()
   const focusReplyId = searchParams.get("focus")
 
@@ -29,11 +31,16 @@ const ThreadDetail = () => {
     enabled: !!threadId,
   })
 
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1)
+    else navigate("/forum")
+  }
+
   if (isLoading) {
     return (
       <PageWrapper>
         <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
           Loading thread...
         </div>
       </PageWrapper>
@@ -48,75 +55,89 @@ const ThreadDetail = () => {
     )
   }
 
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1)
-    else navigate("/forum")
-  }
-
-  // const demoOPReply = {
-  //   id: "op-reply",
-  //   author: thread.author,
-  //   content: "Important update: Please check syllabus PDF first.",
-  //   createdAt: "2026-01-02T12:45",
-  //   upvotes: 8,
-  //   isPinned: true,
-  //   replies: [],
-  // }
-
-  // const allReplies = [demoOPReply, ...replies].sort(
-  //   (a, b) => (b.isPinned === true) - (a.isPinned === true)
-  // )
-
   return (
     <PageWrapper>
-      <div className="space-y-6 animate-in fade-in-50 duration-300 overflow-visible">
+      <div className="space-y-4 animate-in fade-in-50 duration-300">
+
         <Breadcrumbs
           items={[
             { label: "Forum", href: "/forum" },
             thread.universityId && { label: thread.universityId },
-            thread.courseId && { label: thread.courseId },
-            thread.branchId && { label: thread.branchId },
-            { label: thread.title },  // last item — no href, renders as plain text
+            thread.courseId     && { label: thread.courseId },
+            thread.branchId     && { label: thread.branchId },
+            { label: thread.title },
           ].filter(Boolean)}
         />
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-2"
+        {/* Back */}
+        <button
           onClick={handleBack}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground
+                     hover:text-foreground transition-colors group"
         >
-          ← Back
-        </Button>
+          <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+          Back
+        </button>
 
-        {/* Thread Card */}
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <h1 className="text-xl sm:text-2xl font-bold">{thread.title}</h1>
+        {/* Thread card */}
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 space-y-3">
 
-            <div className="flex gap-2 flex-wrap">
-              <Badge variant="secondary">{thread.universityId}</Badge>
-              {thread.courseId && (
-                <Badge variant="outline">{thread.courseId}</Badge>
-              )}
-              {thread.branchId && (
-                <Badge variant="outline">{thread.branchId}</Badge>
-              )}
+          {/* Title */}
+          <h1 className="text-lg sm:text-xl font-bold leading-snug text-foreground">
+            {thread.title}
+          </h1>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1.5">
+            {thread.universityId && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
+                               font-semibold bg-primary/10 text-primary border border-primary/20">
+                {thread.universityId}
+              </span>
+            )}
+            {thread.courseId && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
+                               font-medium bg-muted text-muted-foreground border border-border/60">
+                {thread.courseId}
+              </span>
+            )}
+            {thread.branchId && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
+                               font-medium bg-muted text-muted-foreground border border-border/60">
+                {thread.branchId}
+              </span>
+            )}
+          </div>
+
+          {/* Author row */}
+          <div className="flex items-center gap-2">
+            {/* Avatar */}
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
+                            border border-primary/20 flex items-center justify-center
+                            text-[10px] font-bold text-primary shrink-0">
+              {thread.authorName?.charAt(0).toUpperCase()}
             </div>
+            <span className="text-sm font-medium text-foreground/80">{thread.authorName}</span>
+            <span className="text-muted-foreground/40 text-xs">·</span>
+            <Clock size={10} className="text-muted-foreground/50 shrink-0" />
+            <span className="text-xs text-muted-foreground">{timeAgo(thread.$createdAt)}</span>
+          </div>
 
-            <p className="text-sm text-muted-foreground">
-              By <span className="font-medium">{thread.authorName}</span> •{" "}
-              {new Date(thread.$createdAt).toLocaleDateString()}
-            </p>
+          {/* Divider */}
+          <div className="border-t border-border/50" />
 
-            <p className="text-sm sm:text-base">{thread.content}</p>
-          </CardContent>
-        </Card>
+          {/* Content */}
+          <p className="text-sm sm:text-[15px] leading-relaxed text-foreground/85 whitespace-pre-wrap">
+            {thread.content}
+          </p>
 
-        {/* Replies Section */}
+        </div>
+
+        {/* Replies */}
         <RepliesProvider threadId={threadId} pinnedReplyId={thread.pinnedReplyId ?? null}>
-         <RepliesSection threadAuthor={thread.authorId} focusReplyId={focusReplyId} />
+          <RepliesSection threadAuthor={thread.authorId} focusReplyId={focusReplyId} />
         </RepliesProvider>
+
       </div>
     </PageWrapper>
   )

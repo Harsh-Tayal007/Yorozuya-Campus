@@ -115,11 +115,6 @@
 }
 
 @layer base {
-  /* ── KEY FIX ──────────────────────────────────────────────────────────────
-     The original `* { @apply border-border outline-ring/50 }` causes every
-     element to be style-recalculated when .dark toggles on <html>.
-     Moving border/outline to a cheaper selector avoids the full-page repaint.
-  ───────────────────────────────────────────────────────────────────────── */
   *, *::before, *::after {
     border-color: var(--border);
     outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
@@ -129,17 +124,15 @@
     scrollbar-gutter: stable;
   }
 
+  html, body {
+    padding-right: 0 !important;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    /* Smooth dark/light transition on the body level only — not * selector */
     transition: background-color 180ms ease, color 180ms ease;
   }
-}
-
-/* ── Scrollbar ── */
-html {
-  scrollbar-gutter: stable;
 }
 
 /* ── Text selection ── */
@@ -221,4 +214,11 @@ html {
 @keyframes theme-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* Prevent Radix scroll lock padding injection */
+/* Prevent Radix scroll-lock body padding */
+body[data-scroll-locked] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
 }

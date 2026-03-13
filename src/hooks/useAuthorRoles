@@ -51,7 +51,6 @@ export default function useAuthorRoles(replies) {
 
         // Request 2: fallback for unresolved IDs by document $id
         const unresolved = authorIds.filter((id) => !foundUserIds.has(id));
-        console.log("unresolved after request 1:", unresolved) // ← ADD HERE
         if (unresolved.length > 0) {
           const res2 = await databases.listDocuments(DATABASE_ID, USERS_COL, [
             Query.equal("$id", unresolved),

@@ -75,6 +75,79 @@ const SORT_OPTIONS = [
   { key: "controversial", label: "Controversial", icon: Zap },
 ]
 
+// loading skeleton
+function ReplySkeletonItem({ depth = 0, hasChild = false }) {
+  const indent = depth * (AV + 8)
+  return (
+    <div className="flex flex-col animate-pulse" style={{ paddingLeft: indent }}>
+      <div className="flex gap-2">
+        {/* Avatar */}
+        <div className="shrink-0 rounded-full bg-muted" style={{ width: AV, height: AV }} />
+
+        {/* Body */}
+        <div className="flex-1 min-w-0 pb-2 space-y-2">
+          {/* Meta row: name + badge + time */}
+          <div className="flex items-center gap-2 mt-1">
+            <div className="h-3 w-20 rounded bg-muted" />
+            <div className="h-3 w-10 rounded bg-muted/60" />
+            <div className="h-3 w-8 rounded bg-muted/40" />
+          </div>
+
+          {/* Content lines */}
+          <div className="space-y-1.5">
+            <div className="h-3 rounded bg-muted w-full" />
+            <div className="h-3 rounded bg-muted w-4/5" />
+          </div>
+
+          {/* Action bar: upvote + score + downvote + Reply */}
+          <div className="flex items-center gap-2 -ml-1 mt-1">
+            <div className="h-6 w-6 rounded-lg bg-muted/50" />
+            <div className="h-3 w-4 rounded bg-muted/40" />
+            <div className="h-6 w-6 rounded-lg bg-muted/50" />
+            <div className="h-5 w-10 rounded-lg bg-muted/40 ml-1" />
+          </div>
+        </div>
+      </div>
+
+      {/* Child connector line + child skeleton */}
+      {hasChild && (
+        <div className="flex">
+          <div className="relative shrink-0 self-stretch" style={{ width: AV + 8 }}>
+            <div className="absolute bg-muted/40 rounded-full" style={{ width: 2, left: AV / 2 - 1, top: 0, bottom: 0 }} />
+            <div className="absolute bg-muted/40 rounded-full" style={{ height: 2, left: AV / 2 - 1, top: AV / 2 - 1, width: (AV + 8) - (AV / 2 - 1) }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <ReplySkeletonItem depth={0} hasChild={false} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function RepliesSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* "N Replies" heading placeholder */}
+      <div className="h-5 w-24 rounded bg-muted animate-pulse" />
+
+      {/* CreateReplyBox placeholder */}
+      <div className="h-11 w-full rounded-xl border border-border bg-muted/30 animate-pulse" />
+
+      {/* Sort bar placeholder */}
+      <div className="flex items-center gap-2 h-9">
+        <div className="h-9 w-32 rounded-full border border-border bg-muted/30 animate-pulse" />
+        <div className="h-9 w-9 rounded-full border border-border bg-muted/30 animate-pulse" />
+      </div>
+
+      {/* Reply skeletons — 3 root, first one has a child */}
+      <ReplySkeletonItem hasChild={true} />
+      <ReplySkeletonItem hasChild={false} />
+      <ReplySkeletonItem hasChild={false} />
+    </div>
+  )
+}
+
 export default function RepliesSection({ threadAuthor, focusReplyId }) {
   const { replies, isLoading } = useRepliesContext()
   const navigate = useNavigate()
@@ -123,7 +196,7 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
       ?.scrollIntoView({ behavior: "smooth", block: "center" })
   }, [focusReplyId])
 
-  if (isLoading) return <div className="text-muted-foreground text-sm py-6">Loading replies...</div>
+  if (isLoading) return <RepliesSkeleton />
 
   /* ─── FULL THREAD ─── */
   if (!isFocusMode) {
