@@ -3,6 +3,8 @@ import PageWrapper from "@/components/common/layout/PageWrapper"
 import Breadcrumbs from "@/components/common/navigation/Breadcrumbs"
 import { useQuery } from "@tanstack/react-query"
 import { fetchThreadById } from "@/services/forum/threadService"
+import { getProgramById } from "@/services/university/programService"
+import { getBranchById } from "@/services/university/branchService"
 import { Loader2, Clock, ArrowLeft } from "lucide-react"
 import { RepliesProvider } from "@/components/forum/RepliesProvider"
 import RepliesSection from "@/components/forum/RepliesSection"
@@ -19,6 +21,8 @@ const timeAgo = (dateStr) => {
   return new Date(dateStr).toLocaleDateString()
 }
 
+const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
+
 const ThreadDetail = () => {
   const { threadId } = useParams()
   const navigate = useNavigate()
@@ -30,6 +34,35 @@ const ThreadDetail = () => {
     queryFn: () => fetchThreadById(threadId),
     enabled: !!threadId,
   })
+
+  // Resolve university — fetch directly (same key as Forum, so cache is shared)
+  const { data: uniDoc } = useQuery({
+    queryKey: ["university", thread?.universityId],
+    queryFn:  () => import("@/services/university/universityService")
+                      .then(m => m.getUniversityById(thread.universityId)),
+    enabled:  !!thread && isAppwriteId(thread.universityId),
+    staleTime: Infinity,
+    retry: false,
+  })
+  const uniLabel = uniDoc?.name ?? thread?.universityId
+
+  const { data: programDoc } = useQuery({
+    queryKey: ["program", thread?.courseId],
+    queryFn:  () => getProgramById(thread.courseId),
+    enabled:  !!thread && isAppwriteId(thread.courseId),
+    staleTime: Infinity,
+    retry: false,
+  })
+  const { data: branchDoc } = useQuery({
+    queryKey: ["branch", thread?.branchId],
+    queryFn:  () => getBranchById(thread.branchId),
+    enabled:  !!thread && isAppwriteId(thread.branchId),
+    staleTime: Infinity,
+    retry: false,
+  })
+
+  const courseLabel = programDoc?.name ?? thread?.courseId
+  const branchLabel = branchDoc?.name  ?? thread?.branchId
 
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1)
@@ -62,9 +95,9 @@ const ThreadDetail = () => {
         <Breadcrumbs
           items={[
             { label: "Forum", href: "/forum" },
-            thread.universityId && { label: thread.universityId },
-            thread.courseId     && { label: thread.courseId },
-            thread.branchId     && { label: thread.branchId },
+            thread.universityId && { label: uniLabel },
+            thread.courseId     && { label: courseLabel },
+            thread.branchId     && { label: branchLabel },
             { label: thread.title },
           ].filter(Boolean)}
         />
@@ -80,10 +113,10 @@ const ThreadDetail = () => {
         </button>
 
         {/* Thread card */}
-        <div className="rounded-2xl border border-border bg-card px-5 py-4 space-y-3">
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 space-y-3 overflow-hidden min-w-0">
 
           {/* Title */}
-          <h1 className="text-lg sm:text-xl font-bold leading-snug text-foreground">
+          <h1 className="text-lg sm:text-xl font-bold leading-snug text-foreground break-words">
             {thread.title}
           </h1>
 
@@ -92,26 +125,25 @@ const ThreadDetail = () => {
             {thread.universityId && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
                                font-semibold bg-primary/10 text-primary border border-primary/20">
-                {thread.universityId}
+                {uniLabel}
               </span>
             )}
             {thread.courseId && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
                                font-medium bg-muted text-muted-foreground border border-border/60">
-                {thread.courseId}
+                {courseLabel}
               </span>
             )}
             {thread.branchId && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
                                font-medium bg-muted text-muted-foreground border border-border/60">
-                {thread.branchId}
+                {branchLabel}
               </span>
             )}
           </div>
 
           {/* Author row */}
           <div className="flex items-center gap-2">
-            {/* Avatar */}
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                             border border-primary/20 flex items-center justify-center
                             text-[10px] font-bold text-primary shrink-0">
@@ -127,7 +159,7 @@ const ThreadDetail = () => {
           <div className="border-t border-border/50" />
 
           {/* Content */}
-          <p className="text-sm sm:text-[15px] leading-relaxed text-foreground/85 whitespace-pre-wrap">
+          <p className="text-sm sm:text-[15px] leading-relaxed text-foreground/85 whitespace-pre-wrap break-words overflow-wrap-anywhere">
             {thread.content}
           </p>
 

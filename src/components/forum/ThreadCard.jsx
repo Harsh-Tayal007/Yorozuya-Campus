@@ -4,6 +4,10 @@ import { useQueryClient, useMutation } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { deleteThread } from "@/services/forum/threadService"
 import { MessageSquare, Clock, MoreVertical, Trash2, AlertTriangle, Loader2 } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { getProgramById } from "@/services/university/programService"
+import { getBranchById } from "@/services/university/branchService"
+
 
 const highlightMatch = (text = "", query) => {
   const safeText = String(text)
@@ -32,7 +36,8 @@ const timeAgo = (dateStr) => {
 const Tag = ({ label }) => (
   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium
                    bg-muted text-muted-foreground border border-border/60
-                   group-hover:border-primary/30 transition-colors duration-200">
+                   group-hover:border-primary/30 transition-colors duration-200
+                   max-w-[140px] sm:max-w-[200px] truncate">
     {label}
   </span>
 )
@@ -88,6 +93,33 @@ const ThreadCard = ({ thread, searchQuery }) => {
   const isOwn     = currentUser?.$id === thread.authorId
   const isMod     = role === "admin" || role === "moderator"
   const canDelete = isOwn || isMod
+
+  // Resolve IDs → names
+  // Universities are always cached (staleTime:Infinity from Forum's useUniversities)
+  // Programs/branches: read from cache if filter was opened, else fetch on demand
+  const universities = queryClient.getQueryData(["universities"]) ?? []
+  const uniLabel     = universities.find(u => u.$id === thread.universityId)?.name ?? thread.universityId
+
+  // Only fetch if ID looks like a real Appwrite $id (20+ chars)
+  // Dummy IDs like "btech", "cse" are short strings — skip fetching them
+  const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
+
+  const { data: programDoc } = useQuery({
+    queryKey: ["program", thread.courseId],
+    queryFn:  () => getProgramById(thread.courseId),
+    enabled:  isAppwriteId(thread.courseId),
+    staleTime: Infinity,
+    retry: false,
+  })
+  const { data: branchDoc } = useQuery({
+    queryKey: ["branch", thread.branchId],
+    queryFn:  () => getBranchById(thread.branchId),
+    enabled:  isAppwriteId(thread.branchId),
+    staleTime: Infinity,
+    retry: false,
+  })
+  const courseLabel = programDoc?.name ?? thread.courseId
+  const branchLabel = branchDoc?.name  ?? thread.branchId
 
   // Close menu on outside click
   useEffect(() => {
@@ -222,9 +254,9 @@ const ThreadCard = ({ thread, searchQuery }) => {
             {/* Row 4: tags + reply count */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap gap-1">
-                {thread.universityId && <Tag label={thread.universityId} />}
-                {thread.courseId     && <Tag label={thread.courseId} />}
-                {thread.branchId     && <Tag label={thread.branchId} />}
+                {thread.universityId && <Tag label={uniLabel} />}
+                {thread.courseId     && <Tag label={courseLabel} />}
+                {thread.branchId     && <Tag label={branchLabel} />}
               </div>
               <div className="flex items-center gap-1 text-[12px] text-muted-foreground shrink-0
                               group-hover:text-primary transition-colors duration-200">

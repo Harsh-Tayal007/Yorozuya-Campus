@@ -1,15 +1,8 @@
 import { Link, useLocation } from "react-router-dom"
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-// Supports two modes:
-// 1. `items` prop — explicit control, used for pages with dynamic/fetched labels
-// 2. Auto-generate from URL — fallback for simple static routes
-// ─────────────────────────────────────────────────────────────────────────────
-
 const Breadcrumbs = ({ items, overrides = {} }) => {
   const location = useLocation()
 
-  // ── Mode 1: explicit items ──────────────────────────────────────────────
   if (items) {
     return (
       <nav className="text-sm text-muted-foreground mb-4">
@@ -17,17 +10,24 @@ const Breadcrumbs = ({ items, overrides = {} }) => {
           {items.map((crumb, i) => {
             const isLast = i === items.length - 1
             return (
-              <li key={i} className="flex items-center gap-1">
+              <li key={i} className="flex items-center gap-1 min-w-0">
                 {isLast || !crumb.href ? (
-                  <span className="text-foreground font-medium truncate max-w-[220px]" title={crumb.label}>
+                  <span
+                    className="text-foreground font-medium truncate max-w-[140px] sm:max-w-[220px]"
+                    title={crumb.label}
+                  >
                     {crumb.label}
                   </span>
                 ) : (
-                  <Link to={crumb.href} className="hover:text-foreground transition-colors">
+                  <Link
+                    to={crumb.href}
+                    className="hover:text-foreground transition-colors truncate max-w-[100px] sm:max-w-[160px]"
+                    title={crumb.label}
+                  >
                     {crumb.label}
                   </Link>
                 )}
-                {!isLast && <span className="text-muted-foreground/50">/</span>}
+                {!isLast && <span className="text-muted-foreground/50 shrink-0">/</span>}
               </li>
             )
           })}
@@ -36,16 +36,14 @@ const Breadcrumbs = ({ items, overrides = {} }) => {
     )
   }
 
-  // ── Mode 2: auto-generate from URL (unchanged) ──────────────────────────
+  // ── Mode 2: auto-generate from URL ──────────────────────────────────────
   const segments = location.pathname.split("/").filter(Boolean)
   const breadcrumbs = []
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]
 
-    if (segment === "programs" || segment === "branches" || segment === "subject") {
-      continue
-    }
+    if (segment === "programs" || segment === "branches" || segment === "subject") continue
 
     if (segment === "semester" && segments[i + 1]) {
       const semesterNumber = segments[i + 1]
@@ -72,17 +70,24 @@ const Breadcrumbs = ({ items, overrides = {} }) => {
     <nav className="text-sm text-muted-foreground mb-4">
       <ol className="flex flex-wrap gap-1 items-center">
         {breadcrumbs.map((crumb) => (
-          <li key={crumb.path} className="flex items-center gap-1">
+          <li key={crumb.path} className="flex items-center gap-1 min-w-0">
             {crumb.isLast ? (
-              <span className="text-foreground font-medium truncate max-w-[220px]" title={crumb.label}>
+              <span
+                className="text-foreground font-medium truncate max-w-[140px] sm:max-w-[220px]"
+                title={crumb.label}
+              >
                 {crumb.label}
               </span>
             ) : (
-              <Link to={crumb.path} className="hover:text-foreground transition-colors">
+              <Link
+                to={crumb.path}
+                className="hover:text-foreground transition-colors truncate max-w-[100px] sm:max-w-[160px]"
+                title={crumb.label}
+              >
                 {crumb.label}
               </Link>
             )}
-            {!crumb.isLast && <span className="text-muted-foreground/50">/</span>}
+            {!crumb.isLast && <span className="text-muted-foreground/50 shrink-0">/</span>}
           </li>
         ))}
       </ol>
@@ -92,7 +97,6 @@ const Breadcrumbs = ({ items, overrides = {} }) => {
 
 export default Breadcrumbs
 
-// ─── buildBreadcrumbs utility (unchanged) ────────────────────────────────────
 export const buildBreadcrumbs = (pathname, overrides = {}) => {
   const segments = pathname.split("/").filter(Boolean)
   const crumbs = []
@@ -101,9 +105,7 @@ export const buildBreadcrumbs = (pathname, overrides = {}) => {
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]
 
-    if (segment === "programs" || segment === "branches" || segment === "subject") {
-      continue
-    }
+    if (segment === "programs" || segment === "branches" || segment === "subject") continue
 
     accumulatedPath += `/${segment}`
 

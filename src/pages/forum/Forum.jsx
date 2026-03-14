@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { universities } from "@/data/universities"
+import { useUniversities, usePrograms, useBranches } from "@/hooks/useAcademicDropdowns"
 
 import ThreadCard from "@/components/forum/ThreadCard"
 import { CreateThreadModal, ForumTabs } from "@/components/forum"
@@ -39,6 +39,12 @@ const Forum = () => {
   const courseDropdownRef = useRef(null)
   const branchDropdownRef = useRef(null)
   const { currentUser } = useAuth()
+
+  // ── Real academic data from DB ──────────────────────────────────────────────
+  const { data: universities = [] }                  = useUniversities()
+  const { data: programs = [] }                      = usePrograms(selectedUniversity)
+  const { data: branches = [] }                      = useBranches(selectedCourse)
+
   const navigate        = useNavigate()
   const location        = useLocation()
 
@@ -81,9 +87,6 @@ const Forum = () => {
     if (selectedUniversity) return "university"
     return "all"
   }, [selectedUniversity, selectedCourse, selectedBranch])
-
-  const selectedUniversityData = universities.find(u => u.id === selectedUniversity)
-  const selectedCourseData     = selectedUniversityData?.courses.find(c => c.id === selectedCourse)
 
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ["threads"],
@@ -299,7 +302,7 @@ const Forum = () => {
                                   : "border-border text-muted-foreground"
                                 } bg-muted/40 hover:border-primary/40`}
                   >
-                    <span>{universities.find(u => u.id === selectedUniversity)?.shortName ?? "University"}</span>
+                    <span>{universities.find(u => u.$id === selectedUniversity)?.name ?? "University"}</span>
                     <ChevronDown size={13} className={`transition-transform duration-200 ${uniOpen ? "rotate-180" : ""}`} />
                   </button>
                   {uniOpen && (
@@ -307,11 +310,11 @@ const Forum = () => {
                                     bg-background shadow-xl overflow-hidden
                                     animate-in fade-in-0 zoom-in-95 duration-100 origin-top-left">
                       {universities.map(u => (
-                        <button key={u.id} onClick={() => { setSelectedUniversity(u.id); setSelectedCourse(null); setSelectedBranch(null); setUniOpen(false) }}
+                        <button key={u.$id} onClick={() => { setSelectedUniversity(u.$id); setSelectedCourse(null); setSelectedBranch(null); setUniOpen(false) }}
                           className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-muted
-                                      ${selectedUniversity === u.id ? "text-primary font-semibold" : "text-foreground"}`}>
-                          {u.shortName}
-                          {selectedUniversity === u.id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                      ${selectedUniversity === u.$id ? "text-primary font-semibold" : "text-foreground"}`}>
+                          {u.name}
+                          {selectedUniversity === u.$id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                         </button>
                       ))}
                     </div>
@@ -330,19 +333,19 @@ const Forum = () => {
                                   : "border-border text-muted-foreground"
                                 } bg-muted/40 hover:border-primary/40`}
                   >
-                    <span>{selectedUniversityData?.courses.find(c => c.id === selectedCourse)?.name ?? "Course"}</span>
+                    <span>{programs.find(p => p.$id === selectedCourse)?.name ?? "Course"}</span>
                     <ChevronDown size={13} className={`transition-transform duration-200 ${courseOpen ? "rotate-180" : ""}`} />
                   </button>
                   {courseOpen && (
                     <div className="absolute left-0 top-full mt-1.5 w-full z-[200] rounded-xl border border-border
                                     bg-background shadow-xl overflow-hidden
                                     animate-in fade-in-0 zoom-in-95 duration-100 origin-top-left">
-                      {selectedUniversityData?.courses.map(c => (
-                        <button key={c.id} onClick={() => { setSelectedCourse(c.id); setSelectedBranch(null); setCourseOpen(false) }}
+                      {programs.map(p => (
+                        <button key={p.$id} onClick={() => { setSelectedCourse(p.$id); setSelectedBranch(null); setCourseOpen(false) }}
                           className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-muted
-                                      ${selectedCourse === c.id ? "text-primary font-semibold" : "text-foreground"}`}>
-                          {c.name}
-                          {selectedCourse === c.id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                      ${selectedCourse === p.$id ? "text-primary font-semibold" : "text-foreground"}`}>
+                          {p.name}
+                          {selectedCourse === p.$id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                         </button>
                       ))}
                     </div>
@@ -361,19 +364,19 @@ const Forum = () => {
                                   : "border-border text-muted-foreground"
                                 } bg-muted/40 hover:border-primary/40`}
                   >
-                    <span>{selectedCourseData?.branches.find(b => b.id === selectedBranch)?.name ?? "Branch"}</span>
+                    <span>{branches.find(b => b.$id === selectedBranch)?.name ?? "Branch"}</span>
                     <ChevronDown size={13} className={`transition-transform duration-200 ${branchOpen ? "rotate-180" : ""}`} />
                   </button>
                   {branchOpen && (
                     <div className="absolute left-0 top-full mt-1.5 w-full z-[200] rounded-xl border border-border
                                     bg-background shadow-xl overflow-hidden
                                     animate-in fade-in-0 zoom-in-95 duration-100 origin-top-left">
-                      {selectedCourseData?.branches.map(b => (
-                        <button key={b.id} onClick={() => { setSelectedBranch(b.id); setBranchOpen(false) }}
+                      {branches.map(b => (
+                        <button key={b.$id} onClick={() => { setSelectedBranch(b.$id); setBranchOpen(false) }}
                           className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors hover:bg-muted
-                                      ${selectedBranch === b.id ? "text-primary font-semibold" : "text-foreground"}`}>
+                                      ${selectedBranch === b.$id ? "text-primary font-semibold" : "text-foreground"}`}>
                           {b.name}
-                          {selectedBranch === b.id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                          {selectedBranch === b.$id && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                         </button>
                       ))}
                     </div>
@@ -454,9 +457,7 @@ const Forum = () => {
         selectedUniversity={selectedUniversity}
         selectedCourse={selectedCourse}
         selectedBranch={selectedBranch}
-        selectedUniversityData={selectedUniversityData}
-        selectedCourseData={selectedCourseData}
-        universities={universities}
+
         currentUser={currentUser}
       />
     </PageWrapper>

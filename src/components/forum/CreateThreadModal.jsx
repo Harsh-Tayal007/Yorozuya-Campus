@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useCreateThread } from "@/services/forum/useCreateThread"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { universities } from "@/data/universities"
+import { useUniversities, usePrograms, useBranches } from "@/hooks/useAcademicDropdowns"
 import { X, ChevronDown } from "lucide-react"
 
 // ── Reusable custom dropdown ──────────────────────────────────────────────────
@@ -67,11 +67,22 @@ export default function CreateThreadModal({
 }) {
   const { mutate, isPending } = useCreateThread()
 
+  // ── State first — hooks below depend on these ─────────────────────────────
   const [title,           setTitle]           = useState("")
   const [content,         setContent]         = useState("")
   const [localUniversity, setLocalUniversity] = useState(selectedUniversity)
   const [localCourse,     setLocalCourse]     = useState(selectedCourse)
   const [localBranch,     setLocalBranch]     = useState(selectedBranch)
+
+  // ── Academic data — must come AFTER state so localUniversity/localCourse exist
+  const { data: universities = [] } = useUniversities()
+  const { data: programs = [] }     = usePrograms(localUniversity)
+  const { data: branches = [] }     = useBranches(localCourse)
+
+  // Derived display values for context chips
+  const localUniversityData = universities.find(u => u.$id === localUniversity)
+  const localCourseData     = programs.find(p => p.$id === localCourse)
+  const localBranchData     = branches.find(b => b.$id === localBranch)
 
   useEffect(() => {
     if (open) {
@@ -89,13 +100,6 @@ export default function CreateThreadModal({
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
   }, [open, onClose])
-
-  const localUniversityData = useMemo(() =>
-    universities.find(u => u.id === localUniversity), [localUniversity])
-
-  const localCourseData = useMemo(() =>
-    localUniversityData?.courses?.find(c => c.id === localCourse),
-    [localUniversityData, localCourse])
 
   const canSubmit = title.trim() && content.trim() && localUniversity && localCourse && localBranch
 
@@ -143,14 +147,14 @@ export default function CreateThreadModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-y-auto">
           <div className="px-5 py-4 space-y-5 flex-1">
 
-            {/* Context chips */}
-            {(localUniversityData || localCourseData || localBranch) && (
+            {/* Context chips — show selected values */}
+            {(localUniversityData || localCourseData || localBranchData) && (
               <div className="flex flex-wrap gap-1.5">
                 <span className="text-[11px] font-medium uppercase tracking-wide
                                  text-muted-foreground self-center mr-1">In:</span>
                 {localUniversityData && (
                   <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                    {localUniversityData.shortName}
+                    {localUniversityData.name}
                   </span>
                 )}
                 {localCourseData && (
@@ -158,9 +162,9 @@ export default function CreateThreadModal({
                     {localCourseData.name}
                   </span>
                 )}
-                {localBranch && localCourseData && (
+                {localBranchData && (
                   <span className="px-2.5 py-0.5 rounded-full bg-muted text-xs font-medium">
-                    {localCourseData.branches.find(b => b.id === localBranch)?.name}
+                    {localBranchData.name}
                   </span>
                 )}
               </div>
@@ -177,7 +181,7 @@ export default function CreateThreadModal({
                   <CustomSelect
                     value={localUniversity ?? ""}
                     onChange={v => { setLocalUniversity(v); setLocalCourse(null); setLocalBranch(null) }}
-                    options={universities.map(u => ({ value: u.id, label: u.shortName }))}
+                    options={universities.map(u => ({ value: u.$id, label: u.name }))}
                     placeholder="Select University"
                   />
                 )}
@@ -186,8 +190,8 @@ export default function CreateThreadModal({
                   <CustomSelect
                     value={localCourse ?? ""}
                     onChange={v => { setLocalCourse(v); setLocalBranch(null) }}
-                    options={(localUniversityData?.courses ?? []).map(c => ({ value: c.id, label: c.name }))}
-                    placeholder="Select Course"
+                    options={programs.map(p => ({ value: p.$id, label: p.name }))}
+                    placeholder="Select Program"
                     disabled={!localUniversity}
                   />
                 )}
@@ -196,7 +200,7 @@ export default function CreateThreadModal({
                   <CustomSelect
                     value={localBranch ?? ""}
                     onChange={setLocalBranch}
-                    options={(localCourseData?.branches ?? []).map(b => ({ value: b.id, label: b.name }))}
+                    options={branches.map(b => ({ value: b.$id, label: b.name }))}
                     placeholder="Select Branch"
                     disabled={!localCourse}
                   />

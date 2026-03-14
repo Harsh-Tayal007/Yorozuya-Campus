@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react"
 import { useReplies } from "@/hooks/useReplies"
-import useAuthorRoles from "@/hooks/useAuthorRoles"
+import useAuthorRoles from "@/hooks/useAuthorRolesHook"
 import useThreadVotes from "@/hooks/useThreadVotes"  // ← new
 
 const RepliesContext = createContext(null)

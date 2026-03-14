@@ -188,6 +188,8 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
     })
   }, [replies, sortBy, search])
 
+  const totalCount = Object.keys(replies?.byId ?? {}).length
+
   const focusChildren = focusReplyId ? replies.children?.[focusReplyId] ?? [] : []
 
   useEffect(() => {
@@ -204,7 +206,7 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
       <div className="space-y-4">
 
         <h2 id="replies-section" className="text-lg font-semibold">
-  {rootReplies.length} {rootReplies.length === 1 ? "Reply" : "Replies"}
+  {totalCount} {totalCount === 1 ? "Reply" : "Replies"}
 </h2>
 
         <CreateReplyBox />

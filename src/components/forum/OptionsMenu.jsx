@@ -195,7 +195,7 @@ export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse
             fontSize: 13, color: colors.muted, opacity: 0.75,
             display: "-webkit-box", WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical", overflow: "hidden",
-          }}>{reply.content}</p>
+          }}>{reply.content?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim()}</p>
         </div>
 
         <Row icon={Copy} label="Copy text" onClick={handleCopyText} />

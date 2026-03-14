@@ -82,8 +82,7 @@ function MobileReplyModal({ replyingTo, onSubmit, onClose }) {
             display: "-webkit-box", WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical", overflow: "hidden",
           }}>
-            {/* Strip HTML tags for plain text preview */}
-            {replyingTo.content?.replace(/<[^>]*>/g, "") || ""}
+            {replyingTo.content?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() || ""}
           </p>
         </div>
       )}
@@ -100,6 +99,7 @@ function MobileReplyModal({ replyingTo, onSubmit, onClose }) {
           onSubmit={handlePost}
           placeholder="Your reply…"
           autoFocus
+          collapsibleToolbar
         />
 
         {(cs.previewGif || cs.previewImage) && (
