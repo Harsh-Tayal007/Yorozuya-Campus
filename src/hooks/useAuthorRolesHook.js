@@ -1,5 +1,5 @@
-// src/hooks/useAuthorRoles.js
-import { useEffect, useRef, useState } from "react";
+// src/hooks/useAuthorRolesHook.js
+import { useQuery } from "@tanstack/react-query";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 
@@ -8,29 +8,17 @@ const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID;
 
 // Map shape: { [authorId]: { role, avatarUrl, username } }
 export default function useAuthorRoles(replies) {
-  const [authorRoles, setAuthorRoles] = useState({});
-  const fetchedKeyRef = useRef("");
-
-  useEffect(() => {
-    if (!replies?.byId) return;
-
-    const authorIds = [
-      ...new Set(
+  const authorIds = replies?.byId
+    ? [...new Set(
         Object.values(replies.byId)
           .map((r) => r?.authorId)
           .filter(Boolean),
-      ),
-    ].sort();
+      )].sort()
+    : [];
 
-    if (authorIds.length === 0) return;
-
-    const key = authorIds.join(",");
-    if (key === fetchedKeyRef.current) return;
-    fetchedKeyRef.current = key;
-
-    let cancelled = false;
-
-    (async () => {
+  const { data: authorRoles = {} } = useQuery({
+    queryKey: ["author-roles", ...authorIds],
+    queryFn: async () => {
       const map = {};
 
       try {
@@ -51,7 +39,7 @@ export default function useAuthorRoles(replies) {
           foundUserIds.add(doc.userId);
         }
 
-        // Request 2: fallback by $id
+        // Request 2: fallback by $id for any unresolved ids
         const unresolved = authorIds.filter((id) => !foundUserIds.has(id));
         if (unresolved.length > 0) {
           const res2 = await databases.listDocuments(DATABASE_ID, USERS_COL, [
@@ -71,16 +59,12 @@ export default function useAuthorRoles(replies) {
         console.error("Failed to batch fetch author roles:", err);
       }
 
-      if (cancelled) return;
-      setAuthorRoles((prev) => {
-        const prevKey = JSON.stringify(prev);
-        const nextKey = JSON.stringify(map);
-        return prevKey === nextKey ? prev : map;
-      });
-    })();
-
-    return () => { cancelled = true; };
-  }, [replies?.byId]);
+      return map;
+    },
+    enabled: authorIds.length > 0,
+    staleTime: 1000 * 60 * 10,  // 10 min — same as user-avatar queries
+    retry: false,
+  });
 
   return authorRoles;
 }

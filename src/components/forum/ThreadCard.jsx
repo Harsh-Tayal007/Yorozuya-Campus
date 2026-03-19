@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { deleteThread } from "@/services/forum/threadService"
@@ -10,7 +10,7 @@ import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
+const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const highlightMatch = (text = "", query) => {
   const safeText = String(text)
@@ -27,12 +27,12 @@ const highlightMatch = (text = "", query) => {
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1)  return "just now"
+  if (m < 1) return "just now"
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
-  if (d < 7)  return `${d}d ago`
+  if (d < 7) return `${d}d ago`
   return new Date(dateStr).toLocaleDateString()
 }
 
@@ -50,7 +50,7 @@ const DeleteConfirmDialog = ({ threadTitle, onConfirm, onCancel, isPending }) =>
     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
     <div className="relative z-10 w-full max-w-sm bg-background border border-border
                     rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in-0 zoom-in-95 duration-150"
-         onClick={e => e.stopPropagation()}>
+      onClick={e => e.stopPropagation()}>
       <div className="flex items-center justify-center w-11 h-11 rounded-full
                       bg-destructive/10 border border-destructive/20 mx-auto">
         <AlertTriangle size={20} className="text-destructive" />
@@ -80,10 +80,6 @@ const DeleteConfirmDialog = ({ threadTitle, onConfirm, onCancel, isPending }) =>
 
 // ── Avatar — reads from pre-seeded cache, falls back to individual fetch ──────
 const ThreadAuthorAvatar = ({ authorId, authorName }) => {
-  const [imgLoaded, setImgLoaded] = useState(false)
-
-  // Try cache first (seeded by useThreadAuthors in Forum.jsx)
-  // Falls back to individual fetch if not in cache (e.g. ThreadDetail page)
   const { data } = useQuery({
     queryKey: ["user-avatar", authorId],
     queryFn: async () => {
@@ -96,32 +92,27 @@ const ThreadAuthorAvatar = ({ authorId, authorName }) => {
         ? { avatarUrl: res.documents[0].avatarUrl ?? null, username: res.documents[0].username ?? null }
         : null
     },
-    enabled:   !!authorId,
+    enabled: !!authorId,
     staleTime: 1000 * 60 * 10,
     retry: false,
   })
 
   const avatarUrl = data?.avatarUrl ?? null
 
-  // Always render the initials div — fade in the image on top when loaded
   return (
     <div className="shrink-0 w-8 h-8 rounded-full relative mt-0.5">
-      {/* Initials fallback — always visible until image loads */}
-      <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
-                       border border-primary/20 flex items-center justify-center
-                       text-[11px] font-bold text-primary select-none
-                       transition-opacity duration-300 ${imgLoaded ? "opacity-0" : "opacity-100"}`}>
+      {/* Initials always visible underneath */}
+      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
+                      border border-primary/20 flex items-center justify-center
+                      text-[11px] font-bold text-primary select-none">
         {authorName?.charAt(0).toUpperCase()}
       </div>
-
-      {/* Real avatar — fades in once loaded */}
+      {/* Image sits on top — no opacity fade needed */}
       {avatarUrl && (
         <img
           src={avatarUrl}
           alt={authorName}
-          onLoad={() => setImgLoaded(true)}
-          className={`absolute inset-0 w-full h-full rounded-full object-cover border border-border
-                      transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+          className="absolute inset-0 w-full h-full rounded-full object-cover border border-border"
         />
       )}
     </div>
@@ -130,36 +121,55 @@ const ThreadAuthorAvatar = ({ authorId, authorName }) => {
 
 // =============================================================================
 const ThreadCard = ({ thread, searchQuery }) => {
-  const navigate    = useNavigate()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { currentUser, role } = useAuth()
-  const menuRef     = useRef(null)
-  const [menuOpen,    setMenuOpen]    = useState(false)
+  const menuRef = useRef(null)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const isOwn     = currentUser?.$id === thread.authorId
-  const isMod     = role === "admin" || role === "moderator"
+  const isOwn = currentUser?.$id === thread.authorId
+  const isMod = role === "admin" || role === "moderator"
   const canDelete = isOwn || isMod
 
   const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
 
   const universities = queryClient.getQueryData(["universities"]) ?? []
-  const uniLabel     = universities.find(u => u.$id === thread.universityId)?.name ?? thread.universityId
+  const uniLabel = universities.find(u => u.$id === thread.universityId)?.name ?? thread.universityId
 
   const { data: programDoc } = useQuery({
     queryKey: ["program", thread.courseId],
-    queryFn:  () => getProgramById(thread.courseId),
-    enabled:  isAppwriteId(thread.courseId),
+    queryFn: () => getProgramById(thread.courseId),
+    enabled: isAppwriteId(thread.courseId),
     staleTime: Infinity, retry: false,
   })
   const { data: branchDoc } = useQuery({
     queryKey: ["branch", thread.branchId],
-    queryFn:  () => getBranchById(thread.branchId),
-    enabled:  isAppwriteId(thread.branchId),
+    queryFn: () => getBranchById(thread.branchId),
+    enabled: isAppwriteId(thread.branchId),
     staleTime: Infinity, retry: false,
   })
   const courseLabel = programDoc?.name ?? thread.courseId
-  const branchLabel = branchDoc?.name  ?? thread.branchId
+  const branchLabel = branchDoc?.name ?? thread.branchId
+
+  // Reads from cache already seeded by ThreadAuthorAvatar — no extra network request
+  const { data: authorData } = useQuery({
+    queryKey: ["user-avatar", thread.authorId],
+    queryFn: async () => {
+      const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [
+        Query.equal("userId", thread.authorId),
+        Query.limit(1),
+        Query.select(["avatarUrl", "username"]),
+      ])
+      return res.documents[0]
+        ? { avatarUrl: res.documents[0].avatarUrl ?? null, username: res.documents[0].username ?? null }
+        : null
+    },
+    enabled: !!thread.authorId,
+    staleTime: 1000 * 60 * 10,
+    retry: false,
+  })
+  const profileHref = authorData?.username ? `/profile/${authorData.username}` : null
 
   useEffect(() => {
     if (!menuOpen) return
@@ -217,12 +227,30 @@ const ThreadCard = ({ thread, searchQuery }) => {
                         opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
         <div className="flex items-start gap-3">
-          <ThreadAuthorAvatar authorId={thread.authorId} authorName={thread.authorName} />
+          {/* Avatar — wrapped in Link if profile exists */}
+          {profileHref ? (
+            <Link to={profileHref} onClick={e => e.stopPropagation()}>
+              <ThreadAuthorAvatar authorId={thread.authorId} authorName={thread.authorName} />
+            </Link>
+          ) : (
+            <ThreadAuthorAvatar authorId={thread.authorId} authorName={thread.authorName} />
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground min-w-0">
-                <span className="font-medium text-foreground/80 truncate">{thread.authorName}</span>
+                {/* Author name — linked to profile if available */}
+                {profileHref ? (
+                  <Link
+                    to={profileHref}
+                    onClick={e => e.stopPropagation()}
+                    className="font-medium text-foreground/80 hover:text-primary transition-colors truncate"
+                  >
+                    {thread.authorName}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-foreground/80 truncate">{thread.authorName}</span>
+                )}
                 <span className="shrink-0 opacity-40">·</span>
                 <Clock size={10} className="opacity-40 shrink-0" />
                 <span className="shrink-0">{timeAgo(thread.$createdAt)}</span>
@@ -266,8 +294,8 @@ const ThreadCard = ({ thread, searchQuery }) => {
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap gap-1">
                 {thread.universityId && <Tag label={uniLabel} />}
-                {thread.courseId     && <Tag label={courseLabel} />}
-                {thread.branchId     && <Tag label={branchLabel} />}
+                {thread.courseId && <Tag label={courseLabel} />}
+                {thread.branchId && <Tag label={branchLabel} />}
               </div>
               <div className="flex items-center gap-1 text-[12px] text-muted-foreground shrink-0
                               group-hover:text-primary transition-colors duration-200">

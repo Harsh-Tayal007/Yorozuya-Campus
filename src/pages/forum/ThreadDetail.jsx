@@ -10,20 +10,19 @@ import { Query } from "appwrite"
 import { Loader2, Clock, ArrowLeft } from "lucide-react"
 import { RepliesProvider } from "@/components/forum/RepliesProvider"
 import RepliesSection from "@/components/forum/RepliesSection"
-import { useState } from "react"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
+const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1)  return "just now"
+  if (m < 1) return "just now"
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
-  if (d < 7)  return `${d}d ago`
+  if (d < 7) return `${d}d ago`
   return new Date(dateStr).toLocaleDateString()
 }
 
@@ -35,7 +34,6 @@ const ThreadDetail = () => {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const focusReplyId = searchParams.get("focus")
-  const [imgLoaded, setImgLoaded] = useState(false)
 
   const { data: thread, isLoading } = useQuery({
     queryKey: ["thread", threadId],
@@ -45,23 +43,23 @@ const ThreadDetail = () => {
 
   const { data: uniDoc } = useQuery({
     queryKey: ["university", thread?.universityId],
-    queryFn:  () => import("@/services/university/universityService")
-                      .then(m => m.getUniversityById(thread.universityId)),
-    enabled:  !!thread && isAppwriteId(thread.universityId),
+    queryFn: () => import("@/services/university/universityService")
+      .then(m => m.getUniversityById(thread.universityId)),
+    enabled: !!thread && isAppwriteId(thread.universityId),
     staleTime: Infinity, retry: false,
   })
 
   const { data: programDoc } = useQuery({
     queryKey: ["program", thread?.courseId],
-    queryFn:  () => getProgramById(thread.courseId),
-    enabled:  !!thread && isAppwriteId(thread.courseId),
+    queryFn: () => getProgramById(thread.courseId),
+    enabled: !!thread && isAppwriteId(thread.courseId),
     staleTime: Infinity, retry: false,
   })
 
   const { data: branchDoc } = useQuery({
     queryKey: ["branch", thread?.branchId],
-    queryFn:  () => getBranchById(thread.branchId),
-    enabled:  !!thread && isAppwriteId(thread.branchId),
+    queryFn: () => getBranchById(thread.branchId),
+    enabled: !!thread && isAppwriteId(thread.branchId),
     staleTime: Infinity, retry: false,
   })
 
@@ -79,17 +77,17 @@ const ThreadDetail = () => {
         ? { avatarUrl: res.documents[0].avatarUrl ?? null, username: res.documents[0].username ?? null }
         : null
     },
-    enabled:   !!thread?.authorId,
+    enabled: !!thread?.authorId,
     staleTime: 1000 * 60 * 10,
     retry: false,
   })
 
-  const uniLabel     = uniDoc?.name     ?? thread?.universityId
-  const courseLabel  = programDoc?.name ?? thread?.courseId
-  const branchLabel  = branchDoc?.name  ?? thread?.branchId
-  const avatarUrl    = authorData?.avatarUrl ?? null
+  const uniLabel = uniDoc?.name ?? thread?.universityId
+  const courseLabel = programDoc?.name ?? thread?.courseId
+  const branchLabel = branchDoc?.name ?? thread?.branchId
+  const avatarUrl = authorData?.avatarUrl ?? null
   const authorUsername = authorData?.username ?? null
-  const profileHref  = authorUsername ? `/profile/${authorUsername}` : null
+  const profileHref = authorUsername ? `/profile/${authorUsername}` : null
 
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1)
@@ -115,24 +113,21 @@ const ThreadDetail = () => {
     )
   }
 
-  // Avatar element with fade-in — initials always visible underneath
+  // Avatar element — initials always visible underneath, image sits on top
   const AvatarEl = ({ size = "w-6 h-6", textSize = "text-[10px]" }) => (
     <div className={`${size} rounded-full relative shrink-0`}>
-      {/* Initials fallback */}
+      {/* Initials fallback — always underneath */}
       <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                        border border-primary/20 flex items-center justify-center
-                       ${textSize} font-bold text-primary
-                       transition-opacity duration-300 ${imgLoaded && avatarUrl ? "opacity-0" : "opacity-100"}`}>
+                       ${textSize} font-bold text-primary`}>
         {thread.authorName?.charAt(0).toUpperCase()}
       </div>
-      {/* Real avatar */}
+      {/* Real avatar — sits on top, no onLoad/opacity trick needed */}
       {avatarUrl && (
         <img
           src={avatarUrl}
           alt={thread.authorName}
-          onLoad={() => setImgLoaded(true)}
-          className={`absolute inset-0 w-full h-full rounded-full object-cover border border-border
-                      transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+          className="absolute inset-0 w-full h-full rounded-full object-cover border border-border"
         />
       )}
     </div>
@@ -146,8 +141,8 @@ const ThreadDetail = () => {
           items={[
             { label: "Forum", href: "/forum" },
             thread.universityId && { label: uniLabel },
-            thread.courseId     && { label: courseLabel },
-            thread.branchId     && { label: branchLabel },
+            thread.courseId && { label: courseLabel },
+            thread.branchId && { label: branchLabel },
             { label: thread.title },
           ].filter(Boolean)}
         />
@@ -197,8 +192,8 @@ const ThreadDetail = () => {
 
             {profileHref ? (
               <Link to={profileHref}
-                    className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-                    onClick={e => e.stopPropagation()}>
+                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                onClick={e => e.stopPropagation()}>
                 {thread.authorName}
               </Link>
             ) : (
