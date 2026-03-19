@@ -10,88 +10,75 @@ import { USERS_COLLECTION_ID } from "@/config/appwrite"
 import { ID, Query } from "appwrite"
 import { account, databases } from "@/lib/appwrite"
 import { ROLE_PERMISSIONS } from "@/config/permissions"
-import Signup from "@/pages/auth/Signup"
+import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 
 const AuthContext = createContext(null)
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const DATABASE_ID    = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const USERS_TABLE_ID = USERS_COLLECTION_ID
 
+// ── Build currentUser shape from accountUser + userDoc ───────────────────────
+const buildCurrentUser = (accountUser, userDoc) => ({
+  ...accountUser,
+  username:         userDoc.username,
+  universityId:     userDoc.universityId     ?? null,
+  programId:        userDoc.programId        ?? null,
+  branchId:         userDoc.branchId         ?? null,
+  profileCompleted: userDoc.profileCompleted ?? false,
+  avatarUrl:        userDoc.avatarUrl        ?? null,
+  avatarPublicId:   userDoc.avatarPublicId   ?? null,
+  bio:              userDoc.bio              ?? null,
+  yearOfStudy:      userDoc.yearOfStudy      ?? null,
+  // Use DB name as source of truth (can be updated by user)
+  name:             userDoc.name             ?? accountUser.name,
+})
+
 export const AuthProvider = ({ children }) => {
-  const [authStatus, setAuthStatus] = useState(false)
+  const [authStatus,  setAuthStatus]  = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
-  const [role, setRole] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [role,        setRole]        = useState(null)
+  const [isLoading,   setIsLoading]   = useState(true)
+  const [userDocId,   setUserDocId]   = useState(null)   // ← cached DB doc $id
 
   const assertRoleFromDB = (role) => {
-    if (!role) {
-      throw new Error("Invariant violation: role missing from DB")
-    }
+    if (!role) throw new Error("Invariant violation: role missing from DB")
     return role
   }
 
-
-  // ✅ Permissions derived ONLY from role
   const permissions = useMemo(() => {
     if (!role) return []
     return ROLE_PERMISSIONS[role] || []
   }, [role])
 
-  const hasPermission = (permission) => permissions.includes(permission)
-  const hasAnyPermission = (permissionList) =>
-    permissionList.some((p) => permissions.includes(p))
-
-  // 🔐 ROLE SOURCE OF TRUTH
-  // Role MUST come from users collection.
-  // Do NOT derive role from account, prefs, UI, or defaults.
-
-
+  const hasPermission    = (permission)     => permissions.includes(permission)
+  const hasAnyPermission = (permissionList) => permissionList.some((p) => permissions.includes(p))
 
   const sessionRestored = useRef(false)
 
-  // 🔁 Restore session
+  // ── Restore session ──────────────────────────────────────────────────────
   useEffect(() => {
-
-    if (sessionRestored.current) return  // ← guard against StrictMode double-invoke
+    if (sessionRestored.current) return
     sessionRestored.current = true
-    
+
     const restoreSession = async () => {
       try {
         const accountUser = await getCurrentUser()
 
         const res = await databases.listDocuments(
-          DATABASE_ID,
-          USERS_TABLE_ID,
+          DATABASE_ID, USERS_TABLE_ID,
           [Query.equal("userId", accountUser.$id)]
         )
 
-        if (res.total === 0) {
-          throw new Error("User profile not found")
-        }
+        if (res.total === 0) throw new Error("User profile not found")
 
         const userDoc = res.documents[0]
 
-        // 🔒 Phase 0.2.a hard invariant
-        if (!userDoc.username) {
-          throw new Error("Username missing in user profile")
-        }
+        if (!userDoc.username) throw new Error("Username missing in user profile")
+        if (!userDoc.role)     throw new Error("Role missing in user profile")
 
-        if (!userDoc.role) {
-          throw new Error("Role missing in user profile")
-        }
-
-        const roleFromDB = assertRoleFromDB(userDoc.role)
-
-        setRole(roleFromDB)
-        setCurrentUser({
-          ...accountUser,
-          username: userDoc.username,
-          universityId: userDoc.universityId ?? null,
-          programId: userDoc.programId ?? null,
-          branchId: userDoc.branchId ?? null,
-          profileCompleted: userDoc.profileCompleted ?? false,
-        })
-
+        setRole(assertRoleFromDB(userDoc.role))
+        setUserDocId(userDoc.$id)
+        setCurrentUser(buildCurrentUser(accountUser, userDoc))
         setAuthStatus(true)
 
       } catch (err) {
@@ -99,6 +86,7 @@ export const AuthProvider = ({ children }) => {
         setAuthStatus(false)
         setCurrentUser(null)
         setRole(null)
+        setUserDocId(null)
       } finally {
         setIsLoading(false)
       }
@@ -107,189 +95,145 @@ export const AuthProvider = ({ children }) => {
     restoreSession()
   }, [])
 
-  // 🔐 Login
+  // ── Login ────────────────────────────────────────────────────────────────
   const login = async ({ email, password }) => {
     let accountUser
-
     try {
-      // 🔁 Try to reuse existing session
       accountUser = await getCurrentUser()
     } catch {
-      // 🆕 No session → create one
       await loginUser({ email, password })
       accountUser = await getCurrentUser()
     }
 
     const res = await databases.listDocuments(
-      DATABASE_ID,
-      USERS_TABLE_ID,
+      DATABASE_ID, USERS_TABLE_ID,
       [Query.equal("userId", accountUser.$id)]
     )
 
-    if (res.total === 0) {
-      throw new Error("User profile not found")
-    }
+    if (res.total === 0) throw new Error("User profile not found")
 
     const userDoc = res.documents[0]
 
-    // 🔒 Hard invariants
-    if (!userDoc.username) {
-      throw new Error("Username missing in user profile")
-    }
-
-    if (!userDoc.role) {
-      throw new Error("Role missing in user profile")
-    }
-
+    if (!userDoc.username) throw new Error("Username missing in user profile")
+    if (!userDoc.role)     throw new Error("Role missing in user profile")
 
     setRole(userDoc.role)
-    setCurrentUser({
-      ...accountUser,
-      username: userDoc.username,
-      universityId: userDoc.universityId ?? null,
-      programId: userDoc.programId ?? null,
-      branchId: userDoc.branchId ?? null,
-      profileCompleted: userDoc.profileCompleted ?? false,
-    })
-
+    setUserDocId(userDoc.$id)
+    setCurrentUser(buildCurrentUser(accountUser, userDoc))
     setAuthStatus(true)
   }
 
-
-  // 🆕 Signup — FIXED (Phase 0.2.b)
+  // ── Signup ───────────────────────────────────────────────────────────────
   const completeSignup = async (data) => {
     const { name, email, password, universityId, programId, branchId } = data
 
-    try {
-      await account.deleteSession("current")
-    } catch (err) {
-      // ignore
-    }
+    try { await account.deleteSession("current") } catch { /* ignore */ }
 
-    // 1️⃣ Create auth account
-    const authUser = await account.create(
-      ID.unique(),
-      email,
-      password,
-      name
-    )
-
-    // 2️⃣ Generate username
+    const authUser = await account.create(ID.unique(), email, password, name)
     const username = await generateAvailableUsername(name)
 
-    // 3️⃣ Create DB profile
-    await databases.createDocument(
-      DATABASE_ID,
-      USERS_TABLE_ID,
-      ID.unique(),
-      {
-        userId: authUser.$id,
-        email,
-        name,
-        username,
-        role: "user",
-        universityId,
-        programId,
-        branchId,
-        profileCompleted: true,
-      }
-    )
+    await databases.createDocument(DATABASE_ID, USERS_TABLE_ID, ID.unique(), {
+      userId: authUser.$id,
+      email,
+      name,
+      username,
+      role: "user",
+      universityId,
+      programId,
+      branchId,
+      profileCompleted: true,
+      avatarUrl:       null,
+      avatarPublicId:  null,
+      bio:             null,
+      yearOfStudy:     null,
+    })
 
-    // 4️⃣ Create session (log them in)
     await account.createEmailPasswordSession(email, password)
-
-    // 5️⃣ Fetch auth user again
     const loggedInUser = await account.get()
 
-    // 6️⃣ Fetch DB profile
     const profileRes = await databases.listDocuments(
-      DATABASE_ID,
-      USERS_TABLE_ID,
+      DATABASE_ID, USERS_TABLE_ID,
       [Query.equal("userId", loggedInUser.$id)]
     )
 
-    const profile = profileRes.documents[0] || null
+    const profile = profileRes.documents[0]
 
-    // TO this — explicitly keep auth $id, never let profile overwrite it:
-    setCurrentUser({
-      ...loggedInUser,
-      username: profile.username,
-      universityId: profile.universityId ?? null,
-      programId: profile.programId ?? null,
-      branchId: profile.branchId ?? null,
-      profileCompleted: profile.profileCompleted ?? false,
-      role: profile.role,
-      // $id stays as loggedInUser.$id (auth account ID) — never overwritten
-    })
-
+    setUserDocId(profile.$id)
+    setCurrentUser(buildCurrentUser(loggedInUser, profile))
     setRole(profile.role)
     setAuthStatus(true)
 
     return loggedInUser
   }
 
-  // function to update academic profile.
-  const completeAcademicProfile = async ({
-    universityId,
-    programId,
-    branchId,
-  }) => {
+  // ── Update academic profile ───────────────────────────────────────────────
+  // Fixed: uses cached userDocId — no extra listDocuments needed
+  const completeAcademicProfile = async ({ universityId, programId, branchId }) => {
     if (!currentUser) throw new Error("User not authenticated")
+    if (!userDocId)   throw new Error("User doc ID not cached")
 
-    const res = await databases.listDocuments(
-      DATABASE_ID,
-      USERS_TABLE_ID,
-      [Query.equal("userId", currentUser.$id)]
-    )
+    await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, {
+      universityId, programId, branchId, profileCompleted: true,
+    })
 
-    if (res.total === 0) {
-      throw new Error("User profile not found")
-    }
-
-    const userDoc = res.documents[0]
-
-    await databases.updateDocument(
-      DATABASE_ID,
-      USERS_TABLE_ID,
-      userDoc.$id,
-      {
-        universityId,
-        programId,
-        branchId,
-        profileCompleted: true,
-      }
-    )
-
-    // Update local state immediately
     setCurrentUser((prev) => ({
-      ...prev,
-      universityId,
-      programId,
-      branchId,
-      profileCompleted: true,
+      ...prev, universityId, programId, branchId, profileCompleted: true,
     }))
   }
 
+  // ── Update profile (bio, yearOfStudy, avatar, name) ──────────────────────
+  // 1 DB request + optional Cloudinary upload + optional account.updateName
+  const updateProfile = async ({
+    name,
+    bio,
+    yearOfStudy,
+    avatarUrl,
+    avatarPublicId,
+    oldAvatarPublicId,
+  }) => {
+    if (!currentUser) throw new Error("User not authenticated")
+    if (!userDocId)   throw new Error("User doc ID not cached")
 
+    // Delete old Cloudinary avatar if replacing
+    if (oldAvatarPublicId && oldAvatarPublicId !== avatarPublicId) {
+      await deleteCloudinaryImage(oldAvatarPublicId).catch(() => {})
+    }
 
-  // 🚪 Logout
+    // Build DB update payload — only include defined fields
+    const updates = {}
+    if (name           !== undefined) updates.name           = name
+    if (bio            !== undefined) updates.bio            = bio
+    if (yearOfStudy    !== undefined) updates.yearOfStudy    = yearOfStudy
+    if (avatarUrl      !== undefined) updates.avatarUrl      = avatarUrl
+    if (avatarPublicId !== undefined) updates.avatarPublicId = avatarPublicId
+
+    // Update DB doc
+    await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, updates)
+
+    // If name changed, update Appwrite Auth account name too
+    if (name !== undefined && name !== currentUser.name) {
+      await account.updateName(name).catch(() => {})
+    }
+
+    // Update local state — no re-fetch needed
+    setCurrentUser((prev) => ({ ...prev, ...updates }))
+  }
+
+  // ── Logout ───────────────────────────────────────────────────────────────
   const logout = async () => {
     await logoutUser()
     setAuthStatus(false)
     setCurrentUser(null)
     setRole(null)
+    setUserDocId(null)
   }
 
-  // 🔑 Role helper
   const hasRole = (allowedRoles) => {
     if (!role) return false
-    return Array.isArray(allowedRoles)
-      ? allowedRoles.includes(role)
-      : role === allowedRoles
+    return Array.isArray(allowedRoles) ? allowedRoles.includes(role) : role === allowedRoles
   }
 
   const isAdmin = hasRole("admin")
-
 
   return (
     <AuthContext.Provider
@@ -299,12 +243,14 @@ export const AuthProvider = ({ children }) => {
         role,
         isAdmin,
         isLoading,
+        userDocId,
 
         login,
         completeSignup,
         logout,
         hasRole,
         completeAcademicProfile,
+        updateProfile,
 
         permissions,
         hasPermission,

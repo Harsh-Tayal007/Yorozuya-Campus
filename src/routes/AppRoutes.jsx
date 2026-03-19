@@ -70,6 +70,7 @@ import DashboardPyqs from "@/components/dashboard/DashboardPyqs"
 import DashboardPyqSemester from "@/components/dashboard/DashboardPyqSemester"
 import DashboardPyqSubject from "@/components/dashboard/DashboardPyqSubject"
 import { PageTitleManager } from "@/components"
+import UserProfile from "@/pages/profile/UserProfile"
 
 const AppRoutes = () => {
   return (
@@ -84,6 +85,8 @@ const AppRoutes = () => {
           <Route path="/tools" element={<Tools />} />
 
           <Route path="/universities" element={<Universities />} />
+
+          <Route path="/profile/:username" element={<UserProfile />} />
 
           <Route
             path="/university/:universityId"

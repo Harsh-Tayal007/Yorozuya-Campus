@@ -5,7 +5,7 @@
 import React, { useState, useRef, useCallback, useContext } from "react"
 import { ArrowBigUp, ArrowBigDown, Pin, MoreVertical, Shield, Star, Pencil as PencilIcon } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, Link } from "react-router-dom"
 
 import { fmt, fmtVotes, initials } from "@/utils/replyUtils"
 import GlowCtx from "@/context/GlowContext"
@@ -36,7 +36,7 @@ const MAX_DEPTH_DESKTOP = 5
 const MAX_DEPTH_MOBILE = 3
 
 // =============================================================================
-// FLAIR CONFIG — only shown for non-user roles
+// FLAIR CONFIG
 // =============================================================================
 const FLAIR_CONFIG = {
   admin: {
@@ -58,7 +58,7 @@ const FLAIR_CONFIG = {
 
 function RoleFlair({ role }) {
   const config = FLAIR_CONFIG[role]
-  if (!config) return null  // "user" role — no flair
+  if (!config) return null
   const Icon = config.icon
   return (
     <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-px rounded-md ${config.className}`}>
@@ -69,7 +69,47 @@ function RoleFlair({ role }) {
 }
 
 // =============================================================================
-// REPLY — recursive threaded comment component
+// AVATAR — image or initials, optionally wrapped in a profile link
+// =============================================================================
+function ReplyAvatar({ authorName, avatarUrl, username, size = AV, glow, isMobile }) {
+  const baseClass = `rounded-full flex items-center justify-center font-bold
+                     shrink-0 z-10 select-none transition-all duration-200
+                     ${glow && !isMobile ? "ring-2 ring-primary/40" : ""}`
+
+  const inner = avatarUrl ? (
+    <img
+      src={avatarUrl}
+      alt={authorName}
+      className={`${baseClass} object-cover`}
+      style={{ width: size, height: size }}
+      onError={(e) => { e.currentTarget.style.display = "none" }}
+    />
+  ) : (
+    <div
+      className={`${baseClass} bg-muted text-foreground`}
+      style={{ width: size, height: size, fontSize: 10 }}
+    >
+      {initials(authorName)}
+    </div>
+  )
+
+  if (username) {
+    return (
+      <Link
+        to={`/profile/${username}`}
+        onClick={e => e.stopPropagation()}
+        className="hover:opacity-80 transition-opacity"
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+  return inner
+}
+
+// =============================================================================
+// REPLY
 // =============================================================================
 const Reply = ({
   replyId,
@@ -79,7 +119,6 @@ const Reply = ({
   disableDepthLimit = false
 }) => {
 
-  // ─── ALL HOOKS FIRST ──────────────────────────────────────────────────────
   const { replies, pinnedReplyId, authorRoles, votesMap, updateVote } = useRepliesContext()
   const { user, hasPermission } = useAuth()
   const notifyParent = useContext(GlowCtx)
@@ -99,32 +138,33 @@ const Reply = ({
 
   const dotsRef = useRef(null)
 
-  const { vote, score, handleVote, loading } = useVote(
+  const { vote, score, handleVote } = useVote(
     replies?.byId?.[replyId]?.upvotes ?? 0,
     replies?.byId?.[replyId]?.downvotes ?? 0,
     replyId,
-    votesMap?.[replyId]?.vote ?? null,  // ← pre-fetched
-    votesMap?.[replyId]?.voteDocId ?? null,  // ← pre-fetched
-    updateVote                               // ← callback
+    votesMap?.[replyId]?.vote ?? null,
+    votesMap?.[replyId]?.voteDocId ?? null,
+    updateVote
   )
   const composeState = useComposeState()
   const { createReply, deleteReply, updateReply, pinReply, unpinReply } = useReplyActions(threadId)
 
-  // ─── Derived values ────────────────────────────────────────────────────────
-  const reply = replies?.byId?.[replyId]
+  const reply    = replies?.byId?.[replyId]
   const children = replies.children[replyId] ?? []
 
   const isDeleted = reply?.deleted === true
   const hasChildren = children.length > 0
   const isPinned = reply?.isPinned === true
   const isOwn = user?.$id === reply?.authorId
-  const isOP = reply?.authorId === threadAuthor
+  const isOP  = reply?.authorId === threadAuthor
   const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
-  
 
-  // Role flair — live from authorRoles map, never stale
-  const authorRole = authorRoles?.[reply?.authorId] ?? null
-  const showFlair = authorRole && authorRole !== "user"
+  // Author info — { role, avatarUrl, username }
+  const authorInfo   = authorRoles?.[reply?.authorId] ?? null
+  const authorRole   = authorInfo?.role     ?? null
+  const authorAvatar = authorInfo?.avatarUrl ?? null
+  const authorUsername = authorInfo?.username ?? null
+  const showFlair    = authorRole && authorRole !== "user"
 
   const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
   const isTooDeep = !disableDepthLimit && depth >= maxDepth
@@ -136,7 +176,6 @@ const Reply = ({
     ? Math.max(140, 220 - depth * 35)
     : Math.max(220, 320 - depth * 40)
 
-  // ─── Callbacks ────────────────────────────────────────────────────────────
   const onEnter = useCallback(() => {
     if (isMobile || depth === 0) return
     setGlow(true); notifyParent?.(true)
@@ -154,22 +193,17 @@ const Reply = ({
   const handleSubmit = useCallback((text, gifUrl, imageUrl) => {
     if (!text.trim() && !gifUrl && !imageUrl) return
     createReply.mutate({
-      threadId,
-      content: text,
-      gifUrl,
-      imageUrl,
+      threadId, content: text, gifUrl, imageUrl,
       imagePublicId: composeState.uploadedImagePublicId,
-      authorId: user.$id,
-      authorName: user.username,
+      authorId: user.$id, authorName: user.username,
       parentReplyId: reply.$id ?? reply.id,
     })
   }, [createReply, threadId, user, reply, composeState])
 
   const handleDelete = useCallback(async () => {
     const id = reply.$id ?? reply.id
-    const publicId = reply.imagePublicId
     const replyHasChildren = (replies.children?.[id] ?? []).length > 0
-    await deleteCloudinaryImage(publicId)
+    await deleteCloudinaryImage(reply.imagePublicId)
     await deleteReply.mutateAsync({ replyId: id, hasChildren: replyHasChildren })
     setShowOptions(false)
   }, [reply, deleteReply, replies.children])
@@ -190,19 +224,14 @@ const Reply = ({
       await pinReply.mutateAsync({ replyId: id, threadId, currentPinnedReplyId: pinnedReplyId })
       window.scrollTo({ top: scrollY, behavior: "instant" })
       setTimeout(() => {
-        document.getElementById("replies-section")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        })
+        document.getElementById("replies-section")?.scrollIntoView({ behavior: "smooth", block: "start" })
       }, 100)
     }
     setShowOptions(false)
   }, [reply, isPinned, pinReply, unpinReply, threadId, pinnedReplyId])
 
-  // ─── Guard ────────────────────────────────────────────────────────────────
   if (!reply) return null
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <GlowCtx.Provider value={childGlowCb}>
 
@@ -220,14 +249,14 @@ const Reply = ({
 
           {/* AVATAR COLUMN */}
           <div className="relative shrink-0 flex flex-col items-center" style={{ width: AV }}>
-            <div
-              className={`rounded-full bg-muted flex items-center justify-center font-bold
-                          shrink-0 z-10 select-none transition-all duration-200
-                          ${glow && !isMobile ? "ring-2 ring-primary/40" : ""}`}
-              style={{ width: AV, height: AV, fontSize: 10 }}
-            >
-              {initials(reply.authorName)}
-            </div>
+            <ReplyAvatar
+              authorName={reply.authorName}
+              avatarUrl={authorAvatar}
+              username={authorUsername}
+              size={AV}
+              glow={glow}
+              isMobile={isMobile}
+            />
 
             {shouldShowChildren && (
               <button
@@ -245,21 +274,31 @@ const Reply = ({
           {/* BODY */}
           <div className="flex-1 min-w-0 pb-1">
 
-            {/* ── META ROW ── */}
+            {/* META ROW */}
             <div className="flex items-center gap-1.5 flex-wrap mb-px">
-              <span className="font-semibold text-sm leading-snug">{reply.authorName}</span>
 
-              {/* Role flair — admin / mod / editor only */}
+              {/* Author name — clickable to profile */}
+              {authorUsername ? (
+                <Link
+                  to={`/profile/${authorUsername}`}
+                  onClick={e => e.stopPropagation()}
+                  className="font-semibold text-sm leading-snug hover:text-primary
+                             hover:underline transition-colors"
+                >
+                  {reply.authorName}
+                </Link>
+              ) : (
+                <span className="font-semibold text-sm leading-snug">{reply.authorName}</span>
+              )}
+
               {showFlair && <RoleFlair role={authorRole} />}
 
-              {/* OP badge */}
               {isOP && (
                 <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-px rounded-md font-semibold">
                   OP
                 </span>
               )}
 
-              {/* Pinned badge */}
               {isPinned && (
                 <span className="text-[10px] bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-1.5 py-px rounded-md flex items-center gap-0.5">
                   <Pin size={8} /> Pinned
@@ -269,7 +308,7 @@ const Reply = ({
               <span className="text-muted-foreground text-[11px]">· {fmt(reply.$createdAt)}</span>
             </div>
 
-            {/* Collapsed state */}
+            {/* Collapsed */}
             {collapsed ? (
               <button
                 className="text-xs text-muted-foreground hover:text-primary transition-colors py-0.5"
@@ -310,9 +349,7 @@ const Reply = ({
                       <p className="text-sm leading-relaxed text-foreground/85 break-words">[deleted]</p>
                     ) : (
                       <>
-                        {reply.content && (
-                          <ReplyContent content={reply.content} />
-                        )}
+                        {reply.content && <ReplyContent content={reply.content} />}
                         <ReplyMedia
                           gifUrl={reply.gifUrl}
                           imageUrl={reply.imageUrl}
@@ -341,7 +378,6 @@ const Reply = ({
                 {/* ACTION BAR */}
                 <div className="flex items-center -ml-1 mt-px gap-x-0">
                   <div className="flex items-center gap-0.5">
-
                     <button
                       disabled={isDeleted}
                       onClick={() => { if (isDeleted) return; handleVote("up") }}
@@ -370,7 +406,6 @@ const Reply = ({
                       <ArrowBigDown size={18} className="transition-transform duration-150"
                         style={{ fill: vote === "down" ? "currentColor" : "none" }} />
                     </button>
-
                   </div>
 
                   <button

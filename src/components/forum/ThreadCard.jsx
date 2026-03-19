@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { useQueryClient, useMutation } from "@tanstack/react-query"
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { deleteThread } from "@/services/forum/threadService"
 import { MessageSquare, Clock, MoreVertical, Trash2, AlertTriangle, Loader2 } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
 import { getProgramById } from "@/services/university/programService"
 import { getBranchById } from "@/services/university/branchService"
+import { databases } from "@/lib/appwrite"
+import { Query } from "appwrite"
 
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const highlightMatch = (text = "", query) => {
   const safeText = String(text)
@@ -42,17 +45,12 @@ const Tag = ({ label }) => (
   </span>
 )
 
-// ── Delete Confirm Dialog ─────────────────────────────────────────────────────
 const DeleteConfirmDialog = ({ threadTitle, onConfirm, onCancel, isPending }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-       onClick={onCancel}>
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-    <div
-      className="relative z-10 w-full max-w-sm bg-background border border-border
-                 rounded-2xl shadow-2xl p-6 space-y-4
-                 animate-in fade-in-0 zoom-in-95 duration-150"
-      onClick={e => e.stopPropagation()}
-    >
+    <div className="relative z-10 w-full max-w-sm bg-background border border-border
+                    rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in-0 zoom-in-95 duration-150"
+         onClick={e => e.stopPropagation()}>
       <div className="flex items-center justify-center w-11 h-11 rounded-full
                       bg-destructive/10 border border-destructive/20 mx-auto">
         <AlertTriangle size={20} className="text-destructive" />
@@ -61,19 +59,18 @@ const DeleteConfirmDialog = ({ threadTitle, onConfirm, onCancel, isPending }) =>
         <h3 className="font-semibold text-base">Delete this thread?</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
           <span className="font-medium text-foreground">"{threadTitle}"</span>
-          {" "}and all its replies will be permanently deleted. This cannot be undone.
+          {" "}and all its replies will be permanently deleted.
         </p>
       </div>
       <div className="flex gap-2 pt-1">
         <button onClick={onCancel}
-          className="flex-1 h-10 rounded-xl border border-border text-sm font-medium
-                     hover:bg-muted transition-colors">
+          className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
           Cancel
         </button>
         <button onClick={onConfirm} disabled={isPending}
           className="flex-1 h-10 rounded-xl bg-destructive text-destructive-foreground
-                     text-sm font-semibold hover:bg-destructive/90
-                     disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+                     text-sm font-semibold hover:bg-destructive/90 disabled:opacity-60
+                     transition-colors flex items-center justify-center gap-2">
           {isPending ? <><Loader2 size={14} className="animate-spin" /> Deleting…</> : "Delete"}
         </button>
       </div>
@@ -81,11 +78,61 @@ const DeleteConfirmDialog = ({ threadTitle, onConfirm, onCancel, isPending }) =>
   </div>
 )
 
+// ── Avatar — reads from pre-seeded cache, falls back to individual fetch ──────
+const ThreadAuthorAvatar = ({ authorId, authorName }) => {
+  const [imgLoaded, setImgLoaded] = useState(false)
+
+  // Try cache first (seeded by useThreadAuthors in Forum.jsx)
+  // Falls back to individual fetch if not in cache (e.g. ThreadDetail page)
+  const { data } = useQuery({
+    queryKey: ["user-avatar", authorId],
+    queryFn: async () => {
+      const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [
+        Query.equal("userId", authorId),
+        Query.limit(1),
+        Query.select(["avatarUrl", "username"]),
+      ])
+      return res.documents[0]
+        ? { avatarUrl: res.documents[0].avatarUrl ?? null, username: res.documents[0].username ?? null }
+        : null
+    },
+    enabled:   !!authorId,
+    staleTime: 1000 * 60 * 10,
+    retry: false,
+  })
+
+  const avatarUrl = data?.avatarUrl ?? null
+
+  // Always render the initials div — fade in the image on top when loaded
+  return (
+    <div className="shrink-0 w-8 h-8 rounded-full relative mt-0.5">
+      {/* Initials fallback — always visible until image loads */}
+      <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
+                       border border-primary/20 flex items-center justify-center
+                       text-[11px] font-bold text-primary select-none
+                       transition-opacity duration-300 ${imgLoaded ? "opacity-0" : "opacity-100"}`}>
+        {authorName?.charAt(0).toUpperCase()}
+      </div>
+
+      {/* Real avatar — fades in once loaded */}
+      {avatarUrl && (
+        <img
+          src={avatarUrl}
+          alt={authorName}
+          onLoad={() => setImgLoaded(true)}
+          className={`absolute inset-0 w-full h-full rounded-full object-cover border border-border
+                      transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+        />
+      )}
+    </div>
+  )
+}
+
 // =============================================================================
 const ThreadCard = ({ thread, searchQuery }) => {
   const navigate    = useNavigate()
   const queryClient = useQueryClient()
-  const { currentUser, role } = useAuth()  // role is separate state — NOT inside user object
+  const { currentUser, role } = useAuth()
   const menuRef     = useRef(null)
   const [menuOpen,    setMenuOpen]    = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -94,39 +141,29 @@ const ThreadCard = ({ thread, searchQuery }) => {
   const isMod     = role === "admin" || role === "moderator"
   const canDelete = isOwn || isMod
 
-  // Resolve IDs → names
-  // Universities are always cached (staleTime:Infinity from Forum's useUniversities)
-  // Programs/branches: read from cache if filter was opened, else fetch on demand
+  const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
+
   const universities = queryClient.getQueryData(["universities"]) ?? []
   const uniLabel     = universities.find(u => u.$id === thread.universityId)?.name ?? thread.universityId
-
-  // Only fetch if ID looks like a real Appwrite $id (20+ chars)
-  // Dummy IDs like "btech", "cse" are short strings — skip fetching them
-  const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
 
   const { data: programDoc } = useQuery({
     queryKey: ["program", thread.courseId],
     queryFn:  () => getProgramById(thread.courseId),
     enabled:  isAppwriteId(thread.courseId),
-    staleTime: Infinity,
-    retry: false,
+    staleTime: Infinity, retry: false,
   })
   const { data: branchDoc } = useQuery({
     queryKey: ["branch", thread.branchId],
     queryFn:  () => getBranchById(thread.branchId),
     enabled:  isAppwriteId(thread.branchId),
-    staleTime: Infinity,
-    retry: false,
+    staleTime: Infinity, retry: false,
   })
   const courseLabel = programDoc?.name ?? thread.courseId
   const branchLabel = branchDoc?.name  ?? thread.branchId
 
-  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return
-    const handler = (e) => {
-      if (!menuRef.current?.contains(e.target)) setMenuOpen(false)
-    }
+    const handler = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false) }
     document.addEventListener("mousedown", handler)
     document.addEventListener("touchstart", handler, { passive: true })
     return () => {
@@ -140,15 +177,12 @@ const ThreadCard = ({ thread, searchQuery }) => {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["threads"] })
       const prev = queryClient.getQueryData(["threads"])
-      queryClient.setQueryData(["threads"], (old = []) =>
-        old.filter(t => t.$id !== thread.$id)
-      )
+      queryClient.setQueryData(["threads"], (old = []) => old.filter(t => t.$id !== thread.$id))
       return { prev }
     },
     onError: (err, _, ctx) => {
       queryClient.setQueryData(["threads"], ctx.prev)
-      console.error("Delete failed:", err)
-      alert("Failed to delete thread. You may not have permission.")
+      alert("Failed to delete thread.")
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["threads"] }),
   })
@@ -171,32 +205,21 @@ const ThreadCard = ({ thread, searchQuery }) => {
       )}
 
       <div
-        role="button"
-        tabIndex={0}
+        role="button" tabIndex={0}
         onClick={handleCardClick}
         onKeyDown={(e) => e.key === "Enter" && handleCardClick(e)}
         className="group relative bg-card border border-border rounded-2xl px-4 py-3.5
-                   cursor-pointer select-none outline-none
-                   transition-all duration-200 ease-out
-                   hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5
-                   hover:-translate-y-0.5
-                   focus-visible:ring-2 focus-visible:ring-primary/50
-                   active:scale-[0.99]"
+                   cursor-pointer select-none outline-none transition-all duration-200 ease-out
+                   hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5
+                   focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99]"
       >
-        {/* Left accent */}
         <div className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full bg-primary
                         opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
         <div className="flex items-start gap-3">
-          {/* Avatar */}
-          <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
-                          border border-primary/20 flex items-center justify-center
-                          text-[11px] font-bold text-primary select-none mt-0.5">
-            {thread.authorName?.charAt(0).toUpperCase()}
-          </div>
+          <ThreadAuthorAvatar authorId={thread.authorId} authorName={thread.authorName} />
 
           <div className="flex-1 min-w-0">
-            {/* Row 1: author + time + menu */}
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground min-w-0">
                 <span className="font-medium text-foreground/80 truncate">{thread.authorName}</span>
@@ -210,26 +233,18 @@ const ThreadCard = ({ thread, searchQuery }) => {
                   <button
                     onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v) }}
                     className="p-1.5 rounded-lg transition-colors duration-150 -mr-1
-                               text-muted-foreground hover:text-foreground hover:bg-muted
-                               active:bg-muted"
+                               text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted"
                   >
                     <MoreVertical size={15} />
                   </button>
-
                   {menuOpen && (
                     <div className="absolute right-0 top-8 z-50 w-44 rounded-xl border border-border
-                                    bg-popover shadow-xl overflow-hidden
-                                    animate-in fade-in-0 zoom-in-95 duration-100 origin-top-right">
+                                    bg-popover shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100 origin-top-right">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setMenuOpen(false)
-                          setShowConfirm(true)
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setShowConfirm(true) }}
                         className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm
                                    text-destructive hover:bg-destructive/10 transition-colors">
-                        <Trash2 size={13} />
-                        Delete thread
+                        <Trash2 size={13} /> Delete thread
                       </button>
                     </div>
                   )}
@@ -237,21 +252,17 @@ const ThreadCard = ({ thread, searchQuery }) => {
               )}
             </div>
 
-            {/* Row 2: title */}
             <h3 className="font-semibold text-[14px] leading-snug text-foreground
-                           group-hover:text-primary transition-colors duration-200
-                           line-clamp-2 mb-1.5">
+                           group-hover:text-primary transition-colors duration-200 line-clamp-2 mb-1.5">
               {highlightMatch(thread.title, searchQuery)}
             </h3>
 
-            {/* Row 3: preview */}
             {thread.content && (
               <p className="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed mb-2">
                 {highlightMatch(thread.content, searchQuery)}
               </p>
             )}
 
-            {/* Row 4: tags + reply count */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap gap-1">
                 {thread.universityId && <Tag label={uniLabel} />}

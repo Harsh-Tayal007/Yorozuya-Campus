@@ -4,13 +4,11 @@ import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID;
+const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID;
 
+// Map shape: { [authorId]: { role, avatarUrl, username } }
 export default function useAuthorRoles(replies) {
   const [authorRoles, setAuthorRoles] = useState({});
-
-  // ── Stable key: sorted author IDs joined as string ───────────────────────
-  // Avoids re-fetching when byId object reference changes but authors haven't.
   const fetchedKeyRef = useRef("");
 
   useEffect(() => {
@@ -26,7 +24,6 @@ export default function useAuthorRoles(replies) {
 
     if (authorIds.length === 0) return;
 
-    // Only refetch if the set of author IDs has actually changed
     const key = authorIds.join(",");
     if (key === fetchedKeyRef.current) return;
     fetchedKeyRef.current = key;
@@ -37,27 +34,37 @@ export default function useAuthorRoles(replies) {
       const map = {};
 
       try {
-        // Request 1: batch lookup by userId field
+        // Request 1: batch by userId
         const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [
           Query.equal("userId", authorIds),
           Query.limit(500),
+          Query.select(["userId", "$id", "role", "avatarUrl", "username"]),
         ]);
 
         const foundUserIds = new Set();
         for (const doc of res.documents) {
-          map[doc.userId] = doc.role;
+          map[doc.userId] = {
+            role:      doc.role,
+            avatarUrl: doc.avatarUrl ?? null,
+            username:  doc.username  ?? null,
+          };
           foundUserIds.add(doc.userId);
         }
 
-        // Request 2: fallback for unresolved IDs by document $id
+        // Request 2: fallback by $id
         const unresolved = authorIds.filter((id) => !foundUserIds.has(id));
         if (unresolved.length > 0) {
           const res2 = await databases.listDocuments(DATABASE_ID, USERS_COL, [
             Query.equal("$id", unresolved),
             Query.limit(500),
+            Query.select(["$id", "role", "avatarUrl", "username"]),
           ]);
           for (const doc of res2.documents) {
-            map[doc.$id] = doc.role;
+            map[doc.$id] = {
+              role:      doc.role,
+              avatarUrl: doc.avatarUrl ?? null,
+              username:  doc.username  ?? null,
+            };
           }
         }
       } catch (err) {
@@ -66,16 +73,13 @@ export default function useAuthorRoles(replies) {
 
       if (cancelled) return;
       setAuthorRoles((prev) => {
-        // Only update state if roles actually changed
         const prevKey = JSON.stringify(prev);
         const nextKey = JSON.stringify(map);
         return prevKey === nextKey ? prev : map;
       });
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [replies?.byId]);
 
   return authorRoles;
