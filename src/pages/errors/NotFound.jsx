@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 const TOTAL_SECONDS = 10
 
@@ -16,12 +17,9 @@ const NotFound = () => {
   const normalizedRadius = radius - stroke * 0.5
   const circumference = normalizedRadius * 2 * Math.PI
 
-  // Calculate progress based on seconds
   const [progress, setProgress] = useState(0)
   const strokeDashoffset = circumference * (1 - progress)
 
-
-  // Countdown
   useEffect(() => {
     let animationFrame
     let startTime
@@ -72,46 +70,20 @@ const NotFound = () => {
           shadow-xl dark:shadow-2xl dark:shadow-black/40
         "
       >
-
-        {/* Icon */}
         <div className="flex justify-center mb-6">
           <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-500/10">
-            <SearchX
-              className="text-blue-600 dark:text-blue-400"
-              size={36}
-            />
+            <SearchX className="text-blue-600 dark:text-blue-400" size={36} />
           </div>
         </div>
 
-        {/* Circular Timer + 404 */}
         <div className="relative flex items-center justify-center mb-6">
-
           <svg height={radius * 2} width={radius * 2}>
-            <circle
-              stroke="rgba(148,163,184,0.2)"
-              fill="transparent"
-              strokeWidth={stroke}
-              r={normalizedRadius}
-              cx={radius}
-              cy={radius}
-            />
-
-            <circle
-              stroke="url(#gradient)"
-              fill="transparent"
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              r={normalizedRadius}
-              cx={radius}
-              cy={radius}
-              style={{
-                transform: "rotate(-90deg)",
-                transformOrigin: "50% 50%",
-              }}
-            />
-
+            <circle stroke="rgba(148,163,184,0.2)" fill="transparent" strokeWidth={stroke}
+              r={normalizedRadius} cx={radius} cy={radius} />
+            <circle stroke="url(#gradient)" fill="transparent" strokeWidth={stroke}
+              strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+              r={normalizedRadius} cx={radius} cy={radius}
+              style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }} />
             <defs>
               <linearGradient id="gradient">
                 <stop offset="0%" stopColor="#2563eb" />
@@ -119,20 +91,12 @@ const NotFound = () => {
               </linearGradient>
             </defs>
           </svg>
-
-          <h1 className="
-            absolute text-4xl font-extrabold
-            bg-gradient-to-r from-blue-600 to-indigo-500
-            bg-clip-text text-transparent
-          ">
+          <h1 className="absolute text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
             404
           </h1>
         </div>
 
-        <p className="text-lg font-semibold mb-2">
-          Page Not Found
-        </p>
-
+        <p className="text-lg font-semibold mb-2">Page Not Found</p>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           Looks like this page got lost in the syllabus.
         </p>
@@ -150,31 +114,18 @@ const NotFound = () => {
         )}
 
         <div className="flex flex-col gap-3">
-          <Button
-            variant="outline"
-            onClick={() => {
-              cancelRedirect()
-              navigate(-1)
-            }}
-            className="w-full"
-          >
+          <Button variant="outline" onClick={() => { cancelRedirect(); navigate(-1) }} className="w-full">
             Go Back
           </Button>
 
-          <Button
-            onClick={() => {
-              cancelRedirect()
-              navigate("/", { replace: true })
-            }}
-            className="w-full"
-          >
+          <Button onClick={() => { cancelRedirect(); navigate("/", { replace: true }) }} className="w-full">
             Go to Homepage Now
           </Button>
 
           <button
             onClick={() => {
               cancelRedirect()
-              alert("Report system can be connected later 👀")
+              toast("Thanks for reporting!", { description: "We'll look into this broken link." })
             }}
             className="text-xs text-slate-500 dark:text-slate-400 hover:underline mt-2"
           >

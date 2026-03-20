@@ -27,6 +27,7 @@ import {
     updateSubjectPdf
 } from "@/services/syllabus/subjectService"
 import { updateSyllabus } from "@/services/syllabus/syllabusService"
+import { toast } from "sonner"
 
 
 const initialState = {
@@ -118,7 +119,7 @@ const SyllabusForm = ({
 
     const addSubject = () => {
         if (!subjectDraft.name || !subjectDraft.pdfFile) {
-            alert("Subject name and PDF are required")
+            toast.error("Subject name and PDF are required")
             return
         }
 
@@ -149,9 +150,9 @@ const SyllabusForm = ({
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!formData.branch) return alert("Please select a branch")
+        if (!formData.branch) return toast.error("Please select a branch")
         if (!editingSyllabus && formData.subjects.length === 0)
-            return alert("Add at least one subject")
+            return toast.error("Add at least one subject")
 
         setLoading(true)
 
@@ -208,6 +209,7 @@ const SyllabusForm = ({
 
             /* ---------- REFRESH PARENT LIST ---------- */
             onSuccess?.()
+            toast.success(editingSyllabus ? "Syllabus updated" : "Syllabus created")
 
         } catch (err) {
             console.error(err)

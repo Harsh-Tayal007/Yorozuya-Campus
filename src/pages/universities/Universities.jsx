@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 
 
@@ -52,9 +53,10 @@ const Universities = () => {
     queryClient.invalidateQueries(["universities"])
     setForm({ name: "", country: "", city: "", website: "" })
     setSuccess(true)
+    toast.success("University created")
   },
   onError: () => {
-    setError("Failed to create university.")
+    toast.error("Failed to create university.")
   },
 })
 
@@ -64,7 +66,6 @@ const Universities = () => {
   } = useQuery({
     queryKey: ["universities"],
     queryFn: getUniversities,
-    // staleTime: 20 * 60 * 1000,  // optional if global not set
   })
 
 
@@ -103,24 +104,25 @@ const Universities = () => {
       deleteUniversity(id, currentUser, name),
     onSuccess: () => {
       queryClient.invalidateQueries(["universities"])
+      toast.success("University deleted")
     },
   })
 
   const handleDelete = (id) => {
     if (!canManage) {
-      alert("You are not allowed to delete universities.")
+      toast.error("You don't have permission to delete universities.")
       return
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this university?"
-    )
-
-    if (!confirmed) return
-
     const university = universities.find((u) => u.$id === id)
 
-    deleteMutation.mutate({ id, name: university.name })
+    toast(`Delete "${university.name}"?`, {
+      action: {
+        label: "Delete",
+        onClick: () => deleteMutation.mutate({ id, name: university.name }),
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    })
   }
 
 
@@ -143,13 +145,14 @@ const Universities = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["universities"])
       setEditingUniversity(null)
+      toast.success("University updated")
     },
   })
 
 
   const handleUpdate = () => {
     if (!canManage) {
-      alert("You are not allowed to edit universities.")
+      toast.error("You don't have permission to edit universities.")
       return
     }
 
@@ -172,12 +175,6 @@ const Universities = () => {
           </CardHeader>
 
           <CardContent>
-            {/* {!canManage && (
-              <p className="text-sm text-muted-foreground mb-4">
-                You have read-only access. Editing is disabled.
-              </p>
-            )} */}
-
             <form
               onSubmit={(e) => {
                 e.preventDefault()
@@ -200,7 +197,6 @@ const Universities = () => {
                   name="name"
                   placeholder="University of Tokyo"
                   disabled={!canManage}
-
                 />
               </div>
 
@@ -219,7 +215,6 @@ const Universities = () => {
                   name="country"
                   placeholder="Japan"
                   disabled={!canManage}
-
                 />
               </div>
 
@@ -238,7 +233,6 @@ const Universities = () => {
                   name="city"
                   placeholder="Tokyo"
                   disabled={!canManage}
-
                 />
               </div>
 
@@ -299,7 +293,7 @@ const Universities = () => {
             <UniversityCard
               key={uni.$id}
               university={uni}
-              onClick={() => navigate(`/university/${uni.$id}`)}  // ✅ ADD
+              onClick={() => navigate(`/university/${uni.$id}`)}
               onDelete={canManage ? handleDelete : null}
               onEdit={canManage ? () => setEditingUniversity(uni) : null}
             />

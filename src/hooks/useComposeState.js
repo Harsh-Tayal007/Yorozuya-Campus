@@ -1,6 +1,7 @@
 import { useState, useRef } from "react"
 import useResolvedColors from "./useResolvedColors"
 import { uploadImage } from "@/lib/uploadImage"
+import { toast } from "sonner"
 
 export default function useComposeState() {
 
@@ -42,7 +43,7 @@ export default function useComposeState() {
     if (!file) return
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image must be under 5MB")
+      toast.error("Image must be under 5MB")
       return
     }
 
@@ -58,7 +59,7 @@ export default function useComposeState() {
 
     } catch (err) {
       console.error("Upload failed", err)
-      alert("Image upload failed")
+      toast.error("Image upload failed")
     } finally {
       setIsUploading(false)
       // Reset file input so same file can be re-selected

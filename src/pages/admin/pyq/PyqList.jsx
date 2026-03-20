@@ -1,351 +1,320 @@
-import { useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { motion, AnimatePresence } from "framer-motion"
 import { databases, storage } from "@/lib/appwrite"
 import { Query } from "appwrite"
 import { useNavigate } from "react-router-dom"
-import { FileText, Link as LinkIcon } from "lucide-react"
+import { toast } from "sonner"
+import {
+  FileText, Link as LinkIcon, Image as ImageIcon,
+  Video, Archive, ExternalLink, Pencil, Trash2,
+  BookOpen, GraduationCap, GitBranch, Layers, Calendar,
+  ArrowRight,
+} from "lucide-react"
 
 import {
-    Card,
-    CardContent,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-
-import {
-    DATABASE_ID,
-    PYQS_COLLECTION_ID,
-    SYLLABUS_COLLECTION_ID,
-    UNITS_COLLECTION_ID,
-    PROGRAMS_COLLECTION_ID
+  DATABASE_ID, PYQS_COLLECTION_ID,
+  SYLLABUS_COLLECTION_ID, UNITS_COLLECTION_ID, PROGRAMS_COLLECTION_ID,
 } from "@/config/appwrite"
 import { getSubjectsByIds } from "@/services/syllabus/subjectService"
 
-export default function PyqList({
-    limit = 6,
+// ── File type config ──────────────────────────────────────────────────────────
+const TYPE_CONFIG = {
+  pdf:   { icon: FileText,  accent: "#ef4444", label: "PDF"   },
+  image: { icon: ImageIcon, accent: "#06b6d4", label: "Image" },
+  video: { icon: Video,     accent: "#8b5cf6", label: "Video" },
+  zip:   { icon: Archive,   accent: "#f59e0b", label: "ZIP"   },
+  link:  { icon: LinkIcon,  accent: "#10b981", label: "Link"  },
+}
+
+function highlightText(text, query) {
+  if (!query || !text) return text
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
+  return String(text).split(regex).map((part, i) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? <mark key={i} className="bg-primary/20 text-primary rounded px-0.5 not-italic">{part}</mark>
+      : part
+  )
+}
+
+// ── Build a stable query key from filters ─────────────────────────────────────
+function buildQueryKey(limit, refreshKey, filters, searchTerm) {
+  return [
+    "pyqs",
+    limit,
     refreshKey,
-    filters = {},
-    searchTerm = "",
-    showViewMore = false,
-    onEdit,
-}) {
-    const [pyqs, setPyqs] = useState([])
-    const [loading, setLoading] = useState(true)
-    const navigate = useNavigate()
-    const [subjectMap, setSubjectMap] = useState({})
-    const [syllabusMap, setSyllabusMap] = useState({})
-    const [unitMap, setUnitMap] = useState({})
-    const [programMap, setProgramMap] = useState({})
+    filters.programId  ?? "all",
+    filters.semester   ?? "all",
+    filters.subjectId  ?? "all",
+    filters.unitId     ?? "all",
+    (filters.subjectIds ?? []).join(","),
+    searchTerm,
+  ]
+}
 
-    const highlight = (text, query) => {
-        if (!query) return text
+// ── Fetch everything needed for the list ─────────────────────────────────────
+async function fetchPyqsWithMeta({ limit, filters, searchTerm }) {
+  const queries = [Query.orderDesc("$createdAt"), Query.limit(limit)]
 
-        const regex = new RegExp(`(${query})`, "gi")
-        return text.split(regex).map((part, i) =>
-            part.toLowerCase() === query.toLowerCase() ? (
-                <span
-                    key={i}
-                    className="bg-yellow-300/30 text-yellow-300 px-1 rounded"
-                >
-                    {part}
-                </span>
-            ) : (
-                part
-            )
-        )
-    }
+  if (filters.programId  && filters.programId  !== "all") queries.push(Query.equal("programId",  filters.programId))
+  if (filters.semester   && filters.semester   !== "all") queries.push(Query.equal("semester",   String(filters.semester)))
+  if (filters.subjectId  && filters.subjectId  !== "all") queries.push(Query.equal("subjectId",  filters.subjectId))
+  else if (filters.subjectIds?.length)                    queries.push(Query.equal("subjectId",  filters.subjectIds))
+  if (filters.unitId     && filters.unitId     !== "all") queries.push(Query.equal("unitId",     filters.unitId))
 
+  const res  = await databases.listDocuments(DATABASE_ID, PYQS_COLLECTION_ID, queries)
+  let docs   = res.documents
 
+  if (searchTerm?.trim()) {
+    const q = searchTerm.toLowerCase()
+    docs = docs.filter(p => p.title?.toLowerCase().includes(q))
+  }
 
-    useEffect(() => {
-        const fetchPyqs = async () => {
-            try {
-                const queries = [
-                    Query.orderDesc("$createdAt"),
-                    Query.limit(limit),
-                ]
+  // ── Build lookup maps in parallel ─────────────────────────────────────────
+  const subjectIds  = [...new Set(res.documents.map(p => p.subjectId).filter(Boolean))]
+  const programIds  = [...new Set(res.documents.map(p => p.programId).filter(Boolean))]
 
-                // Program
-                if (filters.programId && filters.programId !== "all") {
-                    queries.push(Query.equal("programId", filters.programId))
-                }
+  const [subjects, programRes] = await Promise.all([
+    subjectIds.length ? getSubjectsByIds(subjectIds) : Promise.resolve([]),
+    programIds.length
+      ? databases.listDocuments(DATABASE_ID, PROGRAMS_COLLECTION_ID, [Query.equal("$id", programIds)])
+      : Promise.resolve({ documents: [] }),
+  ])
 
-                // Semester
-                if (filters.semester && filters.semester !== "all") {
-                    queries.push(Query.equal("semester", String(filters.semester)))
-                }
+  const subjectMap = {}; subjects.forEach(s => { subjectMap[s.$id] = s })
+  const programMap = {}; programRes.documents.forEach(p => { programMap[p.$id] = p })
 
-                // Subject (direct)
-                if (filters.subjectId && filters.subjectId !== "all") {
-                    queries.push(Query.equal("subjectId", filters.subjectId))
-                }
+  const unitIds      = [...new Set(res.documents.map(p => p.unitId).filter(Boolean))]
+  const syllabusIds  = [...new Set(subjects.map(s => s.syllabusId).filter(Boolean))]
 
-                // Subject (derived from branch)
-                if (
-                    (!filters.subjectId || filters.subjectId === "all") &&
-                    filters.subjectIds?.length
-                ) {
-                    queries.push(Query.equal("subjectId", filters.subjectIds))
-                }
+  const [unitRes, syllabusRes] = await Promise.all([
+    unitIds.length
+      ? databases.listDocuments(DATABASE_ID, UNITS_COLLECTION_ID, [Query.equal("$id", unitIds)])
+      : Promise.resolve({ documents: [] }),
+    syllabusIds.length
+      ? databases.listDocuments(DATABASE_ID, SYLLABUS_COLLECTION_ID, [Query.equal("$id", syllabusIds)])
+      : Promise.resolve({ documents: [] }),
+  ])
 
-                // Unit
-                if (filters.unitId && filters.unitId !== "all") {
-                    queries.push(Query.equal("unitId", filters.unitId))
-                }
+  const unitMap     = {}; unitRes.documents.forEach(u => { unitMap[u.$id] = u })
+  const syllabusMap = {}; syllabusRes.documents.forEach(s => { syllabusMap[s.$id] = s })
 
+  return { docs, subjectMap, programMap, unitMap, syllabusMap }
+}
 
-                const res = await databases.listDocuments(
-                    DATABASE_ID,
-                    PYQS_COLLECTION_ID,
-                    queries
-                )
-
-                let docs = res.documents
-
-                // 🔍 Search by title (case-insensitive)
-                if (searchTerm.trim()) {
-                    const q = searchTerm.toLowerCase()
-                    docs = docs.filter(p =>
-                        p.title?.toLowerCase().includes(q)
-                    )
-                }
-
-                setPyqs(docs)
-
-                const subjectIds = [
-                    ...new Set(res.documents.map(p => p.subjectId).filter(Boolean))
-                ]
-
-                if (subjectIds.length) {
-                    const subjects = await getSubjectsByIds(subjectIds)
-                    const map = {}
-                    subjects.forEach(s => {
-                        map[s.$id] = s
-                    })
-                    setSubjectMap(map)
-
-                    const unitIds = [
-                        ...new Set(res.documents.map(p => p.unitId).filter(Boolean))
-                    ]
-
-                    if (unitIds.length) {
-                        const unitRes = await databases.listDocuments(
-                            DATABASE_ID,
-                            UNITS_COLLECTION_ID,
-                            [Query.equal("$id", unitIds)]
-                        )
-
-                        const map = {}
-                        unitRes.documents.forEach(u => {
-                            map[u.$id] = u
-                        })
-
-                        setUnitMap(map)
-                    }
-
-                    const syllabusIds = [
-                        ...new Set(
-                            subjects.map(s => s.syllabusId).filter(Boolean)
-                        )
-                    ]
-
-                    if (syllabusIds.length) {
-                        const res = await databases.listDocuments(
-                            DATABASE_ID,
-                            SYLLABUS_COLLECTION_ID,
-                            [Query.equal("$id", syllabusIds)]
-                        )
-
-                        const map = {}
-                        res.documents.forEach(s => {
-                            map[s.$id] = s
-                        })
-                        setSyllabusMap(map)
-                    }
-                }
-
-                const programIds = [
-                    ...new Set(res.documents.map(p => p.programId).filter(Boolean))
-                ]
-
-                if (programIds.length) {
-                    const programRes = await databases.listDocuments(
-                        DATABASE_ID,
-                        PROGRAMS_COLLECTION_ID,
-                        [Query.equal("$id", programIds)]
-                    )
-
-                    const map = {}
-                    programRes.documents.forEach(p => {
-                        map[p.$id] = p
-                    })
-
-                    setProgramMap(map)
-                }
-            } catch (err) {
-                console.error("Failed to fetch PYQs", err)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchPyqs()
-    }, [limit, refreshKey, filters, searchTerm])
-
-    // useEffect(() => {
-    //     fetchPyqs()
-    // }, [limit, refreshKey, filters, searchTerm])
-
-
-    const handleDelete = async (pyq) => {
-        if (!confirm("Delete this PYQ?")) return
-
-        try {
-            await databases.deleteDocument(
-                DATABASE_ID,
-                PYQS_COLLECTION_ID,
-                pyq.$id
-            )
-
-            if (pyq.fileId && pyq.bucketId) {
-                await storage.deleteFile(pyq.bucketId, pyq.fileId)
-            }
-
-            setPyqs(prev => prev.filter(p => p.$id !== pyq.$id))
-        } catch (err) {
-            console.error("Delete failed", err)
-            alert("Failed to delete PYQ")
-        }
-    }
-
-    const handleEdit = (pyq) => {
-        onEdit?.(pyq)
-    }
-
-
-
-    if (loading) {
-        return <p className="text-sm text-muted-foreground">Loading PYQs…</p>
-    }
-
-    if (!loading && pyqs.length === 0) {
-        return <p className="text-sm text-muted-foreground">No PYQs uploaded yet</p>
-    }
-
-    return (
-        <div className="space-y-4">
-            {pyqs.map((pyq) => {
-                const FileIcon =
-                    pyq.fileType === "pdf"
-                        ? FileText
-                        : pyq.fileType === "link"
-                            ? LinkIcon
-                            : FileText
-
-                return (
-                    <Card key={pyq.$id} className="relative">
-
-                        {/* Actions */}
-                        <div className="absolute top-4 right-4 flex gap-2">
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                    const url = storage.getFileView(pyq.bucketId, pyq.fileId)
-                                    window.open(url, "_blank")
-                                }}
-                            >
-                                View
-                            </Button>
-
-                            <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleEdit(pyq)}
-                            >
-                                Edit
-                            </Button>
-
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDelete(pyq)}
-                            >
-                                Delete
-                            </Button>
-                        </div>
-
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div className="space-y-2 pr-28">
-                                <h3 className="text-lg font-semibold leading-tight">
-                                    {highlight(pyq.title, searchTerm)}
-                                </h3>
-
-                                {/* File type */}
-                                <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
-                                    <FileIcon className="w-4 h-4" />
-                                    <span>{pyq.fileType}</span>
-                                </div>
-
-                                {/* Metadata (Resources-style) */}
-                                <div className="text-sm text-muted-foreground space-y-1">
-                                    <p>
-                                        <strong>Program:</strong>{" "}
-                                        {programMap?.[pyq.programId]?.name || "—"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Semester:</strong> {pyq.semester}
-                                    </p>
-
-                                    <p>
-                                        <strong>Branch:</strong>{" "}
-                                        {syllabusMap[
-                                            subjectMap[pyq.subjectId]?.syllabusId
-                                        ]?.branch || "—"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Subject:</strong>{" "}
-                                        {subjectMap[pyq.subjectId]?.subjectName || "—"}
-                                    </p>
-
-                                    {pyq.unitId && (
-                                        <p>
-                                            <strong>Unit:</strong>{" "}
-                                            {unitMap?.[pyq.unitId]?.title || "—"}
-                                        </p>
-                                    )}
-
-                                    <p>
-                                        <strong>Year:</strong> {pyq.year}
-                                    </p>
-                                </div>
-
-                                {/* Description */}
-                                {pyq.description && (
-                                    <p className="text-sm text-muted-foreground pt-2">
-                                        {pyq.description}
-                                    </p>
-                                )}
-                            </div>
-
-
-
-
-                        </CardContent>
-                    </Card>
-                )
-            })}
-
-            {showViewMore && (
-                <div className="pt-2 text-center">
-                    <Button
-                        variant="ghost"
-                        onClick={() => navigate("/admin/pyqs")}
-                    >
-                        View more →
-                    </Button>
-                </div>
-            )}
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+function Skeleton() {
+  return (
+    <div className="space-y-2.5">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-border/40 bg-card/40 p-4 animate-pulse">
+          <div className="flex gap-4">
+            <div className="w-10 h-10 rounded-xl bg-muted/50 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-muted/50 rounded w-3/4" />
+              <div className="h-3 bg-muted/30 rounded w-1/4" />
+              <div className="flex gap-4 mt-2">
+                <div className="h-3 bg-muted/30 rounded w-20" />
+                <div className="h-3 bg-muted/30 rounded w-16" />
+                <div className="h-3 bg-muted/30 rounded w-24" />
+              </div>
+            </div>
+          </div>
         </div>
+      ))}
+    </div>
+  )
+}
+
+// ── PYQ Card ──────────────────────────────────────────────────────────────────
+function PyqCard({ pyq, programMap, subjectMap, syllabusMap, unitMap, onEdit, onDelete, searchTerm }) {
+  const typeConfig = TYPE_CONFIG[pyq.fileType] ?? TYPE_CONFIG.pdf
+  const Icon       = typeConfig.icon
+  const program    = programMap?.[pyq.programId]?.name
+  const subject    = subjectMap?.[pyq.subjectId]?.subjectName
+  const branch     = syllabusMap?.[subjectMap?.[pyq.subjectId]?.syllabusId]?.branch
+  const unit       = unitMap?.[pyq.unitId]?.title
+
+  const handleView = () => {
+    const url = storage.getFileView(pyq.bucketId, pyq.fileId)
+    window.open(url, "_blank")
+  }
+
+  return (
+    <motion.div layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.25 }}
+      className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
+                 hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+    >
+      {/* Accent top line */}
+      <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
+        style={{ background: `linear-gradient(90deg, transparent, ${typeConfig.accent}, transparent)` }} />
+
+      <div className="p-4 flex items-start gap-4">
+        {/* Icon */}
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5
+                        transition-transform duration-200 group-hover:scale-105"
+          style={{ background: `${typeConfig.accent}15`, border: `1px solid ${typeConfig.accent}30` }}>
+          <Icon size={17} style={{ color: typeConfig.accent }} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground leading-snug">
+                {highlightText(pyq.title, searchTerm)}
+              </h3>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px] font-bold uppercase tracking-wide"
+                  style={{ background: `${typeConfig.accent}15`, color: typeConfig.accent }}>
+                  {typeConfig.label}
+                </span>
+                {pyq.year && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px]
+                                   font-semibold bg-muted/60 text-muted-foreground">
+                    <Calendar size={9} />{pyq.year}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button onClick={handleView}
+                className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-medium
+                           border border-border/60 bg-muted/30 text-muted-foreground
+                           hover:border-border hover:text-foreground hover:bg-muted/60
+                           transition-all duration-150 active:scale-95">
+                <ExternalLink size={11} /> View
+              </button>
+              {onEdit && (
+                <button onClick={() => onEdit(pyq)}
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-medium
+                             border border-border/60 bg-muted/30 text-muted-foreground
+                             hover:border-primary/40 hover:text-primary hover:bg-primary/5
+                             transition-all duration-150 active:scale-95">
+                  <Pencil size={11} /> Edit
+                </button>
+              )}
+              <button onClick={() => onDelete(pyq)}
+                className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-medium
+                           border border-border/60 bg-muted/30 text-muted-foreground
+                           hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5
+                           transition-all duration-150 active:scale-95">
+                <Trash2 size={11} /> Delete
+              </button>
+            </div>
+          </div>
+
+          {/* Meta */}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
+            {program && <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><GraduationCap size={10} className="shrink-0" />{program}</span>}
+            {pyq.semester && <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><BookOpen size={10} className="shrink-0" />Sem {pyq.semester}</span>}
+            {branch  && <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><GitBranch size={10} className="shrink-0" />{branch}</span>}
+            {subject && <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Layers size={10} className="shrink-0" />{subject}</span>}
+            {unit    && <span className="text-[11px] text-muted-foreground/60">· {unit}</span>}
+          </div>
+
+          {pyq.description && (
+            <p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2">{pyq.description}</p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function PyqList({
+  limit = 6,
+  refreshKey = 0,
+  filters = {},
+  searchTerm = "",
+  showViewMore = false,
+  onEdit,
+}) {
+  const navigate     = useNavigate()
+  const queryClient  = useQueryClient()
+  const queryKey     = buildQueryKey(limit, refreshKey, filters, searchTerm)
+
+  const { data, isLoading } = useQuery({
+    queryKey,
+    queryFn: () => fetchPyqsWithMeta({ limit, filters, searchTerm }),
+    staleTime: 1000 * 60 * 5,   // cached 5 min — no refetch on page switch
+    retry: false,
+  })
+
+  const { docs = [], subjectMap = {}, programMap = {}, unitMap = {}, syllabusMap = {} } = data ?? {}
+
+  const handleDelete = (pyq) => {
+    toast(`Delete "${pyq.title}"?`, {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          const id = toast.loading("Deleting…")
+          try {
+            await databases.deleteDocument(DATABASE_ID, PYQS_COLLECTION_ID, pyq.$id)
+            if (pyq.fileId && pyq.bucketId) await storage.deleteFile(pyq.bucketId, pyq.fileId)
+            // Invalidate so list refreshes after delete
+            queryClient.invalidateQueries({ queryKey: ["pyqs"] })
+            toast.success("PYQ deleted", { id })
+          } catch (err) {
+            console.error("Delete failed", err)
+            toast.error("Failed to delete PYQ", { id })
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+    })
+  }
+
+  if (isLoading) return <Skeleton />
+
+  if (!docs.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3
+                      rounded-2xl border border-dashed border-border/50">
+        <div className="w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
+          <FileText size={18} className="text-muted-foreground/40" />
+        </div>
+        <p className="text-sm text-muted-foreground">No PYQs found</p>
+      </div>
     )
+  }
+
+  return (
+    <div className="space-y-2.5">
+      <AnimatePresence mode="popLayout">
+        {docs.map(pyq => (
+          <PyqCard
+            key={pyq.$id}
+            pyq={pyq}
+            programMap={programMap}
+            subjectMap={subjectMap}
+            syllabusMap={syllabusMap}
+            unitMap={unitMap}
+            onEdit={onEdit}
+            onDelete={handleDelete}
+            searchTerm={searchTerm}
+          />
+        ))}
+      </AnimatePresence>
+
+      {showViewMore && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-1 flex justify-center">
+          <button
+            onClick={() => navigate("/admin/pyqs")}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground
+                       hover:text-foreground transition-colors duration-150 group px-4 py-2
+                       rounded-xl border border-border/50 hover:border-border bg-card/40"
+          >
+            View all PYQs
+            <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform duration-150" />
+          </button>
+        </motion.div>
+      )}
+    </div>
+  )
 }

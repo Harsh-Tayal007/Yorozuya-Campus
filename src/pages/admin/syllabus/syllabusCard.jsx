@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { storage } from "@/lib/appwrite"
+import { toast } from "sonner"
 
 const BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID
 
@@ -14,7 +15,7 @@ const SyllabusCard = ({
 
   const handleView = () => {
     if (subjects.length === 0) {
-      alert("No subject PDF available")
+      toast.error("No subject PDF available")
       return
     }
 

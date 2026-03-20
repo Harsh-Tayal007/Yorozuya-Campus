@@ -23,6 +23,7 @@ import { getPrograms } from "@/services/university/programService"
 import { useAuth } from "@/context/AuthContext"
 
 import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
+import { toast } from "sonner"
 
 
 export default function UnitsAdmin() {
@@ -125,7 +126,7 @@ export default function UnitsAdmin() {
     const handleSaveUnit = async () => {
         if (!canCreateOrEdit) return
         if (!subjectId || !title || !order) {
-            alert("Subject, title and order are required")
+            toast.error("Subject, title and order are required")
             return
         }
 
@@ -153,6 +154,7 @@ export default function UnitsAdmin() {
             setTitle("")
             setOrder("")
             setEditingUnit(null)
+            toast.success(editingUnit ? "Unit updated" : "Unit added")
         } catch (err) {
             console.error("Failed to save unit", err)
         }
@@ -161,7 +163,15 @@ export default function UnitsAdmin() {
 
     const handleDeleteUnit = async (unit) => {
         if (!canDelete) return
-        if (!confirm("Delete this unit?")) return
+        toast(`Delete unit "${unit.title}"?`, {
+            action: {
+                label: "Delete", onClick: async () => {
+                    try { await deleteUnit(unit.$id, user, unit.title); setUnits(await getUnitsBySubject(subjectId)); toast.success("Unit deleted") }
+                    catch (err) { console.error("Failed to delete unit", err); toast.error("Failed to delete unit") }
+                }
+            },
+            cancel: { label: "Cancel", onClick: () => { } },
+        })
 
         try {
             await deleteUnit(unit.$id, user, unit.title)

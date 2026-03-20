@@ -41,7 +41,7 @@ import Programs from "@/pages/admin/Programs"
 import UniversityPrograms from "@/pages/admin/UniversityPrograms"
 import ResourcesUpload from "@/pages/admin/resources/ResourcesUpload"
 import PyqUpload from "@/pages/admin/pyq/PyqUpload"
-import PyqList from "@/pages/admin/pyq/PyqList"
+import AdminPyqsPage from "@/pages/admin/pyq/AdminPyqsPage"
 import UnitsAdmin from "@/pages/admin/units/Units"
 import AdminActivity from "@/pages/dashboard/AdminActivity"
 
@@ -71,6 +71,7 @@ import DashboardPyqSemester from "@/components/dashboard/DashboardPyqSemester"
 import DashboardPyqSubject from "@/components/dashboard/DashboardPyqSubject"
 import { PageTitleManager } from "@/components"
 import UserProfile from "@/pages/profile/UserProfile"
+import BranchesAdmin from "@/pages/branches/BranchesAdmin"
 
 const AppRoutes = () => {
   return (
@@ -304,6 +305,17 @@ const AppRoutes = () => {
           />
 
           <Route
+            path="branches"
+            element={
+              <RequirePermissionRoute
+                permission={PERMISSIONS.MANAGE_PROGRAMS}
+              >
+                <BranchesAdmin />
+              </RequirePermissionRoute>
+            }
+          />
+
+          <Route
             path="syllabus"
             element={
               <RequirePermissionRoute
@@ -351,7 +363,7 @@ const AppRoutes = () => {
             path="pyqs"
             element={
               <RequirePermissionRoute permission={PERMISSIONS.VIEW_PYQS}>
-                <PyqList />
+                <AdminPyqsPage />
               </RequirePermissionRoute>
             }
           />

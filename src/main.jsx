@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
+import { Toaster } from "sonner"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,5 +63,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <App />
       </AuthProvider>
     </QueryClientProvider>
+    <Toaster position="bottom-right" richColors closeButton toastOptions={{ duration: 4000 }} />
   </React.StrictMode>
 )
