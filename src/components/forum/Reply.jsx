@@ -137,19 +137,22 @@ const Reply = ({
   const [editText, setEditText] = useState(() => replies?.byId?.[replyId]?.content ?? "")
 
   const dotsRef = useRef(null)
+  
+  const reply    = replies?.byId?.[replyId]
 
   const { vote, score, handleVote } = useVote(
-    replies?.byId?.[replyId]?.upvotes ?? 0,
-    replies?.byId?.[replyId]?.downvotes ?? 0,
-    replyId,
-    votesMap?.[replyId]?.vote ?? null,
-    votesMap?.[replyId]?.voteDocId ?? null,
-    updateVote
-  )
+  replies?.byId?.[replyId]?.upvotes ?? 0,
+  replies?.byId?.[replyId]?.downvotes ?? 0,
+  replyId,
+  votesMap?.[replyId]?.vote ?? null,
+  votesMap?.[replyId]?.voteDocId ?? null,
+  updateVote,
+  reply?.authorId   // ← pass author for karma update
+)
+
   const composeState = useComposeState()
   const { createReply, deleteReply, updateReply, pinReply, unpinReply } = useReplyActions(threadId)
 
-  const reply    = replies?.byId?.[replyId]
   const children = replies.children[replyId] ?? []
 
   const isDeleted = reply?.deleted === true

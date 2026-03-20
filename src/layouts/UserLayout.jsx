@@ -8,25 +8,21 @@ const UserLayout = () => {
   const { handleEdgeHover } = useSidebar()
 
   return (
-
     <div
-    onMouseMove={handleEdgeHover}
-     className="flex min-h-screen
-      bg-gradient-to-b
-      from-slate-50
-      to-slate-100
-      dark:from-[#0f172a]
-      dark:to-[#020617]">
+      onMouseMove={handleEdgeHover}
+      className="flex min-h-screen
+                 bg-gradient-to-b from-slate-50 to-slate-100
+                 dark:from-[#0f172a] dark:to-[#020617]"
+    >
       <Navbar />
       <UserSidebar />
-      <div className="flex-1">
-        <Navbar />
+      {/* min-w-0 prevents flex child from overflowing on mobile */}
+      <div className="flex-1 min-w-0">
         <main className="pt-[68px]">
           <Outlet />
         </main>
       </div>
     </div>
-
   )
 }
 

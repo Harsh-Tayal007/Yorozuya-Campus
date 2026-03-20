@@ -171,7 +171,6 @@ const PrefRow = ({ icon: Icon, label, hint, children }) => (
   </div>
 )
 
-// ── Inline expand form ─────────────────────────────────────────────────────────
 const InlineForm = ({ open, children }) => (
   <AnimatePresence>
     {open && (
@@ -190,7 +189,6 @@ const InlineForm = ({ open, children }) => (
   </AnimatePresence>
 )
 
-// ── Account row — clickable row + inline expand directly below it ─────────────
 const AccountRow = ({ icon: Icon, label, value, formKey, activeForm, setActiveForm, children }) => {
   const isOpen = activeForm === formKey
   return (
@@ -203,9 +201,9 @@ const AccountRow = ({ icon: Icon, label, value, formKey, activeForm, setActiveFo
           <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{label}</span>
         </div>
         <div className="flex items-center gap-2">
-          {value && <span className="text-sm text-muted-foreground">{value}</span>}
+          {value && <span className="text-xs text-muted-foreground truncate max-w-[120px]">{value}</span>}
           <ChevronRight size={14}
-            className={`text-muted-foreground transition-all duration-200 ${isOpen ? "rotate-90 text-primary" : "group-hover:text-primary"}`} />
+            className={`text-muted-foreground transition-all duration-200 shrink-0 ${isOpen ? "rotate-90 text-primary" : "group-hover:text-primary"}`} />
         </div>
       </button>
       <InlineForm open={isOpen}>{children}</InlineForm>
@@ -263,14 +261,13 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
       {error && <div className="mb-4 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">{error}</div>}
 
       <Section>
-        {/* Avatar */}
         <div className="flex items-center gap-4 py-4 border-b border-border/50">
           <div className="relative shrink-0 group">
             {avatarPreview ? (
               <img src={avatarPreview} alt="Avatar"
-                   className="w-16 h-16 rounded-full object-cover border-2 border-border group-hover:border-primary/50 transition-colors" />
+                   className="w-14 h-14 rounded-full object-cover border-2 border-border group-hover:border-primary/50 transition-colors" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                               border-2 border-border group-hover:border-primary/50 flex items-center
                               justify-center text-xl font-bold text-primary transition-colors">
                 {user?.name?.charAt(0).toUpperCase()}
@@ -383,7 +380,6 @@ const AccountTab = ({ user }) => {
       )}
 
       <Section title="General">
-        {/* Email row + inline expand directly below */}
         <AccountRow icon={Mail} label="Email address" value={user?.email}
           formKey="email" activeForm={activeForm} setActiveForm={setForm}>
           {error && activeForm === "email" && <p className="text-xs text-destructive">{error}</p>}
@@ -406,7 +402,6 @@ const AccountTab = ({ user }) => {
           </form>
         </AccountRow>
 
-        {/* Password row + inline expand directly below */}
         <AccountRow icon={Lock} label="Password" value="••••••••"
           formKey="password" activeForm={activeForm} setActiveForm={setForm}>
           {error && activeForm === "password" && <p className="text-xs text-destructive">{error}</p>}
@@ -470,8 +465,6 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
     enabled:  !!programId,
   })
 
-  // Cascade reset - only wipe downstream when user actively changes a value,
-  // not on mount. Compare new value against saved user context value to decide.
   const prevUniRef     = useRef(user?.universityId || "")
   const prevProgramRef = useRef(user?.programId    || "")
 
@@ -479,8 +472,7 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
     const prev = prevUniRef.current
     prevUniRef.current = universityId
     if (prev !== universityId && universityId !== (user?.universityId || "")) {
-      setProgramId("")
-      setBranchId("")
+      setProgramId(""); setBranchId("")
     }
   }, [universityId])
 
@@ -597,7 +589,7 @@ const PreferencesTab = () => {
 }
 
 // =============================================================================
-// MAIN
+// MAIN — fixed mobile overflow
 // =============================================================================
 const DashboardSettings = () => {
   const queryClient = useQueryClient()
@@ -609,43 +601,59 @@ const DashboardSettings = () => {
   const setTab = (key) => setSearchParams({ tab: key }, { replace: true })
 
   return (
-    <div className="max-w-2xl mx-auto py-6 px-1">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
+    <div className="max-w-2xl mx-auto py-4 sm:py-6">
 
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border mb-6 overflow-x-auto scrollbar-none">
-        {TABS.map(tab => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.key
-          return (
-            <button key={tab.key} onClick={() => setTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap
-                          transition-colors duration-150 relative shrink-0
-                          ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon size={14} />
-              {tab.label}
-              {isActive && (
-                <motion.div layoutId="settings-tab-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }} />
-              )}
-            </button>
-          )
-        })}
+      <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6">
+        Settings
+      </h1>
+
+      {/* Tab bar — -mx-4 negates the parent DashboardLayout px-4 on mobile
+          so the border-b goes full width and tabs have room to breathe     */}
+      <div className="-mx-4 sm:mx-0 border-b border-border mb-4 sm:mb-6">
+        <div className="flex overflow-x-auto scrollbar-none px-4 sm:px-0" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {TABS.map(tab => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setTab(tab.key)}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5
+                            text-xs sm:text-sm font-medium whitespace-nowrap
+                            transition-colors duration-150 relative shrink-0
+                            ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon size={13} />
+                {tab.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="settings-tab-indicator"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tab content — no extra padding needed, parent already has px-4 */}
       <AnimatePresence mode="wait">
-        <motion.div key={activeTab}
-          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.15 }}>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.15 }}
+        >
           {activeTab === "profile"     && <ProfileTab     user={user} updateProfile={updateProfile} queryClient={queryClient} navigate={navigate} />}
           {activeTab === "account"     && <AccountTab     user={user} />}
           {activeTab === "academic"    && <AcademicTab    user={user} completeAcademicProfile={completeAcademicProfile} queryClient={queryClient} />}
           {activeTab === "preferences" && <PreferencesTab />}
         </motion.div>
       </AnimatePresence>
+
     </div>
   )
 }

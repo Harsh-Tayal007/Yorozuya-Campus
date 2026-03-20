@@ -1,70 +1,93 @@
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom"
 import PageWrapper from "@/components/common/layout/PageWrapper"
 import Breadcrumbs from "@/components/common/navigation/Breadcrumbs"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { fetchThreadById } from "@/services/forum/threadService"
 import { getProgramById } from "@/services/university/programService"
 import { getBranchById } from "@/services/university/branchService"
 import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
-import { Loader2, Clock, ArrowLeft } from "lucide-react"
+import { Loader2, Clock, ArrowLeft, Bookmark } from "lucide-react"
 import { RepliesProvider } from "@/components/forum/RepliesProvider"
 import RepliesSection from "@/components/forum/RepliesSection"
+import useBookmarkStatus from "@/hooks/useBookmarkStatus"
+import { useAuth } from "@/context/AuthContext"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
+const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1) return "just now"
+  if (m < 1)  return "just now"
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
-  if (d < 7) return `${d}d ago`
+  if (d < 7)  return `${d}d ago`
   return new Date(dateStr).toLocaleDateString()
 }
 
 const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
 
+// ── Bookmark button ───────────────────────────────────────────────────────────
+const BookmarkButton = ({ threadId, threadAuthorId, bookmarkCount }) => {
+  const { currentUser } = useAuth()
+  const { isBookmarked, isPending, toggle } = useBookmarkStatus(threadId, threadAuthorId)
+
+  if (!currentUser) return null
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={isPending}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium
+                  transition-all duration-150 active:scale-95 disabled:opacity-60
+                  ${isBookmarked
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"}`}
+    >
+      <Bookmark size={13} className={isBookmarked ? "fill-primary" : ""} />
+      {bookmarkCount > 0 && <span>{bookmarkCount}</span>}
+      {isBookmarked ? "Saved" : "Save"}
+    </button>
+  )
+}
+
 const ThreadDetail = () => {
   const { threadId } = useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const focusReplyId = searchParams.get("focus")
 
   const { data: thread, isLoading } = useQuery({
     queryKey: ["thread", threadId],
-    queryFn: () => fetchThreadById(threadId),
-    enabled: !!threadId,
+    queryFn:  () => fetchThreadById(threadId),
+    enabled:  !!threadId,
   })
 
   const { data: uniDoc } = useQuery({
     queryKey: ["university", thread?.universityId],
-    queryFn: () => import("@/services/university/universityService")
-      .then(m => m.getUniversityById(thread.universityId)),
-    enabled: !!thread && isAppwriteId(thread.universityId),
-    staleTime: Infinity, retry: false,
+    queryFn:  () => import("@/services/university/universityService")
+                      .then(m => m.getUniversityById(thread.universityId)),
+    enabled:  !!thread && isAppwriteId(thread.universityId),
+    staleTime: Infinity, gcTime: Infinity, retry: false,
   })
 
   const { data: programDoc } = useQuery({
     queryKey: ["program", thread?.courseId],
-    queryFn: () => getProgramById(thread.courseId),
-    enabled: !!thread && isAppwriteId(thread.courseId),
-    staleTime: Infinity, retry: false,
+    queryFn:  () => getProgramById(thread.courseId),
+    enabled:  !!thread && isAppwriteId(thread.courseId),
+    staleTime: Infinity, gcTime: Infinity, retry: false,
   })
 
   const { data: branchDoc } = useQuery({
     queryKey: ["branch", thread?.branchId],
-    queryFn: () => getBranchById(thread.branchId),
-    enabled: !!thread && isAppwriteId(thread.branchId),
-    staleTime: Infinity, retry: false,
+    queryFn:  () => getBranchById(thread.branchId),
+    enabled:  !!thread && isAppwriteId(thread.branchId),
+    staleTime: Infinity, gcTime: Infinity, retry: false,
   })
 
-  // Author avatar — reads from pre-seeded cache first (warm if came from Forum)
-  // falls back to individual fetch if navigated directly to this URL
   const { data: authorData } = useQuery({
     queryKey: ["user-avatar", thread?.authorId],
     queryFn: async () => {
@@ -77,17 +100,18 @@ const ThreadDetail = () => {
         ? { avatarUrl: res.documents[0].avatarUrl ?? null, username: res.documents[0].username ?? null }
         : null
     },
-    enabled: !!thread?.authorId,
-    staleTime: 1000 * 60 * 10,
+    enabled:   !!thread?.authorId,
+    staleTime: Infinity,
+    gcTime:    Infinity,
     retry: false,
   })
 
-  const uniLabel = uniDoc?.name ?? thread?.universityId
-  const courseLabel = programDoc?.name ?? thread?.courseId
-  const branchLabel = branchDoc?.name ?? thread?.branchId
-  const avatarUrl = authorData?.avatarUrl ?? null
-  const authorUsername = authorData?.username ?? null
-  const profileHref = authorUsername ? `/profile/${authorUsername}` : null
+  const uniLabel       = uniDoc?.name       ?? thread?.universityId
+  const courseLabel    = programDoc?.name   ?? thread?.courseId
+  const branchLabel    = branchDoc?.name    ?? thread?.branchId
+  const avatarUrl      = authorData?.avatarUrl  ?? null
+  const authorUsername = authorData?.username   ?? null
+  const profileHref    = authorUsername ? `/profile/${authorUsername}` : null
 
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1)
@@ -113,22 +137,16 @@ const ThreadDetail = () => {
     )
   }
 
-  // Avatar element — initials always visible underneath, image sits on top
   const AvatarEl = ({ size = "w-6 h-6", textSize = "text-[10px]" }) => (
     <div className={`${size} rounded-full relative shrink-0`}>
-      {/* Initials fallback — always underneath */}
       <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                        border border-primary/20 flex items-center justify-center
                        ${textSize} font-bold text-primary`}>
         {thread.authorName?.charAt(0).toUpperCase()}
       </div>
-      {/* Real avatar — sits on top, no onLoad/opacity trick needed */}
       {avatarUrl && (
-        <img
-          src={avatarUrl}
-          alt={thread.authorName}
-          className="absolute inset-0 w-full h-full rounded-full object-cover border border-border"
-        />
+        <img src={avatarUrl} alt={thread.authorName}
+             className="absolute inset-0 w-full h-full rounded-full object-cover border border-border" />
       )}
     </div>
   )
@@ -141,24 +159,36 @@ const ThreadDetail = () => {
           items={[
             { label: "Forum", href: "/forum" },
             thread.universityId && { label: uniLabel },
-            thread.courseId && { label: courseLabel },
-            thread.branchId && { label: branchLabel },
+            thread.courseId     && { label: courseLabel },
+            thread.branchId     && { label: branchLabel },
             { label: thread.title },
           ].filter(Boolean)}
         />
 
         <button onClick={handleBack}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+          className="flex items-center gap-1.5 text-sm text-muted-foreground
+                     hover:text-foreground transition-colors group">
           <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
           Back
         </button>
 
         <div className="rounded-2xl border border-border bg-card px-5 py-4 space-y-3 overflow-hidden min-w-0">
 
-          <h1 className="text-lg sm:text-xl font-bold leading-snug text-foreground break-words">
-            {thread.title}
-          </h1>
+          {/* Title + bookmark */}
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-lg sm:text-xl font-bold leading-snug text-foreground break-words flex-1">
+              {thread.title}
+            </h1>
+            <div className="shrink-0 pt-0.5">
+              <BookmarkButton
+                threadId={thread.$id}
+                threadAuthorId={thread.authorId}
+                bookmarkCount={thread.bookmarkCount ?? 0}
+              />
+            </div>
+          </div>
 
+          {/* Tags */}
           <div className="flex flex-wrap gap-1.5">
             {thread.universityId && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px]
@@ -186,14 +216,12 @@ const ThreadDetail = () => {
               <Link to={profileHref} onClick={e => e.stopPropagation()}>
                 <AvatarEl />
               </Link>
-            ) : (
-              <AvatarEl />
-            )}
+            ) : <AvatarEl />}
 
             {profileHref ? (
               <Link to={profileHref}
-                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-                onClick={e => e.stopPropagation()}>
+                    className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                    onClick={e => e.stopPropagation()}>
                 {thread.authorName}
               </Link>
             ) : (

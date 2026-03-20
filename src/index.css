@@ -222,3 +222,8 @@ body[data-scroll-locked] {
   padding-right: 0 !important;
   margin-right: 0 !important;
 }
+
+/* Hide scrollbar everywhere it's not needed */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

@@ -29,8 +29,11 @@ const buildCurrentUser = (accountUser, userDoc) => ({
   avatarPublicId:   userDoc.avatarPublicId   ?? null,
   bio:              userDoc.bio              ?? null,
   yearOfStudy:      userDoc.yearOfStudy      ?? null,
-  // Use DB name as source of truth (can be updated by user)
   name:             userDoc.name             ?? accountUser.name,
+  // ── new social fields ──
+  karma:            userDoc.karma            ?? 0,
+  followerCount:    userDoc.followerCount    ?? 0,
+  followingCount:   userDoc.followingCount   ?? 0,
 })
 
 export const AuthProvider = ({ children }) => {
