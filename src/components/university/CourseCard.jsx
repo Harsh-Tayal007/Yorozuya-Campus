@@ -1,56 +1,25 @@
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card"
+// src/components/university/CourseCard.jsx
+import { ArrowUpRight } from "lucide-react"
+import GlowCard from "@/components/common/display/GlowCard"
 
-const CourseCard = ({ course, onClick }) => {
-  return (
-    <Card
-      onClick={onClick}
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onClick?.()}
-      className="
-        group relative cursor-pointer overflow-hidden
-        transition-all duration-300
-        hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10
-        focus-visible:ring-2 focus-visible:ring-primary
-      "
-    >
-      {/* Accent bar */}
-      <div className="
-    absolute inset-x-0 top-0 h-1
-    bg-linear-to-r from-indigo-500 to-purple-500
-    scale-x-0 origin-left
-    transition-transform duration-300
-    group-hover:scale-x-100
-  " />
-
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-lg font-semibold transition-colors group-hover:text-primary">
+export const CourseCard = ({ course, onClick }) => (
+  <GlowCard onClick={onClick} className="p-5">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0 flex-1">
+        <h3 className="text-sm font-semibold text-foreground group-hover:text-violet-400
+                       transition-colors duration-200 leading-snug">
           {course.name}
-        </CardTitle>
-
-        <CardDescription>
-          {course.duration
-            ? `Duration: ${course.duration} years`
-            : "Duration not specified"}
-        </CardDescription>
-      </CardHeader>
-
-      <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
+        </h3>
+        <p className="text-[11px] text-muted-foreground mt-1.5">
           {course.degreeType || "Program"}
-        </span>
-
-        <span className="text-primary font-medium transition-all group-hover:translate-x-1">
-          View →
-        </span>
-      </CardFooter>
-    </Card>
-  )
-}
+          {course.duration ? ` · ${course.duration} years` : ""}
+        </p>
+      </div>
+      <ArrowUpRight size={14} className="text-muted-foreground/40 shrink-0 mt-0.5
+                                          group-hover:text-violet-400 group-hover:translate-x-0.5
+                                          group-hover:-translate-y-0.5 transition-all duration-200" />
+    </div>
+  </GlowCard>
+)
 
 export default CourseCard

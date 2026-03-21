@@ -1,44 +1,37 @@
-import React from "react"
-import { Card } from "@/components/ui/card"
+// src/components/common/display/GlowCard.jsx
 import { cn } from "@/lib/utils"
 
-const GlowCard = ({ children, className = "", ...props }) => {
+const GlowCard = ({ children, className = "", onClick, ...props }) => {
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    e.currentTarget.style.setProperty("--mouse-x", `${x}px`)
-    e.currentTarget.style.setProperty("--mouse-y", `${y}px`)
+    e.currentTarget.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`)
+    e.currentTarget.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`)
   }
 
   return (
-    <Card
+    <div
       onMouseMove={handleMouseMove}
+      onClick={onClick}
       className={cn(
-        `
-        relative
-        overflow-hidden
-        transition-colors duration-300
-        hover:ring-1 hover:ring-primary/40
-
-        before:absolute
-        before:inset-0
-        before:rounded-[inherit]
-        before:opacity-0
-        hover:before:opacity-100
-        before:transition-opacity before:duration-300
-        before:pointer-events-none
-
-        before:bg-[radial-gradient(600px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(255,255,255,0.12),transparent_40%)]
-        dark:before:bg-[radial-gradient(600px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(255,255,255,0.08),transparent_40%)]
-        `,
+        `group relative overflow-hidden rounded-2xl
+         border border-border/60 bg-card/60 backdrop-blur-sm
+         transition-all duration-300
+         hover:border-border hover:bg-card/80 hover:-translate-y-0.5 hover:shadow-xl
+         before:absolute before:inset-0 before:rounded-[inherit]
+         before:opacity-0 hover:before:opacity-100
+         before:transition-opacity before:duration-300 before:pointer-events-none
+         before:bg-[radial-gradient(500px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(139,92,246,0.08),transparent_50%)]`,
+        onClick && "cursor-pointer active:scale-[0.98]",
         className
       )}
       {...props}
     >
+      {/* Accent top line */}
+      <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-70
+                      transition-opacity duration-300 pointer-events-none"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent)" }} />
       {children}
-    </Card>
+    </div>
   )
 }
 

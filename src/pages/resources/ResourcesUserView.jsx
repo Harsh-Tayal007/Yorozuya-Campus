@@ -1,579 +1,336 @@
-import { useNavigate, useParams } from "react-router-dom"
-import { useState, useEffect } from "react"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
-
-import { Query } from "appwrite"
+// src/pages/resources/ResourcesUserView.jsx
+import { useState } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
+import { motion } from "framer-motion"
+import { Library, Download, ExternalLink, ArrowUpRight, Layers, BookOpen } from "lucide-react"
 import { databases } from "@/lib/appwrite"
+import { Query } from "appwrite"
 
 import { getPdfViewUrl } from "@/services/shared/storageService"
 import { getAvailableResourceSemesters } from "@/services/resource/resourceAvailabilityService"
-import { BackButton, Breadcrumbs, ErrorState, FileTypeBadge, LoadingCard, SyllabusListSkeleton } from "@/components"
-import { getResolvedResourcesForSubject }
-  from "@/services/resource/resourceUserResolver";
-import { Button } from "@/components/ui/button"
-import { formatFileSize } from "@/utils/formatFileSize"
-import { Badge } from "@/components/ui/badge"
+import { getResolvedResourcesForSubject } from "@/services/resource/resourceUserResolver"
+import { getProgramById } from "@/services/university/programService"
+import { Breadcrumbs } from "@/components"
+import { BackButton } from "@/components"
 import PdfPreviewModal from "@/components/common/display/PdfPreviewModal"
 import { STORAGE_BUCKET_ID } from "@/config/appwrite"
 import { buildResourceFilename } from "@/utils/filenameUtils"
 import { downloadFileXHR } from "@/services/shared/downloadService"
 import { isMobileDevice } from "@/utils/isMobileDevice"
-import { useQuery } from "@tanstack/react-query"
+import { formatFileSize } from "@/utils/formatFileSize"
 import GlowCard from "@/components/common/display/GlowCard"
-import { ArrowUpRight } from "lucide-react"
+import { FileTypeBadge } from "@/components"
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const DATABASE_ID         = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const SYLLABUS_COLLECTION = import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID
 const SUBJECTS_COLLECTION = import.meta.env.VITE_APPWRITE_SUBJECTS_COLLECTION_ID
 const UNITS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID
-const RESOURCES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_RESOURCES_COLLECTION_ID
+
+async function getSubjectsBySemesterContext({ programId, branch, semester }) {
+  const syllabusRes = await databases.listDocuments(DATABASE_ID, SYLLABUS_COLLECTION, [
+    Query.equal("programId", programId),
+    Query.equal("branch", branch),
+    Query.equal("semester", Number(semester)),
+  ])
+  const ids = syllabusRes.documents.map(d => d.$id)
+  if (!ids.length) return []
+  const res = await databases.listDocuments(DATABASE_ID, SUBJECTS_COLLECTION, [
+    Query.equal("syllabusId", ids), Query.orderAsc("subjectName"),
+  ])
+  return res.documents
+}
+
+function Skeleton({ count = 4 }) {
+  return (
+    <div className="space-y-2.5">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-border/40 bg-card/40 h-16 animate-pulse" />
+      ))}
+    </div>
+  )
+}
 
 export default function ResourcesUserView({
   programId: propProgramId,
   branchName: propBranchName,
-  isDashboard
+  isDashboard,
 }) {
-
-  const params = useParams()
-
-  const programId = propProgramId ?? params.programId
+  const params     = useParams()
+  const navigate   = useNavigate()
+  const programId  = propProgramId  ?? params.programId
   const branchName = propBranchName ?? params.branchName
-  const semester = params.semester
-  const subjectId = params.subjectId
-  const unitId = params.unitId
+  const semester   = params.semester
+  const subjectId  = params.subjectId
+  const unitId     = params.unitId
+  const decodedBranch = branchName ? decodeURIComponent(branchName) : null
 
-  const [downloadingId, setDownloadingId] = useState(null);
+  const [previewResource, setPreviewResource] = useState(null)
+  const [downloadingId,   setDownloadingId]   = useState(null)
+  const [progress,        setProgress]        = useState(null)
+  const [activeDownload,  setActiveDownload]  = useState(null)
 
-  const [progress, setProgress] = useState(null)
+  const programBase       = `/programs/${programId}/branches/${branchName}`
+  const dashboardBase     = "/dashboard/resources"
+  const baseResourcesPath = isDashboard ? dashboardBase : `${programBase}/resources`
 
-  const navigate = useNavigate()
+  const canFetch = !!programId && programId !== "undefined"
+               && !!decodedBranch && decodedBranch !== "undefined"
 
-  const decodedBranch = branchName
-    ? decodeURIComponent(branchName)
-    : null
-
-  const [previewResource, setPreviewResource] = useState(null);
-
-  const [activeDownload, setActiveDownload] = useState(null)
-
-  const programBase = `/programs/${programId}/branches/${branchName}`
-  const dashboardBase = "/dashboard/resources"
-
-  const baseResourcesPath = isDashboard
-    ? dashboardBase
-    : `${programBase}/resources`
-
-  const branchBasePath = isDashboard
-    ? "/dashboard"
-    : programBase
-
-  const {
-    data: resources = [],
-    isLoading: loadingResources,
-    error: resourcesError,
-    refetch: refetchResources,
-
-  } = useQuery({
-    queryKey: ["resources", programId, semester, subjectId],
-    queryFn: () =>
-      getResolvedResourcesForSubject({
-        programId,
-        semester,
-        subjectId,
-      }),
-    enabled: !!programId && !!semester && !!subjectId,
-    // staleTime: 5 * 60 * 1000, // 5 minutes cache
-  });
-
-  const {
-    data: program = null,
-  } = useQuery({
+  const { data: program } = useQuery({
     queryKey: ["program", programId],
-    queryFn: () => getProgramById(programId),
-    enabled: !!programId,
+    queryFn:  () => getProgramById(programId),
+    enabled:  canFetch,
     staleTime: 1000 * 60 * 10,
   })
 
-  const {
-    data: subjects = [],
-    isLoading: loading,
-    error: subjectsError,
-    refetch: refetchSubjects,
-  } = useQuery({
-    queryKey: ["subjects", programId, decodedBranch, semester],
-    queryFn: () =>
-      getSubjectsBySemesterContext({
-        programId,
-        branch: decodedBranch,
-        semester,
-      }),
-    enabled: !!programId && !!decodedBranch && !!semester,
-    // staleTime: 10 * 60 * 1000,
-  });
-
-
-  const {
-    data: units = [],
-    isLoading: loadingUnits,
-  } = useQuery({
-    queryKey: ["units", subjectId],
-    queryFn: async () => {
-      const res = await databases.listDocuments(
-        DATABASE_ID,
-        UNITS_COLLECTION_ID,
-        [
-          Query.equal("subjectId", subjectId),
-          Query.orderAsc("order"),
-        ]
-      );
-      return res.documents;
-    },
-    enabled: !!subjectId,
-    // staleTime: 15 * 60 * 1000,
-  });
-
-  const {
-    data: currentSubject = null,
-  } = useQuery({
-    queryKey: ["subject", subjectId],
-    queryFn: () =>
-      databases.getDocument(
-        DATABASE_ID,
-        SUBJECTS_COLLECTION,
-        subjectId
-      ),
-    enabled: !!subjectId,
-    // staleTime: 30 * 60 * 1000,
-  });
-
-  const {
-    data: currentUnit = null,
-  } = useQuery({
-    queryKey: ["unit", unitId],
-    queryFn: () =>
-      databases.getDocument(
-        DATABASE_ID,
-        UNITS_COLLECTION_ID,
-        unitId
-      ),
-    enabled: !!unitId,
-    // staleTime: 30 * 60 * 1000,
-  });
-
-  const {
-    data: availableSemesters = [],
-    isLoading: loadingSemesters,
-  } = useQuery({
+  const { data: availableSemesters = [], isLoading: loadingSemesters } = useQuery({
     queryKey: ["resourceSemesters", programId, decodedBranch],
-    queryFn: () =>
-      getAvailableResourceSemesters({
-        programId,
-        branch: decodedBranch,
-      }),
-    enabled: !!programId && !semester && !subjectId,
-    // staleTime: 20 * 60 * 1000,
-  });
+    queryFn:  () => getAvailableResourceSemesters({ programId, branch: decodedBranch }),
+    enabled:  canFetch && !semester && !subjectId,
+    staleTime: 1000 * 60 * 5,
+  })
 
-  async function getSubjectsBySemesterContext({ programId, branch, semester }) {
-    const syllabusRes = await databases.listDocuments(
-      DATABASE_ID,
-      SYLLABUS_COLLECTION,
-      [
-        Query.equal("programId", programId),
-        Query.equal("branch", branch),
-        Query.equal("semester", Number(semester)),
-      ]
-    )
+  const { data: subjects = [], isLoading: loadingSubjects, refetch: refetchSubjects } = useQuery({
+    queryKey: ["subjects", programId, decodedBranch, semester],
+    queryFn:  () => getSubjectsBySemesterContext({ programId, branch: decodedBranch, semester }),
+    enabled:  canFetch && !!semester && !subjectId,
+    staleTime: 1000 * 60 * 5,
+  })
 
-    const syllabusIds = syllabusRes.documents.map(doc => doc.$id)
+  const { data: resources = [], isLoading: loadingResources, refetch: refetchResources } = useQuery({
+    queryKey: ["resources", programId, semester, subjectId],
+    queryFn:  () => getResolvedResourcesForSubject({ programId, semester, subjectId }),
+    enabled:  canFetch && !!semester && !!subjectId,
+    staleTime: 1000 * 60 * 5,
+  })
 
-    if (!syllabusIds.length) return []
+  const { data: currentSubject } = useQuery({
+    queryKey: ["subject", subjectId],
+    queryFn:  () => databases.getDocument(DATABASE_ID, SUBJECTS_COLLECTION, subjectId),
+    enabled:  !!subjectId, staleTime: 1000 * 60 * 30,
+  })
 
-    const subjectsRes = await databases.listDocuments(
-      DATABASE_ID,
-      SUBJECTS_COLLECTION,
-      [
-        Query.equal("syllabusId", syllabusIds),
-        Query.orderAsc("subjectName"),
-      ]
-    )
+  const { data: currentUnit } = useQuery({
+    queryKey: ["unit", unitId],
+    queryFn:  () => databases.getDocument(DATABASE_ID, UNITS_COLLECTION_ID, unitId),
+    enabled:  !!unitId, staleTime: 1000 * 60 * 30,
+  })
 
-    return subjectsRes.documents
-  }
+  if (!canFetch) return null
 
-
-  if (subjectsError || resourcesError) {
-    return (
-      <ErrorState
-        message="Failed to load resources."
-        onRetry={() => {
-          refetchSubjects()
-          refetchResources()
-        }}
-      />
-    )
-  }
-
-
+  const wrapClass = isDashboard
+    ? "space-y-5"
+    : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6"
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+    <div className={wrapClass}>
 
-      {/* ⬅ Back Button */}
-      {!semester && (
-        <BackButton
-          to={branchBasePath}
-          label={decodedBranch}
-        />
+      {/* ── Back navigation ── */}
+      {isDashboard && !semester && (
+        <BackButton to="/dashboard" label="Overview" />
       )}
-
-      {semester && !subjectId && (
-        <BackButton
-          to={baseResourcesPath}
-          label="Resources"
-        />
+      {isDashboard && semester && !subjectId && (
+        <BackButton to={dashboardBase} label="Resources" />
       )}
-
-      {semester && subjectId && (
-        <BackButton
-          to={`${baseResourcesPath}/semester/${semester}`}
-          label={`Semester ${semester}`}
-        />
+      {isDashboard && semester && subjectId && (
+        <BackButton to={`${dashboardBase}/semester/${semester}`} label={`Semester ${semester}`} />
       )}
-
-      {/* 🧭 Breadcrumb */}
-      {program && (
-  <Breadcrumbs
-    overrides={{
-      ...(program?.name && {
-        [programId]: program.name,
-      }),
-      ...(currentSubject?.subjectName && {
-        [subjectId]: currentSubject.subjectName,
-      }),
-      ...(currentUnit?.title && {
-        [unitId]: `Unit ${currentUnit.order}`,
-      }),
-    }}
-  />
-)}
-
-      {/* 🧾 Header */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold">
-          Resources
-        </h1>
-        <p className="text-muted-foreground">
-          {decodedBranch}
-        </p>
-      </div>
-
-      {/* 📦 Semester Cards */}
-      {!semester && (
+      {!isDashboard && !semester && (
+        <BackButton to={`/programs/${programId}/branches/${branchName}`} label={decodedBranch} />
+      )}
+      {!isDashboard && semester && !subjectId && (
         <>
+          <BackButton to={`${programBase}/resources`} label="Resources" />
+          <Breadcrumbs overrides={{
+            ...(program?.name && { [programId]: program.name }),
+          }} />
+        </>
+      )}
+      {!isDashboard && semester && subjectId && (
+        <>
+          <BackButton to={`${programBase}/resources/semester/${semester}`} label={`Semester ${semester}`} />
+          <Breadcrumbs overrides={{
+            ...(program?.name && { [programId]: program.name }),
+            ...(currentSubject?.subjectName && { [subjectId]: currentSubject.subjectName }),
+            ...(currentUnit?.title && { [unitId]: `Unit ${currentUnit.order}` }),
+          }} />
+        </>
+      )}
+
+      {/* ── Page header ── */}
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+        className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+          <Library size={18} className="text-amber-500" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Resources</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
+        </div>
+      </motion.div>
+
+      {/* ── Semester grid ── */}
+      {!semester && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
           {loadingSemesters ? (
-            <LoadingCard count={4} />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="rounded-2xl border border-border/40 bg-card/40 h-20 animate-pulse" />)}
+            </div>
           ) : availableSemesters.length === 0 ? (
-            <p className="text-muted-foreground">
-              No resources available for this branch yet.
-            </p>
+            <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
+              <p className="text-sm text-muted-foreground">No resources available yet</p>
+            </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {availableSemesters.map((sem) => (
-                <GlowCard
-                  key={sem}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    navigate(`${baseResourcesPath}/semester/${sem}`)
-                  }
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Semester {sem}
-                    </CardTitle>
-                    <CardDescription>
-                      View resources
-                    </CardDescription>
-                  </CardHeader>
-                  {/* Arrow Icon */}
-                  <ArrowUpRight
-                    className="
-          absolute bottom-4 right-4
-          h-4 w-4
-          text-muted-foreground
-          opacity-70
-          transition
-          group-hover:opacity-100
-        "
-                  />
-                </GlowCard>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-
-      {/* 📘 Subjects */}
-      {semester && !subjectId && (
-        <>
-          {loading && (
-            <LoadingCard count={4} />
-          )}
-
-          {!loading && subjects.length === 0 && (
-            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-              No subjects uploaded for this semester yet.
-            </div>
-          )}
-
-          {!loading && subjects.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {subjects.map((subject) => (
-                <GlowCard
-                  key={subject.$id}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    navigate(`${baseResourcesPath}/semester/${semester}/subject/${subject.$id}`)
-                  }
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {subject.subjectName}
-                    </CardTitle>
-
-                    {subject.description && (
-                      <CardDescription>
-                        {subject.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  {/* Arrow Icon */}
-                  <ArrowUpRight
-                    className="
-          absolute bottom-4 right-4
-          h-4 w-4
-          text-muted-foreground
-          opacity-70
-          transition
-          group-hover:opacity-100
-        "
-                  />
-                </GlowCard>
-              ))}
-            </div>
-
-          )}
-        </>
-      )}
-
-      {/* 📚 Resources */}
-      {subjectId && (
-        <>
-          {loadingResources && (
-            <SyllabusListSkeleton count={4} />
-          )}
-
-          {!loadingResources && resources.length === 0 && (
-            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-              No resources uploaded for this unit yet.
-            </div>
-          )}
-
-          {!loadingResources && resources.length > 0 && (
-            <div className="space-y-4">
-              {resources.map((resource) => (
-                <Card
-                  key={resource.$id}
-                  className="
-  p-4
-  flex flex-col gap-4
-  md:flex-row md:items-center md:justify-between
-
-  cursor-default
-  transition-all duration-200
-  hover:bg-muted/40
-  hover:shadow-lg
-hover:-translate-y-[2px]
-
-"
-
-                >
-
-                  {/* Left */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <FileTypeBadge
-                        fileType={resource.type === "pdf" ? "PDF" : "LINK"}
-                      />
-
-                      <p className="font-medium">{resource.title}</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {availableSemesters.map(sem => (
+                <GlowCard key={sem} onClick={() => navigate(`${baseResourcesPath}/semester/${sem}`)} className="p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                        <BookOpen size={14} className="text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground group-hover:text-amber-400 transition-colors">Semester {sem}</p>
+                        <p className="text-[11px] text-muted-foreground">View resources</p>
+                      </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      {resource.unit && (
-                        <Badge variant="secondary">
-                          Unit {resource.unit.order}: {resource.unit.title}
-                        </Badge>
-                      )}
-
-                      {resource.fileSize && (
-                        <Badge
-                          variant="secondary"
-                          className="font-normal opacity-80"
-                        >
-                          {formatFileSize(resource.fileSize)}
-                        </Badge>
-                      )}
-                    </div>
+                    <ArrowUpRight size={14} className="text-muted-foreground/40 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                   </div>
+                </GlowCard>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
 
-                  {/* Right */}
-                  <div className="flex flex-col items-end gap-1 md:shrink-0">
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          // LINK resources → always open normally
-                          if (resource.type === "link" && resource.url) {
-                            window.open(resource.url, "_blank")
-                            return
-                          }
+      {/* ── Subjects grid ── */}
+      {semester && !subjectId && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+          {loadingSubjects ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="rounded-2xl border border-border/40 bg-card/40 h-20 animate-pulse" />)}
+            </div>
+          ) : subjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
+              <p className="text-sm text-muted-foreground">No subjects for this semester yet</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {subjects.map(subject => (
+                <GlowCard key={subject.$id}
+                  onClick={() => navigate(`${baseResourcesPath}/semester/${semester}/subject/${subject.$id}`)}
+                  className="p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                        <Layers size={13} className="text-amber-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground group-hover:text-amber-400 transition-colors truncate">{subject.subjectName}</p>
+                        {subject.description && <p className="text-[11px] text-muted-foreground truncate">{subject.description}</p>}
+                      </div>
+                    </div>
+                    <ArrowUpRight size={14} className="text-muted-foreground/40 group-hover:text-amber-400 transition-all shrink-0" />
+                  </div>
+                </GlowCard>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
 
-                          // PDF on mobile → open directly
-                          if (isMobileDevice()) {
-                            const url = getPdfViewUrl(resource.fileId)
-                            window.open(url, "_blank")
-                            return
-                          }
-
-                          // Desktop PDF → modal preview
-                          setPreviewResource(resource)
-                        }}
-                      >
-                        View
-                      </Button>
-
-                      {resource.type === "pdf" && (
-                        <div className="relative">
-                          <Button
-                            size="sm"
-                            className="relative overflow-hidden pr-8"
-                            onClick={() => {
-                              if (downloadingId === resource.$id) return
-
-                              setDownloadingId(resource.$id)
-                              setProgress(0)
-
-                              const controller = downloadFileXHR({
-                                url: getPdfViewUrl(resource.fileId),
-                                fileName: buildResourceFilename(resource),
-
-                                onProgress: (data) => {
-                                  if (typeof data === "number") {
-                                    setProgress(data)
-                                  } else {
-                                    const percent = Math.min(
-                                      Math.round((data.loaded / resource.fileSize) * 100),
-                                      99
-                                    )
-                                    setProgress(percent)
-                                  }
-                                },
-
-                                onSuccess: () => {
-                                  setProgress(null)
-                                  setDownloadingId(null)
-                                  setActiveDownload(null)
-                                },
-
-                                onCancel: () => {
-                                  setProgress(null)
-                                  setDownloadingId(null)
-                                  setActiveDownload(null)
-                                },
-
-                                onError: () => {
-                                  setProgress(null)
-                                  setDownloadingId(null)
-                                  setActiveDownload(null)
-                                },
-                              })
-
-                              setActiveDownload(controller)
-                            }}
-                          >
-                            {/* BASE */}
-                            {downloadingId === resource.$id && (
-                              <span className="absolute inset-0 bg-zinc-300 dark:bg-zinc-700" />
-                            )}
-
-                            {/* PROGRESS */}
-                            {downloadingId === resource.$id && (
-                              <span
-                                className="absolute inset-y-0 left-0 bg-primary transition-[width]"
-                                style={{ width: `${progress}%` }}
-                              />
-                            )}
-
-                            {/* TEXT (auto-contrast) */}
-                            <span className="relative z-10 mix-blend-difference text-white font-medium">
-                              {downloadingId === resource.$id
-                                ? `Downloading… ${progress ?? 0}%`
-                                : "Download"}
-                            </span>
-                          </Button>
-
-                          {/* ❌ CANCEL (NOT INSIDE BUTTON) */}
-                          {downloadingId === resource.$id && (
-                            <span
-                              className="
-        absolute right-2 top-1/2 -translate-y-1/2
-        cursor-pointer
-        text-xs
-        opacity-70
-        hover:opacity-100
-        z-20
-      "
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                activeDownload?.cancel()
-                              }}
-                            >
-                              ✕
+      {/* ── Resources list ── */}
+      {subjectId && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+          {loadingResources ? <Skeleton count={4} /> : resources.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
+              <p className="text-sm text-muted-foreground">No resources uploaded yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {resources.map(resource => (
+                <motion.div key={resource.$id} layout
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
+                             hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
+                    style={{ background: "linear-gradient(90deg, transparent, #f59e0b, transparent)" }} />
+                  <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileTypeBadge fileType={resource.type} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{resource.title}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          {resource.unit && (
+                            <span className="text-[10px] font-medium px-1.5 py-px rounded bg-muted/60 text-muted-foreground">
+                              Unit {resource.unit.order}: {resource.unit.title}
                             </span>
                           )}
+                          {resource.fileSize && <span className="text-[11px] text-muted-foreground/60">{formatFileSize(resource.fileSize)}</span>}
                         </div>
-
-
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button onClick={() => {
+                        if (resource.type === "link" && resource.url) { window.open(resource.url, "_blank"); return }
+                        if (isMobileDevice()) { window.open(getPdfViewUrl(resource.fileId), "_blank"); return }
+                        setPreviewResource(resource)
+                      }}
+                        className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
+                                   border border-border/60 bg-muted/30 text-muted-foreground
+                                   hover:border-border hover:text-foreground hover:bg-muted/60 transition-all active:scale-95">
+                        <ExternalLink size={11} /> View
+                      </button>
+                      {resource.type === "pdf" && (
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              if (downloadingId === resource.$id) return
+                              setDownloadingId(resource.$id); setProgress(0)
+                              const ctrl = downloadFileXHR({
+                                url: getPdfViewUrl(resource.fileId),
+                                fileName: buildResourceFilename(resource),
+                                onProgress: (d) => setProgress(typeof d === "number" ? d : Math.min(Math.round((d.loaded / resource.fileSize) * 100), 99)),
+                                onSuccess: () => { setProgress(null); setDownloadingId(null); setActiveDownload(null) },
+                                onCancel:  () => { setProgress(null); setDownloadingId(null); setActiveDownload(null) },
+                                onError:   () => { setProgress(null); setDownloadingId(null); setActiveDownload(null) },
+                              })
+                              setActiveDownload(ctrl)
+                            }}
+                            className="relative h-8 px-3 rounded-xl text-xs font-medium text-white overflow-hidden
+                                       flex items-center gap-1 transition-all active:scale-95"
+                            style={{ background: "linear-gradient(135deg, #d97706, #b45309)" }}
+                          >
+                            {downloadingId === resource.$id && (
+                              <span className="absolute inset-y-0 left-0 bg-amber-900/40 transition-[width]" style={{ width: `${progress}%` }} />
+                            )}
+                            <span className="relative z-10 flex items-center gap-1">
+                              <Download size={11} />
+                              {downloadingId === resource.$id ? `${progress ?? 0}%` : "Download"}
+                            </span>
+                          </button>
+                          {downloadingId === resource.$id && (
+                            <button onClick={() => activeDownload?.cancel()}
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 text-xs text-white/70 hover:text-white">✕</button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-
-                </Card>
+                </motion.div>
               ))}
             </div>
           )}
-
-        </>
+        </motion.div>
       )}
 
       {!isMobileDevice() && (
-        <PdfPreviewModal
-          open={!!previewResource}
-          fileId={previewResource?.fileId}
-          bucketId={STORAGE_BUCKET_ID}
-          title={previewResource?.title}
-          onClose={() => setPreviewResource(null)}
-        />
+        <PdfPreviewModal open={!!previewResource} fileId={previewResource?.fileId}
+          bucketId={STORAGE_BUCKET_ID} title={previewResource?.title}
+          onClose={() => setPreviewResource(null)} />
       )}
-
     </div>
   )
 }

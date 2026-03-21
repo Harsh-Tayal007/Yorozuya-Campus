@@ -1,16 +1,39 @@
+// src/layouts/DashboardLayout.jsx
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { Settings } from "lucide-react"
 import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
 import { useSidebar } from "@/context/SidebarContext"
 import { useEffect } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { motion } from "framer-motion"
 
-const DashboardContent = () => {
-  const navigate = useNavigate()
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+function DashboardSkeleton() {
+  return (
+    <div className="w-full px-4 sm:px-6 py-6 space-y-6 animate-pulse">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="space-y-2">
+          <div className="h-6 w-48 bg-muted/60 rounded-xl" />
+          <div className="h-4 w-64 bg-muted/40 rounded-xl" />
+        </div>
+        <div className="h-8 w-36 bg-muted/40 rounded-xl" />
+      </div>
+      <div className="h-px bg-border/40" />
+      <div className="space-y-3">
+        <div className="h-24 bg-muted/30 rounded-2xl" />
+        <div className="h-24 bg-muted/30 rounded-2xl" />
+      </div>
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+const DashboardLayout = () => {
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const { data: identity, isLoading, error } = useAcademicIdentity()
   const { handleEdgeHover } = useSidebar()
-  const location = useLocation()
 
+  // Persist last visited dashboard route for back-navigation
   useEffect(() => {
     if (location.pathname !== "/dashboard") {
       localStorage.setItem("lastDashboardRoute", location.pathname)
@@ -19,77 +42,63 @@ const DashboardContent = () => {
 
   if (isLoading) {
     return (
-      <div className="animate-in fade-in duration-300">
-        <div className="flex min-h-screen">
-          <div className="flex-1 min-w-0 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-[#0f172a] dark:to-[#020617]">
-            <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-6 w-56" />
-                  <Skeleton className="h-4 w-72" />
-                </div>
-                <Skeleton className="h-8 w-40 rounded-md" />
-              </div>
-              <div className="border-b border-border" />
-              <div className="space-y-6">
-                <Skeleton className="h-32 rounded-xl" />
-                <Skeleton className="h-32 rounded-xl" />
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="flex-1 min-w-0 overflow-x-hidden">
+        <DashboardSkeleton />
       </div>
     )
   }
 
   if (error || !identity) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-sm text-red-500">Failed to load academic information.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-sm text-destructive">Failed to load academic information.</p>
       </div>
     )
   }
 
   return (
-    <div onMouseMove={handleEdgeHover} className="flex min-h-screen">
-      {/* overflow-x-hidden here is the key fix — prevents ANY child from
-          causing horizontal scroll regardless of what they do internally */}
-      <div className="flex-1 min-w-0 overflow-x-hidden
-                      bg-gradient-to-b from-slate-50 to-slate-100
-                      dark:from-[#0f172a] dark:to-[#020617]">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+    <div onMouseMove={handleEdgeHover} className="flex-1 min-w-0 overflow-x-hidden">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-0">
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {identity.branch?.name}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {identity.program?.name} · {identity.university?.name}
-              </p>
-            </div>
-
-            <button
-              onClick={() => navigate("/dashboard/settings")}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition"
-            >
-              <Settings className="h-4 w-4" />
-              Change Preferences
-            </button>
+        {/* Header bar */}
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/50"
+        >
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">
+              {identity.branch?.name}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {identity.program?.name}
+              {identity.university?.name ? ` · ${identity.university.name}` : ""}
+            </p>
           </div>
 
-          <div className="mt-4 mb-2 border-b border-border" />
+          <button
+            onClick={() => navigate("/dashboard/settings?tab=academic")}
+            className="inline-flex items-center gap-1.5 text-xs font-medium
+                       text-muted-foreground hover:text-foreground
+                       border border-border/60 hover:border-border
+                       bg-card/60 backdrop-blur-sm hover:bg-card/80
+                       px-3 py-2 rounded-xl transition-all duration-150
+                       active:scale-[0.97] shrink-0 self-start sm:self-auto"
+          >
+            <Settings size={13} />
+            Change Preferences
+          </button>
+        </motion.div>
 
-          <div className="space-y-6">
-            <Outlet />
-          </div>
-
+        {/* Page content — no extra top padding, Outlet handles its own spacing */}
+        <div className="pt-6">
+          <Outlet />
         </div>
+
       </div>
     </div>
   )
 }
-
-const DashboardLayout = () => <DashboardContent />
 
 export default DashboardLayout

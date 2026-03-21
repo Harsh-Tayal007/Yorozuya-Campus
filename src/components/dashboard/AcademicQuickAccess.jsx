@@ -1,85 +1,94 @@
+// src/components/dashboard/AcademicQuickAccess.jsx
 import { useNavigate } from "react-router-dom"
 import { BookOpen, Library, FileText, ArrowUpRight } from "lucide-react"
+import GlowCard from "@/components/common/display/GlowCard"
 
-import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import GlowCard from "../common/display/GlowCard"
+const CARDS = [
+  {
+    key: "syllabus",
+    label: "Syllabus",
+    description: "View semester-wise syllabus",
+    icon: BookOpen,
+    accent: "#06b6d4",
+    explorePath: (programId, branchName) =>
+      `/programs/${programId}/branches/${branchName}/syllabus`,
+    dashboardPath: () => "/dashboard/syllabus",
+  },
+  {
+    key: "resources",
+    label: "Resources",
+    description: "Notes, links & study materials",
+    icon: Library,
+    accent: "#f59e0b",
+    explorePath: (programId, branchName) =>
+      `/programs/${programId}/branches/${branchName}/resources`,
+    dashboardPath: () => "/dashboard/resources",
+  },
+  {
+    key: "pyqs",
+    label: "PYQs",
+    description: "Previous year question papers",
+    icon: FileText,
+    accent: "#ef4444",
+    explorePath: (programId, branchName) =>
+      `/programs/${programId}/branches/${branchName}/pyqs`,
+    dashboardPath: () => "/dashboard/pyqs",
+  },
+]
 
 const AcademicQuickAccess = ({
   programId,
   branchName,
   programName,
-  mode = "explore", // "explore" | "dashboard"
+  mode = "explore",
 }) => {
   const navigate = useNavigate()
 
-  const basePath =
-    mode === "dashboard"
-      ? "/dashboard"
-      : `/programs/${programId}/branches/${branchName}`
+  // Guard — never navigate with undefined params
+  const canNavigate = mode === "dashboard" || (!!programId && !!branchName)
+
+  const handleClick = (card) => {
+    if (!canNavigate) return
+    const path = mode === "dashboard"
+      ? card.dashboardPath()
+      : card.explorePath(programId, branchName)
+    navigate(path, { state: { programName } })
+  }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-      {/* Syllabus */}
-      <GlowCard
-        className="cursor-pointer relative"
-        onClick={() => navigate(`${basePath}/syllabus`,
-          {
-    state: {
-      programName
-    }
-  }
-        )}
-      >
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <BookOpen className="h-5 w-5 text-primary" />
-            <CardTitle>Syllabus</CardTitle>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {CARDS.map(({ key, label, description, icon: Icon, accent, ...card }) => (
+        <GlowCard
+          key={key}
+          onClick={() => handleClick({ key, label, description, icon: Icon, accent, ...card })}
+          className={`p-5 ${!canNavigate ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0
+                           group-hover:scale-110 transition-transform duration-200"
+                style={{ background: `${accent}15`, border: `1px solid ${accent}25` }}
+              >
+                <Icon size={16} style={{ color: accent }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground transition-colors duration-200">
+                  {label}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
+              </div>
+            </div>
+            <ArrowUpRight
+              size={14}
+              className="text-muted-foreground/40 shrink-0 mt-0.5
+                         group-hover:translate-x-0.5 group-hover:-translate-y-0.5
+                         transition-all duration-200"
+              style={{ color: `${accent}80` }}
+            />
           </div>
-          <CardDescription>
-            View semester-wise syllabus
-          </CardDescription>
-        </CardHeader>
-
-        <ArrowUpRight className="absolute bottom-4 right-4 h-4 w-4 text-muted-foreground opacity-70 transition group-hover:opacity-100" />
-      </GlowCard>
-
-      {/* Resources */}
-      <GlowCard
-        className="cursor-pointer relative"
-        onClick={() => navigate(`${basePath}/resources`)}
-      >
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Library className="h-5 w-5 text-primary" />
-            <CardTitle>Resources</CardTitle>
-          </div>
-          <CardDescription>
-            Notes, links & study materials
-          </CardDescription>
-        </CardHeader>
-
-        <ArrowUpRight className="absolute bottom-4 right-4 h-4 w-4 text-muted-foreground opacity-70 transition group-hover:opacity-100" />
-      </GlowCard>
-
-      {/* PYQs */}
-      <GlowCard
-        className="cursor-pointer relative"
-        onClick={() => navigate(`${basePath}/pyqs`)}
-      >
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-primary" />
-            <CardTitle>PYQs</CardTitle>
-          </div>
-          <CardDescription>
-            Previous year question papers
-          </CardDescription>
-        </CardHeader>
-
-        <ArrowUpRight className="absolute bottom-4 right-4 h-4 w-4 text-muted-foreground opacity-70 transition group-hover:opacity-100" />
-      </GlowCard>
-
+        </GlowCard>
+      ))}
     </div>
   )
 }

@@ -1,52 +1,35 @@
-import { FileText } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip"
+// src/components/common/FileTypeBadge.jsx
+import { FileText, Video, Link as LinkIcon, Archive, Image as ImageIcon } from "lucide-react"
 
-const FILE_TYPE_STYLES = {
-    pdf: {
-        label: "PDF",
-        icon: FileText,
-        tooltip: "PDF document",
-        badgeClass:
-            "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-    },
+const FILE_TYPE_CONFIG = {
+  pdf:   { label: "PDF",   icon: FileText,  accent: "#ef4444" },
+  video: { label: "Video", icon: Video,     accent: "#8b5cf6" },
+  link:  { label: "Link",  icon: LinkIcon,  accent: "#06b6d4" },
+  notes: { label: "Notes", icon: FileText,  accent: "#f59e0b" },
+  image: { label: "Image", icon: ImageIcon, accent: "#10b981" },
+  zip:   { label: "ZIP",   icon: Archive,   accent: "#6b7280" },
 }
 
 const FileTypeBadge = ({ fileType = "pdf", onPreview }) => {
-    const type =
-        FILE_TYPE_STYLES[fileType?.toLowerCase()] || FILE_TYPE_STYLES.pdf
-    const Icon = type.icon
+  const key = fileType?.toLowerCase()
+  const cfg = FILE_TYPE_CONFIG[key] ?? FILE_TYPE_CONFIG.pdf
+  const Icon = cfg.icon
 
-    return (
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        onClick={onPreview}
-                        className="flex items-center gap-2 focus:outline-none"
-                    >
-                        <Icon className="h-5 w-5 text-muted-foreground hover:text-foreground transition" />
-
-                        <Badge
-                            variant="secondary"
-                            className={`text-xs px-2 py-0.5 ${type.badgeClass}`}
-                        >
-                            {type.label}
-                        </Badge>
-                    </button>
-                </TooltipTrigger>
-
-                <TooltipContent>
-                    <p>{type.tooltip}</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-    )
+  return (
+    <button
+      type="button"
+      onClick={onPreview}
+      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1
+                 transition-all duration-150 active:scale-95 focus:outline-none"
+      style={{ background: `${cfg.accent}15`, border: `1px solid ${cfg.accent}30` }}
+      title={`${cfg.label} file`}
+    >
+      <Icon size={12} style={{ color: cfg.accent }} />
+      <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: cfg.accent }}>
+        {cfg.label}
+      </span>
+    </button>
+  )
 }
 
 export default FileTypeBadge

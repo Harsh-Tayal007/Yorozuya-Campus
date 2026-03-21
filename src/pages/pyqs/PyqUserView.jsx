@@ -1,146 +1,97 @@
+// src/pages/pyqs/PyqUserView.jsx
 import { useParams, useNavigate } from "react-router-dom"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useQuery } from "@tanstack/react-query"
+import { motion } from "framer-motion"
+import { FileText, ArrowUpRight, BookOpen } from "lucide-react"
 import { getSemestersWithPyqs } from "@/services/syllabus/pyqService"
 import { getProgramById } from "@/services/university/programService"
-import { BackButton, Breadcrumbs, ErrorState, LoadingCard } from "@/components"
-import { useQuery } from "@tanstack/react-query"
-import { ArrowUpRight } from "lucide-react"
+import { Breadcrumbs } from "@/components"
+import { BackButton } from "@/components"
 import GlowCard from "@/components/common/display/GlowCard"
-import { DATABASE_ID, PROGRAMS_COLLECTION_ID } from "@/config/appwrite"
-import { useEffect, useState } from "react"
-import { databases } from "@/lib/appwrite"
 
+const PyqUserView = ({ programId: propProgramId, branchName: propBranchName, isDashboard }) => {
+  const params    = useParams()
+  const navigate  = useNavigate()
+  const programId  = propProgramId  ?? params.programId
+  const branchName = propBranchName ?? params.branchName
+  const decodedBranch = branchName ? decodeURIComponent(branchName) : null
 
-const PyqUserView = ({
-    programId: propProgramId,
-    branchName: propBranchName,
-    isDashboard
-}) => {
-    const params = useParams()
+  const programBase    = `/programs/${programId}/branches/${branchName}`
+  const basePyqPath    = isDashboard ? "/dashboard/pyqs" : `${programBase}/pyqs`
 
-    const programId = propProgramId ?? params.programId
-    const branchName = propBranchName ?? params.branchName
-    const semester = params.semester
-    const subjectId = params.subjectId
+  const canFetch = !!programId && programId !== "undefined"
 
-    const navigate = useNavigate()
+  const { data: semesters = [], isLoading, error: semestersError, refetch } = useQuery({
+    queryKey: ["pyq-semesters", programId],
+    queryFn:  () => getSemestersWithPyqs(programId),
+    enabled:  canFetch,
+    staleTime: 1000 * 60 * 5,
+  })
 
-    const decodedBranch = branchName
-        ? decodeURIComponent(branchName)
-        : null
+  const { data: program, error: programError, refetch: refetchProgram } = useQuery({
+    queryKey: ["program", programId],
+    queryFn:  () => getProgramById(programId),
+    enabled:  canFetch,
+    staleTime: 1000 * 60 * 10,
+  })
 
-    const programBase = `/programs/${programId}/branches/${branchName}`
-    const dashboardBase = "/dashboard/pyqs"
+  if (!canFetch) return null
 
-    const basePyqPath = isDashboard
-        ? dashboardBase
-        : `${programBase}/pyqs`
+  const wrapClass = isDashboard ? "space-y-5" : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6"
 
-    const branchBasePath = isDashboard
-        ? "/dashboard"
-        : programBase
+  return (
+    <div className={wrapClass}>
+      {isDashboard && <BackButton to="/dashboard" label="Overview" />}
+      {!isDashboard && (
+        <>
+          <BackButton to={`/programs/${programId}/branches/${branchName}`} label={decodedBranch} />
+          {program && <Breadcrumbs overrides={{ [programId]: program.name }} />}
+        </>
+      )}
 
-    const {
-  data: semesters = [],
-  isLoading: loadingSemesters,
-  error: semestersError,
-  refetch: refetchSemesters,
-} = useQuery({
-  queryKey: ["pyq-semesters", programId],
-  queryFn: () => getSemestersWithPyqs(programId),
-  enabled: !!programId,
-})
-
-const {
-  data: program,
-  isLoading: loadingProgram,
-  error: programError,
-  refetch: refetchProgram,
-} = useQuery({
-  queryKey: ["program", programId],
-  queryFn: () => getProgramById(programId),
-  enabled: !!programId,
-  staleTime: 1000 * 60 * 10,
-})
-
-    if (semestersError || programError) {
-        return (
-            <ErrorState
-                message="Failed to load PYQs."
-                onRetry={() => {
-                    refetchSemesters()
-                    refetchProgram()
-                }}
-            />
-        )
-    }
-
-    return (
-        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-            <BackButton
-                to={branchBasePath}
-                label={decodedBranch}
-            />
-
-            {program && (
-                <Breadcrumbs
-                    overrides={{
-                        [programId]: program.name,
-                    }}
-                />
-            )}
-
-            <div>
-                <h1 className="text-2xl font-bold">PYQs</h1>
-                <p className="text-muted-foreground mt-1">
-                    {decodeURIComponent(branchName)}
-                </p>
-            </div>
-
-            {loadingSemesters || loadingProgram ? (
-                <LoadingCard count={4} />
-            ) : semesters.length === 0 ? (
-                <p className="text-muted-foreground">
-                    No PYQs available yet.
-                </p>
-            ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {semesters.map((sem) => (
-                        <GlowCard
-                            key={sem}
-                            className="cursor-pointer relative"
-                            onClick={() =>
-                                navigate(`${basePyqPath}/semester/${sem}`)
-                            }
-                        >
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    Semester {sem}
-                                </CardTitle>
-
-                                <CardDescription>
-                                    View PYQs
-                                </CardDescription>
-                            </CardHeader>
-
-                            {/* Arrow Icon */}
-                            <ArrowUpRight
-                                className="
-          absolute bottom-4 right-4
-          h-4 w-4
-          text-muted-foreground
-          opacity-70
-          transition
-          group-hover:opacity-100
-        "
-                            />
-                        </GlowCard>
-                    ))}
-                </div>
-
-            )}
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+        className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
+          <FileText size={18} className="text-red-500" />
         </div>
-    )
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">PYQs</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+        {isLoading ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="rounded-2xl border border-border/40 bg-card/40 h-20 animate-pulse" />)}
+          </div>
+        ) : semesters.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
+            <p className="text-sm text-muted-foreground">No PYQs available yet</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {semesters.map(sem => (
+              <GlowCard key={sem} onClick={() => navigate(`${basePyqPath}/semester/${sem}`)} className="p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                      <BookOpen size={13} className="text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground group-hover:text-red-400 transition-colors">Semester {sem}</p>
+                      <p className="text-[11px] text-muted-foreground">View PYQs</p>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={14} className="text-muted-foreground/40 group-hover:text-red-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </div>
+              </GlowCard>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </div>
+  )
 }
 
 export default PyqUserView

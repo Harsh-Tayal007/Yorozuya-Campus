@@ -1,244 +1,146 @@
+// src/pages/pyqs/PyqSubjectList.jsx
+import { useState } from "react"
 import { useParams, useLocation } from "react-router-dom"
-import { useEffect, useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useQuery } from "@tanstack/react-query"
+import { motion } from "framer-motion"
+import { FileText, ExternalLink, Download } from "lucide-react"
 import { databases, storage } from "@/lib/appwrite"
-import { BackButton, Breadcrumbs, ErrorState, FileTypeBadge, LoadingCard, SyllabusListSkeleton } from "@/components"
+import { Breadcrumbs } from "@/components"
+import { BackButton } from "@/components"
 import { formatFileSize } from "@/utils/formatFileSize"
 import PyqPreviewModal from "./PyqPreviewModal"
-
-import {
-    getPyqsForSubject,
-} from "@/services/syllabus/pyqService"
+import { getPyqsForSubject } from "@/services/syllabus/pyqService"
+import { getProgramById } from "@/services/university/programService"
 import { DATABASE_ID, SUBJECTS_COLLECTION_ID } from "@/config/appwrite"
 import { isMobileDevice } from "@/utils/isMobileDevice"
-import { useQuery } from "@tanstack/react-query"
+import { FileTypeBadge } from "@/components"
 
+const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, isDashboard }) => {
+  const params   = useParams()
+  const location = useLocation()
+  const programId  = propProgramId  ?? params.programId
+  const branchName = propBranchName ?? params.branchName
+  const semester   = params.semester
+  const subjectId  = params.subjectId
+  const decodedBranch = branchName ? decodeURIComponent(branchName) : null
+  const initialSubjectName = location.state?.subjectName
 
-const PyqSubjectList = ({
-    programId: propProgramId,
-    branchName: propBranchName,
-    isDashboard
-}) => {
-    const params = useParams()
+  const [previewPyq, setPreviewPyq] = useState(null)
 
-    const programId = propProgramId ?? params.programId
-    const branchName = propBranchName ?? params.branchName
-    const semester = params.semester
-    const subjectId = params.subjectId
+  const programBase = `/programs/${programId}/branches/${branchName}`
+  const basePyqPath = isDashboard ? "/dashboard/pyqs" : `${programBase}/pyqs`
 
-    const [pyqs, setPyqs] = useState([])
-    const [loading, setLoading] = useState(true)
+  const canFetch = !!programId && programId !== "undefined" && !!semester && !!subjectId
 
-    const [previewPyq, setPreviewPyq] = useState(null)
+  const { data: program } = useQuery({
+    queryKey: ["program", programId],
+    queryFn:  () => getProgramById(programId),
+    enabled:  canFetch, staleTime: 1000 * 60 * 10,
+  })
 
-    const [error, setError] = useState(null)
+  const { data: currentSubject } = useQuery({
+    queryKey: ["subject", subjectId],
+    queryFn:  () => databases.getDocument(DATABASE_ID, SUBJECTS_COLLECTION_ID, subjectId),
+    enabled:  canFetch && !initialSubjectName,
+    staleTime: 1000 * 60 * 30,
+  })
 
-    const location = useLocation()
-    const initialSubjectName = location.state?.subjectName
+  const subjectName = initialSubjectName || currentSubject?.subjectName
 
-    const [currentSubject, setCurrentSubject] = useState(
-        initialSubjectName ? { subjectName: initialSubjectName } : null
-    )
+  const { data: pyqs = [], isLoading } = useQuery({
+    queryKey: ["pyqs-subject", programId, semester, subjectId],
+    queryFn:  () => getPyqsForSubject({ programId, semester: Number(semester), subjectId }),
+    enabled:  canFetch,
+    staleTime: 1000 * 60 * 5,
+  })
 
+  const handleView     = (pyq) => {
+    if (isMobileDevice()) { window.open(storage.getFileView(pyq.bucketId, pyq.fileId), "_blank"); return }
+    setPreviewPyq(pyq)
+  }
+  const handleDownload = (pyq) => window.open(storage.getFileDownload(pyq.bucketId, pyq.fileId), "_blank")
 
+  if (!canFetch) return null
 
-    useEffect(() => {
-        if (!subjectId || initialSubjectName) return
+  const wrapClass = isDashboard ? "space-y-5" : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6"
 
-        const fetchSubject = async () => {
+  return (
+    <div className={wrapClass}>
+      <BackButton to={`${basePyqPath}/semester/${semester}`} label={`Semester ${semester}`} />
+      {!isDashboard && (
+        <Breadcrumbs overrides={{
+          ...(program?.name   && { [programId]:  program.name }),
+          ...(subjectName     && { [subjectId]:  subjectName }),
+        }} />
+      )}
 
-            const res = await databases.getDocument(
-                DATABASE_ID,
-                SUBJECTS_COLLECTION_ID,
-                subjectId
-            )
-            console.log("Fetched subject:", res)
-            setCurrentSubject(res)
-
-        }
-
-        fetchSubject()
-    }, [subjectId, initialSubjectName])
-
-
-    const decodedBranch = branchName
-        ? decodeURIComponent(branchName)
-        : null
-
-    const programBase = `/programs/${programId}/branches/${branchName}`
-    const dashboardBase = "/dashboard/pyqs"
-
-    const basePyqPath = isDashboard
-        ? dashboardBase
-        : `${programBase}/pyqs`
-
-    const branchBasePath = isDashboard
-        ? "/dashboard"
-        : programBase
-
-    const {
-        data: program
-    } = useQuery({
-        queryKey: ["program", programId],
-        queryFn: () => getProgramById(programId),
-        enabled: !!programId,
-    })
-
-
-    useEffect(() => {
-        const fetchPyqs = async () => {
-            try {
-                const data = await getPyqsForSubject({
-                    programId,
-                    semester: Number(semester),
-                    subjectId,
-                })
-                setPyqs(data)
-            } catch (err) {
-                setError(true)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-
-        fetchPyqs()
-    }, [programId, semester, subjectId])
-
-    // handlers
-    const handleView = (pyq) => {
-        if (isMobileDevice()) {
-            const url = storage.getFileView(pyq.bucketId, pyq.fileId)
-            window.open(url, "_blank")
-            return
-        }
-
-        setPreviewPyq(pyq)
-    }
-
-
-    const handleDownload = (pyq) => {
-        const url = storage.getFileDownload(pyq.bucketId, pyq.fileId)
-        window.open(url, "_blank")
-    }
-
-
-    return (
-        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-
-            <BackButton
-                to={`${basePyqPath}/semester/${semester}`}
-                label={`Semester ${semester}`}
-            />
-
-            <Breadcrumbs
-  overrides={{
-    ...(program?.name && {
-      [programId]: program.name,
-    }),
-    ...(currentSubject?.subjectName && {
-      [subjectId]: currentSubject.subjectName,
-    }),
-  }}
-/>
-
-            {/* 📝 Page Header */}
-            <div>
-                <h1 className="text-2xl font-bold">PYQs</h1>
-                <p className="text-muted-foreground">
-                    Computer Science Engineering
-                </p>
-            </div>
-
-            {/* 📄 PYQ List */}
-            {loading ? (
-                <SyllabusListSkeleton count={4} />
-            ) : pyqs.length === 0 ? (
-                <p className="text-muted-foreground">
-                    No PYQs uploaded for this subject yet.
-                </p>
-            ) : (
-                <div className="space-y-4">
-                    {pyqs.map((pyq) => (
-                        <Card
-                            key={pyq.$id}
-                            className="
-    p-4
-    flex flex-col gap-4
-    md:flex-row md:items-center md:justify-between
-
-    cursor-default
-    transition-all duration-200
-    hover:bg-muted/40
-    hover:shadow-lg
-    hover:-translate-y-[2px]
-  "
-                        >
-
-                            {/* Left */}
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-3">
-                                    <FileTypeBadge
-                                        fileType={pyq.fileType}
-                                        onPreview={() => handleView(pyq)}
-                                    />
-
-                                    <p className="font-medium">{pyq.title}</p>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    {pyq.unit && (
-                                        <Badge variant="secondary">
-                                            Unit {pyq.unit.order}: {pyq.unit.title}
-                                        </Badge>
-                                    )}
-
-                                    {pyq.fileSize && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="text-xs font-normal opacity-80"
-                                        >
-                                            {formatFileSize(pyq.fileSize)}
-                                        </Badge>
-                                    )}
-
-                                </div>
-                            </div>
-
-
-                            {/* Right */}
-                            <div className="flex gap-2 md:shrink-0">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleView(pyq)}
-                                >
-                                    View
-                                </Button>
-
-                                <Button
-                                    size="sm"
-                                    onClick={() => handleDownload(pyq)}
-                                >
-                                    Download
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            )}
-            {!isMobileDevice() && (
-                <PyqPreviewModal
-                    pyq={previewPyq}
-                    open={!!previewPyq}
-                    onClose={() => setPreviewPyq(null)}
-                />
-            )}
-
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+        className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
+          <FileText size={18} className="text-red-500" />
         </div>
-    )
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">PYQs</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{subjectName ?? decodedBranch}</p>
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+        {isLoading ? (
+          <div className="space-y-2.5">
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="rounded-2xl border border-border/40 bg-card/40 h-16 animate-pulse" />)}
+          </div>
+        ) : pyqs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
+            <p className="text-sm text-muted-foreground">No PYQs uploaded for this subject yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {pyqs.map(pyq => (
+              <motion.div key={pyq.$id} layout
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
+                           hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
+                  style={{ background: "linear-gradient(90deg, transparent, #ef4444, transparent)" }} />
+                <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileTypeBadge fileType={pyq.fileType} onPreview={() => handleView(pyq)} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{pyq.title}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                        {pyq.unit && <span className="text-[10px] font-medium px-1.5 py-px rounded bg-muted/60 text-muted-foreground">Unit {pyq.unit.order}: {pyq.unit.title}</span>}
+                        {pyq.year && <span className="text-[11px] text-muted-foreground">{pyq.year}</span>}
+                        {pyq.fileSize && <span className="text-[11px] text-muted-foreground/60">{formatFileSize(pyq.fileSize)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={() => handleView(pyq)}
+                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
+                                 border border-border/60 bg-muted/30 text-muted-foreground
+                                 hover:border-border hover:text-foreground hover:bg-muted/60 transition-all active:scale-95">
+                      <ExternalLink size={11} /> View
+                    </button>
+                    <button onClick={() => handleDownload(pyq)}
+                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium text-white transition-all active:scale-95"
+                      style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}>
+                      <Download size={11} /> Download
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {!isMobileDevice() && (
+        <PyqPreviewModal pyq={previewPyq} open={!!previewPyq} onClose={() => setPreviewPyq(null)} />
+      )}
+    </div>
+  )
 }
 
 export default PyqSubjectList

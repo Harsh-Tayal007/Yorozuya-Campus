@@ -1,361 +1,219 @@
-import { useEffect, useState } from "react"
+// src/pages/admin/syllabus/SyllabusUserView.jsx
+import { useState } from "react"
 import { useParams } from "react-router-dom"
-import { getSyllabusByContext } from "@/services/syllabus/syllabusService"
+import { useQuery } from "@tanstack/react-query"
+import { motion } from "framer-motion"
+import { ClipboardList, Download, ExternalLink } from "lucide-react"
 
 import { getPdfViewUrl } from "@/services/shared/storageService"
-
-import { databases } from "@/lib/appwrite";
-import { Query } from "appwrite";
-import { BackButton, Breadcrumbs, ErrorState, SyllabusListSkeleton } from "@/components"
-
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { FileTypeBadge } from "@/components";
+import { databases, storage } from "@/lib/appwrite"
+import { Query } from "appwrite"
+import { Breadcrumbs } from "@/components"
+import { BackButton } from "@/components"
+import { PdfPreviewModal } from "@/components"
+import { STORAGE_BUCKET_ID, SUBJECTS_COLLECTION_ID, SYLLABUS_COLLECTION_ID } from "@/config/appwrite"
+import { buildSyllabusFilename } from "@/utils/filenameUtils"
+import { downloadFileXHR } from "@/services/shared/downloadService"
 import { formatFileSize } from "@/utils/formatFileSize"
-import { PdfPreviewModal } from "@/components";
-import { storage } from "@/lib/appwrite";
-import { STORAGE_BUCKET_ID, SUBJECTS_COLLECTION_ID, SYLLABUS_COLLECTION_ID } from "@/config/appwrite";
-import { buildSyllabusFilename } from "@/utils/filenameUtils";
-import { downloadFileXHR } from "@/services/shared/downloadService";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { getProgramById } from "@/services/university/programService";
+import { getProgramById } from "@/services/university/programService"
+import { FileTypeBadge } from "@/components"
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-const SYLLABUS_COLLECTION = SYLLABUS_COLLECTION_ID;
-const SUBJECTS_COLLECTION = SUBJECTS_COLLECTION_ID;
+const DATABASE_ID        = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const SYLLABUS_BUCKET_ID = STORAGE_BUCKET_ID
 
+async function getSubjectsBySemesterContext({ programId, branch, semester }) {
+  const syllabusRes = await databases.listDocuments(DATABASE_ID, SYLLABUS_COLLECTION_ID, [
+    Query.equal("programId", programId),
+    Query.equal("branch", branch),
+    Query.equal("semester", Number(semester)),
+  ])
+  const ids = syllabusRes.documents.map(d => d.$id)
+  if (!ids.length) return []
+  const subjectsRes = await databases.listDocuments(DATABASE_ID, SUBJECTS_COLLECTION_ID, [
+    Query.equal("syllabusId", ids),
+    Query.orderAsc("subjectName"),
+  ])
+  return subjectsRes.documents
+}
+
+const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 export default function SyllabusUserView({
-    programId: propProgramId,
-    branchName: propBranchName,
-    semester: propSemester,
-    isDashboard
+  programId: propProgramId,
+  branchName: propBranchName,
+  semester: propSemester,
+  isDashboard,
 }) {
+  const params     = useParams()
+  const programId  = propProgramId  ?? params.programId
+  const branchName = propBranchName ?? params.branchName
+  const semester   = propSemester   ?? params.semester
 
-    const params = useParams()
+  // When isDashboard, branchName is already a plain string from the branch document (e.g. "Computer Science Engineering")
+  // When public, branchName comes from URL params and may be URL-encoded
+  // decodeURIComponent on a plain string is safe (no-op), but guard against undefined
+  const decodedBranch = branchName && branchName !== "undefined"
+    ? decodeURIComponent(branchName)
+    : null
 
-    const programId = propProgramId ?? params.programId
-    const branchName = propBranchName ?? params.branchName
-    const semester = propSemester ?? params.semester
+  const [previewFile, setPreviewFile] = useState(null)
 
-    const decodedBranch = branchName
-        ? decodeURIComponent(branchName)
-        : null
+  const canFetch = !!programId
+    && programId !== "undefined"
+    && !!decodedBranch
+    && !!semester
+    && semester !== "undefined"
 
-    const [previewFile, setPreviewFile] = useState(null)
+  const { data: program } = useQuery({
+    queryKey: ["program", programId],
+    queryFn:  () => getProgramById(programId),
+    enabled:  canFetch,
+    staleTime: 1000 * 60 * 10,
+  })
 
-    const {
-  data: program = null,
-} = useQuery({
-  queryKey: ["program", programId],
-  queryFn: () => getProgramById(programId),
-  enabled: !!programId,
-  staleTime: 1000 * 60 * 10,
-})
+  const { data: subjects = [], isLoading, error } = useQuery({
+    queryKey: ["syllabus-subjects", programId, decodedBranch, semester],
+    queryFn:  () => getSubjectsBySemesterContext({
+      programId,
+      branch: decodedBranch,
+      semester: Number(semester),
+    }),
+    enabled:  canFetch,
+    staleTime: 1000 * 60 * 5,
+  })
 
-    const {
-        data: syllabus = null,
-        isLoading: loadingSyllabus,
-        error: syllabusError,
-        refetch: refetchSyllabus,
-    } = useQuery({
-        queryKey: ["syllabus", programId, decodedBranch, semester],
-        queryFn: () =>
-            getSyllabusByContext({
-                programId,
-                branch: decodedBranch,
-                semester: Number(semester),
-            }),
-        enabled: !!programId && !!decodedBranch && !!semester,
-    });
+  const { data: fileSizes = {} } = useQuery({
+    queryKey: ["syllabus-file-sizes", subjects.map(s => s.pdfFileId)],
+    queryFn: async () => {
+      const sizes = {}
+      await Promise.all(subjects.map(async s => {
+        if (!s.pdfFileId) return
+        const file = await storage.getFile(SYLLABUS_BUCKET_ID, s.pdfFileId)
+        sizes[s.pdfFileId] = file.sizeOriginal
+      }))
+      return sizes
+    },
+    enabled:  subjects.length > 0,
+    staleTime: 1000 * 60 * 10,
+  })
 
-    const {
-        data: subjects = [],
-        isLoading: loadingSubjects,
-        error: subjectsError,
-    } = useQuery({
-        queryKey: ["syllabus-subjects", programId, decodedBranch, semester],
-        queryFn: () =>
-            getSubjectsBySemesterContext({
-                programId,
-                branch: decodedBranch,
-                semester: Number(semester),
-            }),
-        enabled: !!programId && !!decodedBranch && !!semester,
-    });
+  if (!canFetch) return null
 
-    const {
-        data: fileSizes = {},
-    } = useQuery({
-        queryKey: ["syllabus-file-sizes", subjects],
-        queryFn: async () => {
-            const sizes = {};
+  const publicBase = `/programs/${programId}/branches/${branchName}/syllabus`
+  const wrapClass  = isDashboard
+    ? "space-y-5"
+    : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6"
 
-            await Promise.all(
-                subjects.map(async (subject) => {
-                    if (!subject.pdfFileId) return;
+  return (
+    <div className={wrapClass}>
 
-                    const file = await storage.getFile(
-                        SYLLABUS_BUCKET_ID,
-                        subject.pdfFileId
-                    );
+      {isDashboard && (
+        <BackButton to="/dashboard/syllabus" label="Syllabus" />
+      )}
+      {!isDashboard && (
+        <>
+          <BackButton to={publicBase} label="Syllabus" />
+          <Breadcrumbs overrides={{ [programId]: program?.name || "" }} />
+        </>
+      )}
 
-                    sizes[subject.pdfFileId] = file.sizeOriginal;
-                })
-            );
-
-            return sizes;
-        },
-        enabled: subjects.length > 0,
-    });
-
-
-    // 🔒 In-memory download cache
-    const downloadCache = new Map();
-
-    // helper function
-    const isMobileDevice = () =>
-        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-
-    const handleView = (subject) => {
-        if (isMobileDevice()) {
-            // Mobile → open directly
-            const url = storage.getFileView(
-                SYLLABUS_BUCKET_ID,
-                subject.pdfFileId
-            )
-            window.open(url, "_blank")
-            return
-        }
-
-        // Desktop → modal preview
-        setPreviewFile({
-            fileId: subject.pdfFileId,
-            bucketId: SYLLABUS_BUCKET_ID,
-            title: subject.subjectName,
-        })
-    }
-
-
-    const handleDownload = (subject) => {
-        downloadFileXHR({
-            url: getPdfViewUrl(subject.pdfFileId),
-
-            fileName: buildSyllabusFilename({
-                subjectName: subject.subjectName,
-                semester,
-            }),
-
-            onError: () => {
-                console.error("Failed to download syllabus")
-            },
-        })
-    }
-
-    const triggerDownload = (url, filename) => {
-        const link = document.createElement("a")
-        link.href = url
-        link.download = filename
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-    }
-
-
-    async function getSyllabus(programId, branch, semester) {
-        const res = await databases.listDocuments(
-            DATABASE_ID,
-            SYLLABUS_COLLECTION,
-            [
-                Query.equal("programId", programId),
-                Query.equal("branch", branch),
-                Query.equal("semester", Number(semester)),
-                Query.limit(1),
-            ]
-        );
-
-
-        return res.documents[0];
-    }
-
-    async function getSubjectsBySyllabusId(syllabusId) {
-        const res = await databases.listDocuments(
-            DATABASE_ID,
-            SUBJECTS_COLLECTION,
-            [
-                Query.equal("syllabusId", syllabusId),
-                Query.orderAsc("subjectName"),
-            ]
-        );
-
-        return res.documents;
-    }
-
-    async function getSubjectsBySemesterContext({ programId, branch, semester }) {
-        // 1️⃣ Get all syllabi for this semester
-        const syllabusRes = await databases.listDocuments(
-            DATABASE_ID,
-            SYLLABUS_COLLECTION,
-            [
-                Query.equal("programId", programId),
-                Query.equal("branch", branch),
-                Query.equal("semester", Number(semester)),
-            ]
-        );
-
-        const syllabusIds = syllabusRes.documents.map(doc => doc.$id);
-
-        if (!syllabusIds.length) return [];
-
-        // 2️⃣ Get subjects belonging to ANY of these syllabi
-        const subjectsRes = await databases.listDocuments(
-            DATABASE_ID,
-            SUBJECTS_COLLECTION,
-            [
-                Query.equal("syllabusId", syllabusIds),
-                Query.orderAsc("subjectName"),
-            ]
-        );
-
-        return subjectsRes.documents;
-    }
-
-    /* ❌ Error */
-    if (syllabusError || subjectsError) {
-        return (
-            <ErrorState
-                message="Failed to load syllabus."
-                onRetry={() => {
-                    refetchSyllabus()
-                    refetchSubjects()
-                }}
-            />
-        )
-    }
-    const basePath = isDashboard
-        ? "/dashboard/syllabus"
-        : `/programs/${programId}/branches/${branchName}/syllabus`
-
-    return (
-        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-            <div className="flex items-center gap-4">
-                <BackButton
-                    to={basePath}
-                    label="Syllabus"
-                />
-            </div>
-
-           <Breadcrumbs
-  overrides={{
-    [programId]: program?.name || "",
-  }}
-/>
-
-            {/* 🧾 Header */}
-            <div className="space-y-1">
-                <h1 className="text-3xl font-bold">
-                    Syllabus
-                </h1>
-
-                <p className="text-muted-foreground">
-                    {decodedBranch}
-                </p>
-
-            </div>
-
-
-            {/* 📘 Syllabus Subjects */}
-            {loadingSyllabus || loadingSubjects ? (
-                <SyllabusListSkeleton count={6} />
-            ) : subjects.length === 0 ? (
-                <p className="text-muted-foreground">
-                    No subjects uploaded for this semester yet.
-                </p>
-            ) : (
-                <div className="space-y-4">
-                    {subjects.map((subject) => (
-                        <Card
-                            key={subject.$id}
-                            className="
-    p-4
-    flex flex-col gap-4
-    md:flex-row md:items-center md:justify-between
-
-    transition-all duration-200
-    hover:bg-muted/40
-   hover:shadow-lg
-hover:-translate-y-[2px]
-
-  "
-                        >
-
-
-                            {/* Left */}
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-3">
-                                    <FileTypeBadge
-                                        fileType="pdf"
-                                        onPreview={() => handleView(subject)}
-                                    />
-
-                                    <p className="font-medium">
-                                        {subject.subjectName}
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    {subject.description && (
-                                        <span>{subject.description}</span>
-                                    )}
-
-                                    {subject.description && fileSizes[subject.pdfFileId] && (
-                                        <span className="opacity-60">•</span>
-                                    )}
-
-                                    {fileSizes[subject.pdfFileId] && (
-                                        <Badge variant="secondary" className="text-xs font-normal">
-                                            {formatFileSize(fileSizes[subject.pdfFileId])}
-                                        </Badge>
-                                    )}
-
-                                </div>
-                            </div>
-
-                            {/* Right */}
-                            <div className="flex gap-2 md:shrink-0">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleView(subject)}
-                                >
-                                    View
-                                </Button>
-
-                                <Button
-                                    size="sm"
-                                    onClick={() => handleDownload(subject)}
-                                >
-                                    Download
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            )}
-
-            {!isMobileDevice() && (
-                <PdfPreviewModal
-                    open={!!previewFile}
-                    fileId={previewFile?.fileId}
-                    bucketId={previewFile?.bucketId}
-                    title={previewFile?.title}
-                    onClose={() => setPreviewFile(null)}
-                />
-            )}
-
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="flex items-center gap-3"
+      >
+        <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+          <ClipboardList size={18} className="text-cyan-500" />
         </div>
-    )
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Semester {semester} · Syllabus</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
+        </div>
+      </motion.div>
 
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+        {isLoading ? (
+          <div className="space-y-2.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border/40 bg-card/40 h-16 animate-pulse" />
+            ))}
+          </div>
+        ) : subjects.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
+            <p className="text-sm text-muted-foreground">No subjects uploaded for this semester yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {subjects.map(subject => (
+              <motion.div key={subject.$id} layout
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
+                           hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
+                  style={{ background: "linear-gradient(90deg, transparent, #06b6d4, transparent)" }} />
+                <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileTypeBadge fileType="pdf" onPreview={() => {
+                      if (isMobile()) { window.open(storage.getFileView(SYLLABUS_BUCKET_ID, subject.pdfFileId), "_blank"); return }
+                      setPreviewFile({ fileId: subject.pdfFileId, bucketId: SYLLABUS_BUCKET_ID, title: subject.subjectName })
+                    }} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{subject.subjectName}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {subject.description && (
+                          <span className="text-[11px] text-muted-foreground truncate">{subject.description}</span>
+                        )}
+                        {fileSizes[subject.pdfFileId] && (
+                          <span className="text-[11px] text-muted-foreground/60 shrink-0">
+                            {formatFileSize(fileSizes[subject.pdfFileId])}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      onClick={() => {
+                        if (isMobile()) { window.open(storage.getFileView(SYLLABUS_BUCKET_ID, subject.pdfFileId), "_blank"); return }
+                        setPreviewFile({ fileId: subject.pdfFileId, bucketId: SYLLABUS_BUCKET_ID, title: subject.subjectName })
+                      }}
+                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
+                                 border border-border/60 bg-muted/30 text-muted-foreground
+                                 hover:border-border hover:text-foreground hover:bg-muted/60
+                                 transition-all active:scale-95"
+                    >
+                      <ExternalLink size={11} /> View
+                    </button>
+                    <button
+                      onClick={() => downloadFileXHR({
+                        url: getPdfViewUrl(subject.pdfFileId),
+                        fileName: buildSyllabusFilename({ subjectName: subject.subjectName, semester }),
+                      })}
+                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
+                                 text-white transition-all active:scale-95"
+                      style={{ background: "linear-gradient(135deg, #0891b2, #0e7490)" }}
+                    >
+                      <Download size={11} /> Download
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {!isMobile() && (
+        <PdfPreviewModal
+          open={!!previewFile}
+          fileId={previewFile?.fileId}
+          bucketId={previewFile?.bucketId}
+          title={previewFile?.title}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
+    </div>
+  )
 }

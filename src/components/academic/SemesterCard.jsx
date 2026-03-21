@@ -1,54 +1,28 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowUpRight } from "lucide-react"
+// src/components/academic/SemesterCard.jsx
+import { ArrowUpRight, BookOpen } from "lucide-react"
+import GlowCard from "@/components/common/display/GlowCard"
 
-const SemesterCard = ({ semester, onClick }) => {
-    return (
-        <Card
-            onClick={onClick}
-            onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect()
-                const x = e.clientX - rect.left
-                const y = e.clientY - rect.top
-
-                e.currentTarget.style.setProperty("--mouse-x", `${x}px`)
-                e.currentTarget.style.setProperty("--mouse-y", `${y}px`)
-            }}
-            className="
-        relative
-        cursor-pointer
-        overflow-hidden
-        transition-colors duration-300
-        before:absolute
-        before:inset-0
-        before:opacity-0
-        hover:before:opacity-100
-        before:transition-opacity before:duration-300
-        before:bg-[radial-gradient(600px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(255,255,255,0.12),transparent_40%)]
-        dark:before:bg-[radial-gradient(600px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(255,255,255,0.08),transparent_40%)]
-        hover:ring-1 hover:ring-primary/20
-      "
-        >
-            <CardHeader>
-                <CardTitle className="text-lg">
-                    Semester {semester}
-                </CardTitle>
-
-                <CardDescription>
-                    View syllabus
-                </CardDescription>
-            </CardHeader>
-
-            <ArrowUpRight
-                className="
-          absolute bottom-4 right-4
-          h-4 w-4
-          text-muted-foreground
-          opacity-70
-          transition
-        "
-            />
-        </Card>
-    )
-}
+const SemesterCard = ({ semester, onClick, description = "View content" }) => (
+  <GlowCard onClick={onClick} className="p-5">
+    <div className="flex items-start justify-between gap-2">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20
+                        flex items-center justify-center shrink-0
+                        group-hover:scale-105 transition-transform duration-200">
+          <BookOpen size={14} className="text-violet-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground group-hover:text-violet-400 transition-colors duration-200">
+            Semester {semester}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
+        </div>
+      </div>
+      <ArrowUpRight size={14} className="text-muted-foreground/40 shrink-0 mt-0.5
+                                          group-hover:text-violet-400 group-hover:translate-x-0.5
+                                          group-hover:-translate-y-0.5 transition-all duration-200" />
+    </div>
+  </GlowCard>
+)
 
 export default SemesterCard

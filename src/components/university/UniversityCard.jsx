@@ -1,133 +1,65 @@
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ExternalLink, Trash2, Pencil } from "lucide-react"
+// src/components/university/UniversityCard.jsx
+import { ExternalLink, Pencil, Trash2, MapPin, ArrowUpRight } from "lucide-react"
+import GlowCard from "@/components/common/display/GlowCard"
 
-const UniversityCard = ({
-  university,
-  onClick,
-  actions,
-  showCourses = false,
-  onDelete,
-  onEdit,
-}) => {
+const UniversityCard = ({ university, onClick, onDelete, onEdit, showCourses = false }) => {
   return (
-    <Card
-      onClick={onClick}
-      tabIndex={onClick ? 0 : -1}
-      onKeyDown={(e) => e.key === "Enter" && onClick?.()}
-      className="
-        group relative cursor-pointer overflow-hidden
-        transition-all duration-300
-        hover:-translate-y-1
-        hover:shadow-xl
-        hover:shadow-primary/10
-      "
-    >
-      {/* Animated accent bar */}
-      <div
-        className="
-          absolute inset-x-0 top-0 h-1
-          bg-linear-to-r from-indigo-500 to-purple-500
-          scale-x-0 origin-left
-          transition-transform duration-300
-          group-hover:scale-x-100
-        "
-      />
-
-      <CardHeader className="space-y-1">
-        <CardTitle
-          className="
-            text-lg font-semibold
-            transition-colors
-            group-hover:text-primary
-          "
-        >
-          {university.name}
-        </CardTitle>
-
-        <CardDescription>
-          {university.city
-            ? `${university.city}, ${university.country}`
-            : university.country}
-        </CardDescription>
-      </CardHeader>
-
-      <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
-        {/* LEFT SIDE */}
-        {showCourses && university.courses && (
-          <span>{university.courses.length} Courses</span>
-        )}
-
-        {!showCourses && university.website && (
-          <a
-            href={university.website}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="
-              inline-flex items-center gap-1
-              hover:text-primary
-              transition-colors
-            "
-          >
-            Website <ExternalLink size={14} />
-          </a>
-        )}
-
-        {/* RIGHT SIDE */}
-        <div className="flex items-center gap-2">
-          {actions}
-
-          {onEdit && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-
-
-          {onDelete && (
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(university.$id)
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-
-          {onClick && (
-            <span
-              className="
-        inline-flex items-center gap-1
-        text-primary font-medium
-        transition-all
-        group-hover:gap-2
-      "
-            >
-              View <span>→</span>
-            </span>
-          )}
+    <GlowCard onClick={onClick} className="p-5">
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-foreground group-hover:text-violet-400
+                         transition-colors duration-200 truncate">
+            {university.name}
+          </h3>
+          <div className="flex items-center gap-1 mt-1">
+            <MapPin size={10} className="text-muted-foreground shrink-0" />
+            <p className="text-[11px] text-muted-foreground truncate">
+              {university.city ? `${university.city}, ${university.country}` : university.country}
+            </p>
+          </div>
         </div>
 
+        {/* Actions */}
+        {(onEdit || onDelete) && (
+          <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+            {onEdit && (
+              <button onClick={onEdit}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5
+                           border border-transparent hover:border-primary/20 transition-all active:scale-95">
+                <Pencil size={12} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete(university.$id) }}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/5
+                           border border-transparent hover:border-destructive/20 transition-all active:scale-95">
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
-      </CardFooter>
-    </Card>
+      {/* Footer row */}
+      <div className="flex items-center justify-between">
+        {university.website && !showCourses ? (
+          <a href={university.website} target="_blank" rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors">
+            Website <ExternalLink size={10} />
+          </a>
+        ) : showCourses && university.courses ? (
+          <span className="text-[11px] text-muted-foreground">{university.courses.length} courses</span>
+        ) : <span />}
+
+        {onClick && (
+          <ArrowUpRight size={14} className="text-muted-foreground/50 group-hover:text-violet-400
+                                              group-hover:translate-x-0.5 group-hover:-translate-y-0.5
+                                              transition-all duration-200" />
+        )}
+      </div>
+    </GlowCard>
   )
 }
 
