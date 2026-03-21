@@ -8,13 +8,14 @@ import {
   Camera, Loader2, ChevronDown, ChevronRight, Check,
   User, GraduationCap, BookOpen, GitBranch, Calendar,
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
+  KeyRound, AlertCircle,
 } from "lucide-react"
 
 import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram } from "@/services/university/branchService"
 import { uploadAvatar } from "@/services/user/profileService"
-import { account } from "@/lib/appwrite"
+import { account, functions } from "@/lib/appwrite"
 
 const YEAR_OPTIONS = [
   { value: "1", label: "1st Year" }, { value: "2", label: "2nd Year" },
@@ -28,6 +29,8 @@ const TABS = [
   { key: "academic",    label: "Academic",    icon: GraduationCap },
   { key: "preferences", label: "Preferences", icon: Bell },
 ]
+
+// ── Reusable primitives ───────────────────────────────────────────────────────
 
 const Field = ({ label, hint, children }) => (
   <div className="space-y-1.5">
@@ -112,8 +115,8 @@ const Toggle = ({ checked, onChange }) => (
   </button>
 )
 
-const SaveBtn = ({ saving, disabled, label = "Save changes" }) => (
-  <motion.button type="submit" disabled={saving || disabled}
+const SaveBtn = ({ saving, disabled, label = "Save changes", onClick, type = "submit" }) => (
+  <motion.button type={type} onClick={onClick} disabled={saving || disabled}
     whileHover={{ scale: (saving || disabled) ? 1 : 1.01 }}
     whileTap={{ scale: (saving || disabled) ? 1 : 0.98 }}
     transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -156,25 +159,50 @@ const InlineForm = ({ open, children }) => (
   </AnimatePresence>
 )
 
-const AccountRow = ({ icon: Icon, label, value, formKey, activeForm, setActiveForm, children }) => {
+const AccountRow = ({ icon: Icon, label, value, formKey, activeForm, setActiveForm, children, disabled, disabledReason }) => {
   const isOpen = activeForm === formKey
   return (
     <div className="border-b border-border/50 last:border-0">
-      <button type="button" onClick={() => setActiveForm(isOpen ? null : formKey)}
-        className="flex items-center justify-between w-full py-3.5 transition-colors
-                   hover:text-primary group rounded-lg px-1 -mx-1">
+      <button type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setActiveForm(isOpen ? null : formKey)}
+        className={`flex items-center justify-between w-full py-3.5 transition-colors
+                   rounded-lg px-1 -mx-1 group
+                   ${disabled ? "cursor-not-allowed opacity-60" : "hover:text-primary"}`}>
         <div className="flex items-center gap-3">
-          {Icon && <Icon size={15} className="text-muted-foreground group-hover:text-primary transition-colors" />}
-          <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{label}</span>
+          {Icon && <Icon size={15} className={`text-muted-foreground transition-colors ${!disabled ? "group-hover:text-primary" : ""}`} />}
+          <div className="text-left">
+            <span className={`text-sm font-medium text-foreground transition-colors ${!disabled ? "group-hover:text-primary" : ""}`}>{label}</span>
+            {disabled && disabledReason && (
+              <p className="text-xs text-muted-foreground mt-0.5">{disabledReason}</p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {value && <span className="text-xs text-muted-foreground truncate max-w-[120px]">{value}</span>}
-          <ChevronRight size={14}
-            className={`text-muted-foreground transition-all duration-200 shrink-0 ${isOpen ? "rotate-90 text-primary" : "group-hover:text-primary"}`} />
+          {!disabled && (
+            <ChevronRight size={14}
+              className={`text-muted-foreground transition-all duration-200 shrink-0 ${isOpen ? "rotate-90 text-primary" : "group-hover:text-primary"}`} />
+          )}
         </div>
       </button>
-      <InlineForm open={isOpen}>{children}</InlineForm>
+      <InlineForm open={isOpen && !disabled}>{children}</InlineForm>
     </div>
+  )
+}
+
+// ── OAuth provider badge ──────────────────────────────────────────────────────
+const OAuthBadge = ({ provider }) => {
+  const providerMap = {
+    google: { label: "Google", color: "bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20" },
+    github: { label: "GitHub", color: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-white/10 dark:text-slate-300 dark:border-white/10" },
+  }
+  const info = providerMap[provider?.toLowerCase()] ?? { label: provider, color: "bg-muted text-muted-foreground border-border" }
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${info.color}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+      Signed in with {info.label}
+    </span>
   )
 }
 
@@ -273,25 +301,62 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
 }
 
 // =============================================================================
-// TAB: ACCOUNT
+// TAB: ACCOUNT  (OAuth detection + set/change password + forgot password)
 // =============================================================================
 const AccountTab = ({ user }) => {
-  const [activeForm, setActiveForm] = useState(null)
+  const [activeForm,  setActiveForm]  = useState(null)
   const [email,       setEmail]       = useState("")
   const [password,    setPassword]    = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPass, setConfirmPass] = useState("")
   const [showPass,    setShowPass]    = useState(false)
   const [showNew,     setShowNew]     = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [saving,      setSaving]      = useState(false)
+
+  // ── Detect OAuth provider ─────────────────────────────────────────────────
+  const [oauthProvider,   setOauthProvider]   = useState(null)
+  const [hasPassword,     setHasPassword]     = useState(false) // OAuth user who also set a password
+  const [identityLoading, setIdentityLoading] = useState(true)
+
+  useEffect(() => {
+    const detectProvider = async () => {
+      try {
+        const identities = await account.listIdentities()
+        if (identities.total > 0) {
+          setOauthProvider(identities.identities[0].provider)
+        }
+        // Check if a password session exists by trying prefs
+        // Appwrite doesn't expose "hasPassword" directly, so we check via
+        // account.get() — if passwordUpdate is non-null, they have a password
+        const me = await account.get()
+        setHasPassword(!!me.passwordUpdate)
+      } catch {
+        setOauthProvider(null)
+        setHasPassword(false)
+      } finally {
+        setIdentityLoading(false)
+      }
+    }
+    detectProvider()
+  }, [])
+
+  const isOAuth = !!oauthProvider
 
   const resetForms = () => {
     setEmail(""); setPassword(""); setNewPassword(""); setConfirmPass("")
-    setShowPass(false); setShowNew(false)
+    setShowPass(false); setShowNew(false); setShowConfirm(false)
   }
-
   const setForm = (form) => { resetForms(); setActiveForm(prev => prev === form ? null : form) }
 
+  const showHideBtn = (visible, toggle) => (
+    <button type="button" onClick={() => toggle(v => !v)}
+      className="text-muted-foreground hover:text-foreground transition-colors">
+      {visible ? <EyeOff size={14} /> : <Eye size={14} />}
+    </button>
+  )
+
+  // ── Change email (email/password users only) ──────────────────────────────
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
     if (!email.trim() || !password) { toast.error("All fields required"); return }
@@ -305,35 +370,118 @@ const AccountTab = ({ user }) => {
     } finally { setSaving(false) }
   }
 
+  // ── Change password (email/password users who already have one) ───────────
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
     if (!password || !newPassword || !confirmPass) { toast.error("All fields required"); return }
     if (newPassword !== confirmPass) { toast.error("New passwords don't match"); return }
-    if (newPassword.length < 8) { toast.error("Password must be at least 8 characters"); return }
+    if (newPassword.length < 8) { toast.error("Min 8 characters"); return }
     try {
       setSaving(true)
       await account.updatePassword(newPassword, password)
       toast.success("Password updated successfully")
+      setHasPassword(true)
       setActiveForm(null); resetForms()
     } catch (err) {
       toast.error(err?.message ?? "Failed to update password")
     } finally { setSaving(false) }
   }
 
-  const showHideBtn = (visible, toggle) => (
-    <button type="button" onClick={() => toggle(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors">
-      {visible ? <EyeOff size={14} /> : <Eye size={14} />}
-    </button>
-  )
+  // ── SET password for the first time (OAuth users, no current password) ────
+  // Appwrite allows updatePassword with empty oldPassword for OAuth-only accounts
+  const handleSetPasswordSubmit = async (e) => {
+    e.preventDefault()
+    if (!newPassword || !confirmPass) { toast.error("All fields required"); return }
+    if (newPassword !== confirmPass)  { toast.error("Passwords don't match"); return }
+    if (newPassword.length < 8)       { toast.error("Min 8 characters"); return }
+    try {
+      setSaving(true)
+      // Pass empty string as oldPassword — Appwrite accepts this for OAuth accounts
+      await account.updatePassword(newPassword, "")
+      toast.success("Password set! You can now log in with email + password too.", { duration: 5000 })
+      setHasPassword(true)
+      setActiveForm(null); resetForms()
+    } catch (err) {
+      toast.error(err?.message ?? "Failed to set password")
+    } finally { setSaving(false) }
+  }
+
+  // ── Forgot / reset password ───────────────────────────────────────────────
+  const handleForgotPassword = async () => {
+    if (!user?.email) { toast.error("No email found on your account"); return }
+    try {
+      setSaving(true)
+      const execution = await functions.createExecution(
+        import.meta.env.VITE_APPWRITE_RECOVERY_FUNCTION_ID,
+        JSON.stringify({ email: user.email }),
+        false,
+        "/",
+        "POST"
+      )
+      const result = JSON.parse(execution.responseBody || "{}")
+      if (result.error) throw new Error(result.error)
+      toast.success(`Recovery email sent to ${user.email}`, {
+        description: "Check your inbox and follow the link to reset your password.",
+        duration: 6000,
+      })
+    } catch (err) {
+      toast.error(err?.message ?? "Failed to send recovery email")
+    } finally { setSaving(false) }
+  }
+
+  if (identityLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 size={20} className="animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div>
+      {/* OAuth notice banner */}
+      {isOAuth && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-500/20
+                     bg-blue-50 dark:bg-blue-500/10 px-4 py-3.5"
+        >
+          <AlertCircle size={15} className="text-blue-500 mt-0.5 shrink-0" />
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Signed in with {oauthProvider.charAt(0).toUpperCase() + oauthProvider.slice(1)}
+            </p>
+            <p className="text-xs text-blue-600/80 dark:text-blue-400/80">
+              {hasPassword
+                ? `Your account has a password set. You can log in with either ${oauthProvider} or email + password.`
+                : `You can set a password below to also be able to log in with email + password.`}
+            </p>
+          </div>
+          <OAuthBadge provider={oauthProvider} />
+        </motion.div>
+      )}
+
       <Section title="General">
-        <AccountRow icon={Mail} label="Email address" value={user?.email} formKey="email" activeForm={activeForm} setActiveForm={setForm}>
+        {/* Email — disabled for OAuth users */}
+        <AccountRow
+          icon={Mail}
+          label="Email address"
+          value={user?.email}
+          formKey="email"
+          activeForm={activeForm}
+          setActiveForm={setForm}
+          disabled={isOAuth}
+          disabledReason={`Managed by ${oauthProvider}`}
+        >
           <form onSubmit={handleEmailSubmit} className="space-y-3">
-            <Field label="New Email"><Input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="new@email.com" /></Field>
+            <Field label="New Email">
+              <Input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="new@email.com" />
+            </Field>
             <Field label="Current Password" hint="Required to confirm change">
-              <Input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? "text" : "password"} placeholder="Your current password" right={showHideBtn(showPass, setShowPass)} />
+              <Input value={password} onChange={e => setPassword(e.target.value)}
+                type={showPass ? "text" : "password"} placeholder="Your current password"
+                right={showHideBtn(showPass, setShowPass)} />
             </Field>
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => { setActiveForm(null); resetForms() }}
@@ -342,25 +490,115 @@ const AccountTab = ({ user }) => {
             </div>
           </form>
         </AccountRow>
-        <AccountRow icon={Lock} label="Password" value="••••••••" formKey="password" activeForm={activeForm} setActiveForm={setForm}>
-          <form onSubmit={handlePasswordSubmit} className="space-y-3">
-            <Field label="Current Password">
-              <Input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? "text" : "password"} placeholder="Current password" right={showHideBtn(showPass, setShowPass)} />
-            </Field>
-            <Field label="New Password">
-              <Input value={newPassword} onChange={e => setNewPassword(e.target.value)} type={showNew ? "text" : "password"} placeholder="Min 8 characters" right={showHideBtn(showNew, setShowNew)} />
-            </Field>
-            <Field label="Confirm New Password">
-              <Input value={confirmPass} onChange={e => setConfirmPass(e.target.value)} type="password" placeholder="Repeat new password" />
-            </Field>
-            <div className="flex gap-2 pt-1">
-              <button type="button" onClick={() => { setActiveForm(null); resetForms() }}
-                className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
-              <SaveBtn saving={saving} label="Update Password" />
-            </div>
-          </form>
+
+        {/* Password row — changes behavior based on isOAuth + hasPassword */}
+        <AccountRow
+          icon={Lock}
+          label={isOAuth && !hasPassword ? "Set a password" : "Password"}
+          value={hasPassword ? "••••••••" : undefined}
+          formKey="password"
+          activeForm={activeForm}
+          setActiveForm={setForm}
+          disabled={false}
+          disabledReason={null}
+        >
+          {/* OAuth user — no password yet → SET password form */}
+          {isOAuth && !hasPassword && (
+            <form onSubmit={handleSetPasswordSubmit} className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Set a password so you can also log in with <span className="font-medium text-foreground">{user?.email}</span> + password.
+              </p>
+              <Field label="New Password">
+                <Input value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                  type={showNew ? "text" : "password"} placeholder="Min 8 characters"
+                  right={showHideBtn(showNew, setShowNew)} />
+              </Field>
+              <Field label="Confirm Password">
+                <Input value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+                  type={showConfirm ? "text" : "password"} placeholder="Repeat password"
+                  right={showHideBtn(showConfirm, setShowConfirm)} />
+              </Field>
+              {confirmPass && (
+                <p className={`text-xs ${newPassword === confirmPass ? "text-green-500" : "text-red-400"}`}>
+                  {newPassword === confirmPass ? "✓ Passwords match" : "✗ Passwords don't match"}
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => { setActiveForm(null); resetForms() }}
+                  className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
+                <SaveBtn saving={saving} label="Set Password" />
+              </div>
+            </form>
+          )}
+
+          {/* Has password (either email/password user OR OAuth who set one) → CHANGE form */}
+          {hasPassword && (
+            <form onSubmit={handlePasswordSubmit} className="space-y-3">
+              {/* OAuth users don't need old password if they want to change —
+                  but Appwrite requires it once a password is set, so always ask */}
+              <Field label="Current Password">
+                <Input value={password} onChange={e => setPassword(e.target.value)}
+                  type={showPass ? "text" : "password"} placeholder="Current password"
+                  right={showHideBtn(showPass, setShowPass)} />
+              </Field>
+              <Field label="New Password">
+                <Input value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                  type={showNew ? "text" : "password"} placeholder="Min 8 characters"
+                  right={showHideBtn(showNew, setShowNew)} />
+              </Field>
+              <Field label="Confirm New Password">
+                <Input value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+                  type={showConfirm ? "text" : "password"} placeholder="Repeat new password"
+                  right={showHideBtn(showConfirm, setShowConfirm)} />
+              </Field>
+              {confirmPass && (
+                <p className={`text-xs ${newPassword === confirmPass ? "text-green-500" : "text-red-400"}`}>
+                  {newPassword === confirmPass ? "✓ Passwords match" : "✗ Passwords don't match"}
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => { setActiveForm(null); resetForms() }}
+                  className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
+                <SaveBtn saving={saving} label="Update Password" />
+              </div>
+            </form>
+          )}
         </AccountRow>
       </Section>
+
+      {/* Forgot / reset password — shown for everyone who has a password */}
+      {hasPassword && (
+        <Section title="Password Recovery">
+          <div className="py-3.5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <KeyRound size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Forgot your password?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    We'll send a recovery link to <span className="font-medium text-foreground">{user?.email}</span>
+                  </p>
+                </div>
+              </div>
+              <motion.button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={saving}
+                whileHover={{ scale: saving ? 1 : 1.01 }}
+                whileTap={{ scale: saving ? 1 : 0.98 }}
+                className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-border
+                           text-sm font-medium text-foreground hover:bg-muted hover:border-primary/30
+                           disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+              >
+                {saving
+                  ? <><Loader2 size={13} className="animate-spin" /> Sending…</>
+                  : <><Mail size={13} /> Send reset link</>
+                }
+              </motion.button>
+            </div>
+          </div>
+        </Section>
+      )}
     </div>
   )
 }

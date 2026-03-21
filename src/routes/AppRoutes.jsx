@@ -31,6 +31,9 @@ import BranchSyllabus from "@/pages/branches/BranchSyllabus"
 /* 🔐 Auth pages */
 import Login from "@/pages/auth/Login"
 import Signup from "@/pages/auth/Signup"
+import OAuthCallback from "@/pages/auth/OAuthCallback"
+import ForgotPassword from "@/pages/auth/ForgotPassword"
+import ResetPassword from "@/pages/auth/ResetPassword"
 
 /* 🔒 Route guards */
 import ProtectedRoute from "./ProtectedRoute"
@@ -168,6 +171,9 @@ const AppRoutes = () => {
             path="/resources"
             element={<ResourcesUserView />}
           />
+
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
 
 
@@ -190,6 +196,8 @@ const AppRoutes = () => {
             </PublicRoute>
           }
         />
+
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
 
         {/* 🔒 Logged-in user routes */}
