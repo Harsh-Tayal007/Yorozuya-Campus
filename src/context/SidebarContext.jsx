@@ -1,49 +1,73 @@
 // src/context/SidebarContext.jsx
-
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 
 const SidebarContext = createContext(null)
 
 export const SidebarProvider = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen,   setIsOpen]   = useState(false)
   const [isPinned, setIsPinned] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
 
-  const isDesktop = window.innerWidth >= 1024
-
-  const handleEdgeHover = (e) => {
-    if (isDesktop && !isPinned && e.clientX <= 8) {
-      setIsOpen(true)
+  useEffect(() => {
+    const handler = () => {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      if (mobile) { setIsOpen(false); setIsPinned(false) }
     }
-  }
+    window.addEventListener("resize", handler)
+    return () => window.removeEventListener("resize", handler)
+  }, [])
 
   // Mobile scroll lock
   useEffect(() => {
-    if (!isDesktop && isOpen) {
-      document.body.style.overflow = "hidden"
-    } else {
-      document.body.style.overflow = ""
-    }
-  }, [isOpen, isDesktop])
+    document.body.style.overflow = (isMobile && isOpen) ? "hidden" : ""
+    return () => { document.body.style.overflow = "" }
+  }, [isOpen, isMobile])
 
-  const value = {
-    isOpen,
-    setIsOpen,
-    isPinned,
-    setIsPinned,
-    handleEdgeHover
-  }
+  // Hover left edge on desktop to peek open
+  const handleEdgeHover = useCallback((e) => {
+    if (!isMobile && !isPinned && e.clientX <= 8) setIsOpen(true)
+  }, [isMobile, isPinned])
+
+  // Navbar hamburger — toggles pin on desktop, toggles open on mobile
+  const toggleSidebar = useCallback(() => {
+    if (isMobile) {
+      setIsOpen(v => !v)
+    } else {
+      if (isPinned) { setIsPinned(false); setIsOpen(false) }
+      else          { setIsPinned(true);  setIsOpen(true)  }
+    }
+  }, [isMobile, isPinned])
+
+  // Sidebar internal pin button — same as toggleSidebar on desktop
+  const togglePin = useCallback(() => {
+    if (isMobile) { setIsOpen(false); setIsPinned(false); return }
+    if (isPinned) { setIsPinned(false); setIsOpen(false) }
+    else          { setIsPinned(true);  setIsOpen(true)  }
+  }, [isMobile, isPinned])
+
+  // Mouse leaves sidebar — close if not pinned
+  const handleSidebarLeave = useCallback(() => {
+    if (!isMobile && !isPinned) setIsOpen(false)
+  }, [isMobile, isPinned])
 
   return (
-    <SidebarContext.Provider value={value}>
+    <SidebarContext.Provider value={{
+      isOpen, setIsOpen,
+      isPinned, setIsPinned,
+      isMobile,
+      handleEdgeHover,
+      handleSidebarLeave,
+      toggleSidebar,
+      togglePin,
+    }}>
       {children}
     </SidebarContext.Provider>
   )
 }
 
 export const useSidebar = () => {
-  const context = useContext(SidebarContext)
-  if (!context) {
-    throw new Error("useSidebar must be used inside SidebarProvider")
-  }
-  return context
+  const ctx = useContext(SidebarContext)
+  if (!ctx) throw new Error("useSidebar must be inside SidebarProvider")
+  return ctx
 }

@@ -1,4 +1,5 @@
 // src/pages/dashboard/AdminActivity.jsx
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
@@ -6,19 +7,19 @@ import { DATABASE_ID, ACTIVITIES_COLLECTION_ID } from "@/config/appwrite"
 import { motion } from "framer-motion"
 import { Loader2, Plus, Pencil, Trash2, Shield, RefreshCw, Upload, Activity } from "lucide-react"
 
+const PAGE_SIZE = 25
+
 function parseAction(action = "") {
   const a = action.toLowerCase()
   if (a.includes("creat") || a.includes("add") || a.includes("upload"))
-    return { color: "text-emerald-500", bg: "bg-emerald-500/10", dot: "#10b981", Icon: Plus }
+    return { color: "text-emerald-500", bg: "bg-emerald-500/10", Icon: Plus }
   if (a.includes("delet") || a.includes("remov"))
-    return { color: "text-red-500",     bg: "bg-red-500/10",     dot: "#ef4444", Icon: Trash2 }
+    return { color: "text-red-500",     bg: "bg-red-500/10",     Icon: Trash2 }
   if (a.includes("updat") || a.includes("edit") || a.includes("chang"))
-    return { color: "text-blue-500",    bg: "bg-blue-500/10",    dot: "#6366f1", Icon: Pencil }
+    return { color: "text-blue-500",    bg: "bg-blue-500/10",    Icon: Pencil }
   if (a.includes("role") || a.includes("permiss"))
-    return { color: "text-purple-500",  bg: "bg-purple-500/10",  dot: "#8b5cf6", Icon: Shield }
-  if (a.includes("upload"))
-    return { color: "text-amber-500",   bg: "bg-amber-500/10",   dot: "#f59e0b", Icon: Upload }
-  return   { color: "text-muted-foreground", bg: "bg-muted",     dot: "#6b7280", Icon: RefreshCw }
+    return { color: "text-purple-500",  bg: "bg-purple-500/10",  Icon: Shield }
+  return   { color: "text-muted-foreground", bg: "bg-muted",     Icon: RefreshCw }
 }
 
 function timeAgo(dateStr) {
@@ -31,7 +32,6 @@ function timeAgo(dateStr) {
   if (mins  < 60) return `${mins}m ago`
   if (hours < 24) return `${hours}h ago`
   if (days  < 7)  return `${days}d ago`
-  // Only show full date when older than a week — no duplication
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 }
 
@@ -66,17 +66,84 @@ const itemVariants = {
 }
 
 export default function AdminActivity() {
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["admin-activity-full"],
+  // Cursor stack: array of $id values
+  // cursors[0] = undefined (first page, no cursor)
+  // cursors[1] = last $id of page 1 (used as cursorAfter for page 2)
+  const [cursors, setCursors] = useState([undefined])
+  const [pageIndex, setPageIndex] = useState(0)
+
+  const currentCursor = cursors[pageIndex]
+
+  // Get accurate total count — res.total is always correct regardless of limit
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["admin-activity-count"],
     queryFn: async () => {
       const res = await databases.listDocuments(
         DATABASE_ID, ACTIVITIES_COLLECTION_ID,
-        [Query.orderDesc("$createdAt"), Query.limit(100)]
+        [Query.limit(1)]
+      )
+      return res.total
+    },
+    staleTime: 1000 * 60 * 2,
+  })
+
+  // Fetch current page using cursor-based pagination
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ["admin-activity-page", currentCursor],
+    queryFn: async () => {
+      const queries = [
+        Query.orderDesc("$createdAt"),
+        Query.limit(PAGE_SIZE),
+      ]
+      // Only add cursorAfter for pages beyond the first
+      if (currentCursor) {
+        queries.push(Query.cursorAfter(currentCursor))
+      }
+      const res = await databases.listDocuments(
+        DATABASE_ID, ACTIVITIES_COLLECTION_ID,
+        queries
       )
       return res.documents
     },
     staleTime: 1000 * 60 * 2,
+    keepPreviousData: true,
   })
+
+  const activities = data ?? []
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+  const hasNext = pageIndex < totalPages - 1
+  const hasPrev = pageIndex > 0
+
+  const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    document.documentElement.scrollTo({ top: 0, behavior: "smooth" })
+    document.body.scrollTo({ top: 0, behavior: "smooth" })
+    const el = document.querySelector("main")
+      ?? document.querySelector(".overflow-y-auto")
+      ?? document.querySelector(".overflow-auto")
+    if (el) el.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const goNext = () => {
+    if (!hasNext || activities.length === 0) return
+    const lastId = activities[activities.length - 1].$id
+    setCursors(prev => {
+      const next = [...prev]
+      if (!next[pageIndex + 1]) next[pageIndex + 1] = lastId
+      return next
+    })
+    setPageIndex(i => i + 1)
+    scrollTop()
+  }
+
+  const goPrev = () => {
+    if (!hasPrev) return
+    setPageIndex(i => i - 1)
+    scrollTop()
+  }
+
+  const startItem = pageIndex * PAGE_SIZE + 1
+  const endItem   = Math.min((pageIndex + 1) * PAGE_SIZE, totalCount)
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -94,86 +161,114 @@ export default function AdminActivity() {
         <div>
           <h1 className="text-xl font-bold tracking-tight">Activity Log</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {activities.length} recent event{activities.length !== 1 ? "s" : ""}
+            {totalCount} total event{totalCount !== 1 ? "s" : ""}
+            {totalPages > 1 && (
+              <span className="ml-1.5 text-muted-foreground/60">
+                · page {pageIndex + 1} of {totalPages}
+              </span>
+            )}
           </p>
         </div>
       </motion.div>
 
-      {isLoading && (
+      {(isLoading || isFetching) && (
         <div className="flex items-center gap-2 text-muted-foreground py-10 justify-center">
           <Loader2 size={16} className="animate-spin" />
           <span className="text-sm">Loading activity…</span>
         </div>
       )}
 
-      {!isLoading && activities.length === 0 && (
+      {!isLoading && !isFetching && activities.length === 0 && (
         <div className="text-center py-16 text-muted-foreground text-sm">
           No activity recorded yet
         </div>
       )}
 
-      {!isLoading && activities.length > 0 && (
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border/60" />
+      {!isLoading && !isFetching && activities.length > 0 && (
+        <>
+          <div className="relative">
+            <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border/60" />
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="space-y-1.5"
-          >
-            {activities.map((activity) => {
-              const { color, bg, dot, Icon } = parseAction(activity.action)
-
-              return (
-                <motion.div
-                  key={activity.$id}
-                  variants={itemVariants}
-                  className="relative flex gap-4 group"
-                >
-                  {/* Icon on timeline */}
-                  <div className={`relative z-10 shrink-0 w-10 h-10 rounded-full
-                                   flex items-center justify-center mt-0.5
-                                   border border-border bg-background
-                                   transition-colors duration-200 group-hover:${bg}`}>
-                    <Icon size={14} className={color} />
-                  </div>
-
-                  {/* Card */}
-                  <div className="flex-1 min-w-0 rounded-2xl border border-border/60 bg-card/60
-                                   backdrop-blur-sm px-4 py-3 mb-1.5
-                                   hover:border-border hover:bg-card/80
-                                   transition-all duration-200">
-                    <div className="flex items-start justify-between gap-2 flex-wrap">
-                      {/* Left: actor + action + entity */}
-                      <div className="flex items-center gap-1.5 flex-wrap text-sm leading-relaxed min-w-0">
-                        <span className="font-semibold text-foreground shrink-0">
-                          {activity.actorName}
-                        </span>
-                        <span className={`text-xs font-medium shrink-0 ${color}`}>
-                          {activity.action}
-                        </span>
-                        <EntityBadge type={activity.entityType} />
-                        {activity.entityName && (
-                          <span className="text-muted-foreground truncate max-w-[180px]"
-                                title={activity.entityName}>
-                            "{activity.entityName}"
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Right: single timestamp only — relative if recent, date if old */}
-                      <span className="text-[11px] text-muted-foreground shrink-0 mt-0.5 tabular-nums">
-                        {timeAgo(activity.$createdAt)}
-                      </span>
+            <motion.div
+              key={pageIndex}
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              className="space-y-1.5"
+            >
+              {activities.map((activity) => {
+                const { color, bg, Icon } = parseAction(activity.action)
+                return (
+                  <motion.div
+                    key={activity.$id}
+                    variants={itemVariants}
+                    className="relative flex gap-4 group"
+                  >
+                    <div className={`relative z-10 shrink-0 w-10 h-10 rounded-full
+                                     flex items-center justify-center mt-0.5
+                                     border border-border bg-background
+                                     transition-colors duration-200 group-hover:${bg}`}>
+                      <Icon size={14} className={color} />
                     </div>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        </div>
+
+                    <div className="flex-1 min-w-0 rounded-2xl border border-border/60 bg-card/60
+                                     backdrop-blur-sm px-4 py-3 mb-1.5
+                                     hover:border-border hover:bg-card/80
+                                     transition-all duration-200">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap text-sm leading-relaxed min-w-0">
+                          <span className="font-semibold text-foreground shrink-0">
+                            {activity.actorName}
+                          </span>
+                          <span className={`text-xs font-medium shrink-0 ${color}`}>
+                            {activity.action}
+                          </span>
+                          <EntityBadge type={activity.entityType} />
+                          {activity.entityName && (
+                            <span className="text-muted-foreground truncate max-w-[180px]"
+                                  title={activity.entityName}>
+                              "{activity.entityName}"
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground shrink-0 mt-0.5 tabular-nums">
+                          {timeAgo(activity.$createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={goPrev}
+                disabled={!hasPrev}
+                className="px-4 py-2 rounded-xl border border-border text-sm font-medium
+                           text-muted-foreground hover:text-foreground hover:bg-muted
+                           disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Previous
+              </button>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {startItem}–{endItem} of {totalCount}
+              </span>
+              <button
+                onClick={goNext}
+                disabled={!hasNext}
+                className="px-4 py-2 rounded-xl border border-border text-sm font-medium
+                           text-muted-foreground hover:text-foreground hover:bg-muted
+                           disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

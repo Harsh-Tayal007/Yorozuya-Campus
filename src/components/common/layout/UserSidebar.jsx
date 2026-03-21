@@ -1,329 +1,206 @@
-import { motion, AnimatePresence } from "framer-motion"
-import { Link, useLocation } from "react-router-dom"
-import { useEffect, useRef, useState } from "react"
-import { X, Menu, ChevronDown } from "lucide-react"
-
+// src/components/common/navigation/UserSidebar.jsx
+import { useLocation, Link } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Pin, PinOff, X, ChevronDown } from "lucide-react"
 import { useSidebar } from "@/context/SidebarContext"
-import { dashboardRootLink, dashboardSidebarSections, forumRootLink, homeRootLink } from "@/config/dashboardSidebarConfig"
-import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
 import { useAuth } from "@/context/AuthContext"
+import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
+import {
+  dashboardRootLink,
+  dashboardSidebarSections,
+  forumRootLink,
+  homeRootLink,
+} from "@/config/dashboardSidebarConfig"
+
+const NAVBAR_H  = 68
+const SIDEBAR_W = 256
+
+export { SIDEBAR_W, NAVBAR_H }
 
 export default function UserSidebar() {
+  const {
+    isOpen, setIsOpen,
+    isPinned, isMobile,
+    togglePin, handleSidebarLeave,
+  } = useSidebar()
 
-    const { isOpen, setIsOpen, isPinned, setIsPinned } = useSidebar()
+  const location = useLocation()
+  const { user } = useAuth()
+  const isLoggedIn = !!user
 
-    const isDesktop = window.innerWidth >= 1024
+  const [openSections, setOpenSections] = useState([])
 
-    const isMobile = window.innerWidth < 1024
+  // On mobile only: close sidebar on route change
+  // On desktop: never auto-close — user controls it via pin/hover
+  useEffect(() => {
+    if (isMobile) setIsOpen(false)
+  }, [location.pathname, isMobile])
 
-    const location = useLocation()
-    const [openSections, setOpenSections] = useState([])
-
-    const { user } = useAuth()
-    const { data: academicIdentity } = useAcademicIdentity()
-
-    const isLoggedIn = !!user
-    const hasAcademicIdentity = !!academicIdentity
-
-
-    // Close on route change
-    useEffect(() => {
-        setIsOpen(false)
-        setIsPinned(false)
-    }, [location.pathname])
-
-
-    // Auto close when mouse leaves (if not pinned)
-    const handleMouseLeave = () => {
-        if (!isPinned && isDesktop) {
-            setIsOpen(false)
-        }
-    }
-
-    const togglePin = () => {
-        const isDesktop = window.innerWidth >= 1024
-
-        if (!isDesktop) {
-            setIsOpen(false)
-            setIsPinned(false)
-            return
-        }
-
-        if (isPinned) {
-            setIsPinned(false)
-            setIsOpen(false)
-        } else {
-            setIsPinned(true)
-            setIsOpen(true)
-        }
-    }
-
-    useEffect(() => {
-        const activeSection = dashboardSidebarSections.find((section) =>
-            section.children.some((child) =>
-                location.pathname.startsWith(child.path)
-            )
-        )
-
-        if (activeSection) {
-            setOpenSections((prev) =>
-                prev.includes(activeSection.id)
-                    ? prev
-                    : [...prev, activeSection.id]
-            )
-        }
-    }, [location.pathname])
-
-    return (
-        <>
-            {/* Overlay */}
-            <motion.div
-                initial={false}
-                animate={{ opacity: isOpen ? 1 : 0 }}
-                transition={{ duration: 0.25 }}
-                onClick={() => {
-                    setIsOpen(false)
-                    setIsPinned(false)
-                }}
-                className={`
-        fixed inset-0 z-40
-        bg-black/30
-        backdrop-blur-sm
-        ${isOpen ? "pointer-events-auto" : "pointer-events-none"}
-      `}
-            />
-
-            {/* Sidebar */}
-            <motion.aside
-                onMouseLeave={handleMouseLeave}
-                initial={false}
-                animate={{
-                    x: isOpen ? 0 : -320
-                }}
-                transition={{
-                    type: "spring",
-                    stiffness: isMobile ? 320 : 260,
-                    damping: 28,
-                    mass: 0.7
-                }}
-
-
-                className="fixed top-0 left-0 bottom-0 z-60 w-[280px] origin-left"
-            >
-                {/* Inner wrapper for gap effect */}
-                <motion.div
-                    initial={false}
-                    animate={{
-                        margin: isMobile ? 0 : isPinned ? 0 : 16,
-                        borderRadius: isMobile
-                            ? "0px"
-                            : isPinned
-                                ? "0px 16px 0px 0px"
-                                : "16px"
-                    }}
-                    transition={{
-                        type: "spring",
-                        stiffness: 220,
-                        damping: 28
-                    }}
-                    className="
-          h-full
-          bg-white/75 dark:bg-[#0b1220]/80
-          backdrop-blur-2xl backdrop-saturate-150
-          border border-white/10
-          shadow-[0_20px_60px_rgba(0,0,0,0.35)]
-          flex flex-col
-        "
-                >
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
-                        <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500" />
-                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                                Unizuya
-                            </span>
-                        </div>
-
-                        <button
-                            onClick={togglePin}
-                            className="
-              p-2 rounded-lg
-              hover:bg-white/40 dark:hover:bg-white/10
-              transition-all duration-200
-            "
-                        >
-                            {isPinned ? <X size={18} /> : <Menu size={18} />}
-                        </button>
-                    </div>
-
-                    {/* Links */}
-                    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-
-                        {/* HOME LINK */}
-                        <Link
-                            to={homeRootLink.path}
-                            className={`
-    group flex items-center gap-3
-    px-3 py-2.5 rounded-xl
-    text-sm font-medium
-    transition-all duration-200
-    ${location.pathname === "/"
-                                    ? "bg-indigo-500/20 text-indigo-500"
-                                    : "text-slate-800 dark:text-white hover:bg-white/40 dark:hover:bg-white/10"
-                                }
-  `}
-                        >
-                            <homeRootLink.icon size={18} />
-                            {homeRootLink.label}
-                        </Link>
-
-                        {/* ROOT DASHBOARD LINK */}
-                        {isLoggedIn && (
-                            <Link
-                                to={dashboardRootLink.path}
-                                className={`
-      group flex items-center gap-3
-      px-3 py-2.5 rounded-xl
-      text-sm font-medium
-      transition-all duration-200
-      ${location.pathname === "/dashboard"
-                                        ? "bg-indigo-500/20 text-indigo-500"
-                                        : "text-slate-800 dark:text-white hover:bg-white/40 dark:hover:bg-white/10"
-                                    }
-    `}
-                            >
-                                <dashboardRootLink.icon size={18} />
-                                {dashboardRootLink.label}
-                            </Link>
-                        )}
-                        {/* FORUM LINK */}
-                        <Link
-                            to={forumRootLink.path}
-                            className={`
-    group flex items-center gap-3
-    px-3 py-2.5 rounded-xl
-    text-sm font-medium
-    transition-all duration-200
-    ${location.pathname.startsWith("/forum")
-                                    ? "bg-indigo-500/20 text-indigo-500"
-                                    : "text-slate-800 dark:text-white hover:bg-white/40 dark:hover:bg-white/10"
-                                }
-  `}
-                        >
-                            <forumRootLink.icon size={18} />
-                            {forumRootLink.label}
-                        </Link>
-
-                        {/* Divider */}
-                        <div className="h-px bg-white/10 my-2" />
-
-                        {/* SECTIONS */}
-                        {isLoggedIn && dashboardSidebarSections.map((section) => {
-                            const isExpanded = openSections.includes(section.id)
-
-                            return (
-                                <div key={section.id} className="space-y-1">
-
-                                    {/* Section Header */}
-                                    <button
-                                        onClick={() =>
-                                            setOpenSections((prev) =>
-                                                prev.includes(section.id)
-                                                    ? prev.filter((id) => id !== section.id)
-                                                    : [...prev, section.id]
-                                            )
-                                        }
-                                        className="
-                                        hover:bg-white/30 dark:hover:bg-white/5 rounded-lg
-            group w-full flex items-center justify-between
-            px-3 py-2
-            text-xs font-semibold tracking-wide uppercase
-            text-slate-500 dark:text-slate-400
-            hover:text-slate-800 dark:hover:text-white
-            transition-colors
-          "
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <section.icon size={14} />
-                                            {section.label}
-                                        </div>
-
-                                        <motion.div
-                                            animate={{ rotate: isExpanded ? 180 : 0 }}
-                                            transition={{ duration: 0.25 }}
-                                        >
-                                            <ChevronDown size={14} />
-                                        </motion.div>
-                                    </button>
-
-                                    {/* Dropdown */}
-                                    <AnimatePresence initial={false}>
-                                        {isExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.25 }}
-                                                className="overflow-hidden"
-                                            >
-                                                <div className="mt-2 ml-3 border-l border-white/10 pl-3 space-y-1
-">
-                                                    {section.children.map((item) => {
-                                                        const active = location.pathname.startsWith(item.path)
-
-                                                        return (
-                                                            <Link
-                                                                key={item.id}
-                                                                to={item.path}
-                                                                className={`
-                                                                   group relative flex items-center gap-3
-                                                                   px-3 py-2 rounded-lg text-sm
-                                                                   transition-all duration-200
-                                                                   ${active
-                                                                        ? "bg-indigo-500/20 text-indigo-500"
-                                                                        : ":text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/30 dark:hover:bg-white/5"
-                                                                    }
-                      `}
-                                                            >
-                                                                <item.icon size={16} />
-                                                                {item.label}
-
-                                                                {active && (
-                                                                    <motion.div
-                                                                        layoutId="active-indicator"
-                                                                        className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r"
-                                                                    />
-                                                                )}
-                                                            </Link>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </motion.div>
-            </motion.aside>
-        </>
+  // Auto-open section that contains the active route
+  useEffect(() => {
+    const active = dashboardSidebarSections.find(s =>
+      s.children.some(c => location.pathname.startsWith(c.path))
     )
+    if (active) {
+      setOpenSections(prev =>
+        prev.includes(active.id) ? prev : [...prev, active.id]
+      )
+    }
+  }, [location.pathname])
 
+  const visible = isOpen || isPinned
+
+  // Top-level nav links — always show Home and Forum regardless of auth
+  // Dashboard only if logged in
+  const topLinks = [
+    homeRootLink,
+    ...(isLoggedIn ? [dashboardRootLink] : []),
+    forumRootLink,  // always visible
+  ]
+
+  return (
+    <>
+      {/* Mobile backdrop */}
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar panel */}
+      <aside
+        onMouseLeave={handleSidebarLeave}
+        style={{
+          top:       isMobile ? 0 : NAVBAR_H,
+          width:     SIDEBAR_W,
+          transform: visible ? "translateX(0)" : "translateX(-100%)",
+          zIndex:    50,
+        }}
+        className="fixed left-0 bottom-0
+                   flex flex-col
+                   bg-white/80 dark:bg-[#0b1220]/95
+                   backdrop-blur-xl backdrop-saturate-150
+                   border-r border-white/10 dark:border-white/5
+                   shadow-[4px_0_24px_rgba(0,0,0,0.12)]
+                   transition-transform duration-200 ease-in-out
+                   overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3
+                        border-b border-border/40 shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 min-w-0">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500
+                            to-purple-500 shrink-0" />
+            <span className="text-sm font-semibold text-foreground truncate">
+              Unizuya
+            </span>
+          </Link>
+
+          <button
+            onClick={togglePin}
+            title={isMobile ? "Close" : isPinned ? "Unpin sidebar" : "Pin sidebar"}
+            className="p-1.5 rounded-lg text-muted-foreground
+                       hover:text-foreground hover:bg-muted
+                       transition-colors duration-150 shrink-0"
+          >
+            {isMobile
+              ? <X size={15} />
+              : isPinned
+                ? <PinOff size={14} />
+                : <Pin size={14} />
+            }
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5">
+
+          {/* Top flat links */}
+          {topLinks.map(item => {
+            const isActive = item.path === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(item.path)
+            return (
+              <SidebarLink key={item.path} to={item.path}
+                icon={item.icon} label={item.label} isActive={isActive} />
+            )
+          })}
+
+          {/* Collapsible sections — logged-in only */}
+          {isLoggedIn && (
+            <>
+              <div className="h-px bg-border/40 mx-1 my-2" />
+
+              {dashboardSidebarSections.map(section => {
+                const isExpanded = openSections.includes(section.id)
+                const SIcon = section.icon
+
+                return (
+                  <div key={section.id}>
+                    <button
+                      onClick={() => setOpenSections(prev =>
+                        prev.includes(section.id)
+                          ? prev.filter(id => id !== section.id)
+                          : [...prev, section.id]
+                      )}
+                      className="w-full flex items-center justify-between
+                                 px-3 py-2 rounded-lg
+                                 text-xs font-semibold uppercase tracking-wide
+                                 text-muted-foreground hover:text-foreground
+                                 hover:bg-muted transition-colors duration-150"
+                    >
+                      <div className="flex items-center gap-2">
+                        <SIcon size={13} />
+                        {section.label}
+                      </div>
+                      <ChevronDown size={13}
+                        className={`transition-transform duration-200
+                                    ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="ml-4 border-l border-border/40 pl-2
+                                      mt-0.5 space-y-0.5">
+                        {section.children.map(item => {
+                          const isActive = location.pathname.startsWith(item.path)
+                          return (
+                            <SidebarLink key={item.path} to={item.path}
+                              icon={item.icon} label={item.label}
+                              isActive={isActive} small />
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          )}
+        </nav>
+      </aside>
+    </>
+  )
 }
 
-function SidebarLink({ to, label }) {
-    return (
-        <Link
-            to={to}
-            className="
-        block rounded-xl px-4 py-3 text-sm
-        text-slate-800 dark:text-white
-        hover:bg-white/50 dark:hover:bg-white/10
-        transition-all duration-200
-      "
-        >
-            {label}
-        </Link>
-    )
+function SidebarLink({ to, icon: Icon, label, isActive, small }) {
+  return (
+    <Link
+      to={to}
+      className={`group relative flex items-center gap-2.5 rounded-lg
+                  transition-colors duration-150 whitespace-nowrap
+                  ${small ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm font-medium"}
+                  ${isActive
+                    ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+    >
+      {isActive && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5
+                         rounded-r bg-indigo-500" />
+      )}
+      <Icon size={small ? 14 : 16} className="shrink-0" />
+      {label}
+    </Link>
+  )
 }

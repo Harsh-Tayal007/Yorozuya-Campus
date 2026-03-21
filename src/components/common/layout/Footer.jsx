@@ -1,135 +1,136 @@
-import { motion } from "framer-motion"
+// src/components/Footer.jsx
 import { Link } from "react-router-dom"
-import { Github, Linkedin, Twitter, MessageCircle } from "lucide-react"
-import { FaDiscord } from 'react-icons/fa'
+import { useAuth } from "@/context/AuthContext"
 
-const ANIMATION_DURATION = 0.6
+const PLATFORM_LINKS = [
+  { label: "Home",         to: "/"             },
+  { label: "Forum",        to: "/forum"        },
+  { label: "Universities", to: "/universities" },
+  { label: "Resources",    to: "/universities" },
+  { label: "PYQs",         to: "/universities" },
+]
+
+const ACCOUNT_LINKS = [
+  { label: "Dashboard", to: "/dashboard",          auth: true  },
+  { label: "Profile",   to: null,                  auth: true  }, // built below
+  { label: "Settings",  to: "/dashboard/settings", auth: true  },
+  { label: "Login",     to: "/login",               auth: false },
+  { label: "Sign Up",   to: "/signup",              auth: false },
+]
 
 export default function Footer() {
-    return (
-        <footer className="relative w-full border-t border-border/40 bg-background/80 backdrop-blur-md">
+  const { currentUser } = useAuth()
 
+  return (
+    <footer className="relative border-t border-border/40 bg-background/60 backdrop-blur-md mt-auto">
+      {/* Top gradient blend */}
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b
+                      from-indigo-500/5 to-transparent pointer-events-none" />
 
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-10">
 
-            {/* 🌌 Subtle Gradient Top Blend */}
-            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-blue-500/10 to-transparent pointer-events-none" />
+          {/* Brand */}
+          <div className="col-span-2 sm:col-span-1">
+            <Link to="/" className="inline-block">
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-400
+                               to-indigo-400 bg-clip-text text-transparent">
+                Unizuya
+              </span>
+            </Link>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-xs">
+              A unified academic platform helping students access syllabus,
+              resources, and PYQs — all in one place.
+            </p>
+            <p className="mt-4 text-xs text-muted-foreground/60">
+              🚧 Currently in active development
+            </p>
+          </div>
 
-            <div className="w-full">
-                <div className="mx-auto max-w-7xl px-6 py-16">
-
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: ANIMATION_DURATION }}
-                        className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4"
-                    >
-                        {/* Brand + Social */}
-                        <div>
-                            <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                                Unizuya
-                            </h3>
-
-                            <p className="mt-4 text-sm text-muted-foreground max-w-xs">
-                                A unified academic platform helping students access syllabus,
-                                resources, and PYQs — all in one place.
-                            </p>
-
-                            {/* 🔥 Social Icons */}
-                            <div className="mt-6 flex items-center gap-4">
-                                <SocialIcon icon={Twitter} href="https://twitter.com" />
-                                <SocialIcon icon={Linkedin} href="https://linkedin.com" />
-                                <SocialIcon icon={Github} href="https://github.com" />
-                                <SocialIcon icon={FaDiscord} href="https://discord.com" />
-                            </div>
-                        </div>
-
-                        <FooterColumn
-                            title="Platform"
-                            links={[
-                                { name: "Universities", to: "/universities" },
-                                { name: "Programs", to: "/universities" },
-                                { name: "Resources", to: "/universities" },
-                                { name: "PYQs", to: "/universities" },
-                            ]}
-                        />
-
-                        <FooterColumn
-                            title="Company"
-                            links={[
-                                { name: "About", to: "/" },
-                                { name: "Contact", to: "/" },
-                                { name: "Privacy Policy", to: "/" },
-                            ]}
-                        />
-
-                        <FooterColumn
-                            title="Support"
-                            links={[
-                                { name: "Help Center", to: "/" },
-                                { name: "Community", to: "/" },
-                                { name: "Status", to: "/" },
-                            ]}
-                        />
-                    </motion.div>
-
-                    {/* Bottom */}
-                    <div className="mt-14 border-t border-border/40 pt-8 text-center">
-                        <p className="text-sm text-muted-foreground">
-                            © {new Date().getFullYear()} Unizuya. All rights reserved.
-                        </p>
-                    </div>
-
-                </div>
-            </div>
-        </footer>
-    )
-}
-
-function FooterColumn({ title, links }) {
-    return (
-        <div>
-            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wide text-foreground">
-                {title}
+          {/* Platform */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider
+                           text-foreground mb-4">
+              Platform
             </h4>
-
-            <ul className="space-y-3">
-                {links.map((link) => (
-                    <li key={link.name}>
-                        <Link
-                            to={link.to}
-                            className="text-sm text-muted-foreground transition-colors duration-200 hover:text-blue-500"
-                        >
-                            {link.name}
-                        </Link>
-                    </li>
-                ))}
+            <ul className="space-y-2.5">
+              {PLATFORM_LINKS.map(link => (
+                <li key={link.label}>
+                  <Link to={link.to}
+                    className="text-sm text-muted-foreground hover:text-primary
+                               transition-colors duration-150">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
+          </div>
+
+          {/* Account */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider
+                           text-foreground mb-4">
+              Account
+            </h4>
+            <ul className="space-y-2.5">
+              {currentUser ? (
+                <>
+                  <li>
+                    <Link to="/dashboard"
+                      className="text-sm text-muted-foreground hover:text-primary
+                                 transition-colors duration-150">
+                      Dashboard
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to={`/profile/${currentUser.username}`}
+                      className="text-sm text-muted-foreground hover:text-primary
+                                 transition-colors duration-150">
+                      Profile
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/settings"
+                      className="text-sm text-muted-foreground hover:text-primary
+                                 transition-colors duration-150">
+                      Settings
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link to="/login"
+                      className="text-sm text-muted-foreground hover:text-primary
+                                 transition-colors duration-150">
+                      Login
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/signup"
+                      className="text-sm text-muted-foreground hover:text-primary
+                                 transition-colors duration-150">
+                      Sign Up
+                    </Link>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
+
         </div>
-    )
-}
 
-function SocialIcon({ icon: Icon, href }) {
-    return (
-        <motion.a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.15 }}
-            transition={{ duration: 0.2 }}
-           className="
-  p-2 rounded-lg
-  bg-card
-  border border-border
-  text-muted-foreground
-  hover:text-blue-400
-  hover:border-blue-400/60
-  hover:shadow-[0_0_15px_rgba(59,130,246,0.4)]
-  transition-colors duration-200
-"
-        >
-            <Icon size={16} />
-        </motion.a>
-    )
+        {/* Bottom bar */}
+        <div className="mt-10 pt-6 border-t border-border/40 flex flex-col sm:flex-row
+                        items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Unizuya. All rights reserved.
+          </p>
+          <p className="text-xs text-muted-foreground/50">
+            Built for students, by students
+          </p>
+        </div>
+      </div>
+    </footer>
+  )
 }
-

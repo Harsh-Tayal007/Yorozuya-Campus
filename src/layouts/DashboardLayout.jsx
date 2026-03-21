@@ -5,8 +5,8 @@ import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
 import { useSidebar } from "@/context/SidebarContext"
 import { useEffect } from "react"
 import { motion } from "framer-motion"
+import { SIDEBAR_W } from "@/components/common/layout/UserSidebar"
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
 function DashboardSkeleton() {
   return (
     <div className="w-full px-4 sm:px-6 py-6 space-y-6 animate-pulse">
@@ -26,23 +26,28 @@ function DashboardSkeleton() {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 const DashboardLayout = () => {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { data: identity, isLoading, error } = useAcademicIdentity()
-  const { handleEdgeHover } = useSidebar()
+  const { handleEdgeHover, isPinned, isMobile } = useSidebar()
 
-  // Persist last visited dashboard route for back-navigation
   useEffect(() => {
     if (location.pathname !== "/dashboard") {
       localStorage.setItem("lastDashboardRoute", location.pathname)
     }
   }, [location.pathname])
 
+  // Same margin logic as PublicLayout
+  const marginLeft = (!isMobile && isPinned) ? SIDEBAR_W : 0
+
   if (isLoading) {
     return (
-      <div className="flex-1 min-w-0 overflow-x-hidden">
+      <div
+        onMouseMove={handleEdgeHover}
+        style={{ marginLeft, transition: "margin-left 200ms ease-in-out" }}
+        className="flex-1 min-w-0 overflow-x-hidden"
+      >
         <DashboardSkeleton />
       </div>
     )
@@ -50,25 +55,34 @@ const DashboardLayout = () => {
 
   if (error || !identity) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div
+        onMouseMove={handleEdgeHover}
+        style={{ marginLeft, transition: "margin-left 200ms ease-in-out" }}
+        className="flex items-center justify-center min-h-[60vh]"
+      >
         <p className="text-sm text-destructive">Failed to load academic information.</p>
       </div>
     )
   }
 
   return (
-    <div onMouseMove={handleEdgeHover} className="flex-1 min-w-0 overflow-x-hidden">
+    <div
+      onMouseMove={handleEdgeHover}
+      style={{ marginLeft, transition: "margin-left 200ms ease-in-out" }}
+      className="flex-1 min-w-0 overflow-x-hidden"
+    >
       <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-0">
 
-        {/* Header bar */}
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/50"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between
+                     gap-3 pb-4 border-b border-border/50"
         >
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight
+                           text-foreground truncate">
               {identity.branch?.name}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -91,11 +105,9 @@ const DashboardLayout = () => {
           </button>
         </motion.div>
 
-        {/* Page content — no extra top padding, Outlet handles its own spacing */}
         <div className="pt-6">
           <Outlet />
         </div>
-
       </div>
     </div>
   )
