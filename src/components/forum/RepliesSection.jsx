@@ -209,7 +209,7 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
   {totalCount} {totalCount === 1 ? "Reply" : "Replies"}
 </h2>
 
-        <CreateReplyBox />
+        <CreateReplyBox threadAuthor={threadAuthor} />
 
         <div className="flex items-center gap-2 h-9">
 

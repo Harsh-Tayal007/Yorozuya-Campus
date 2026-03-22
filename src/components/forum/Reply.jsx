@@ -24,6 +24,7 @@ import ReplyMedia from "./ReplyMedia"
 import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 import ReplyContent from "./ReplyContent"
 import TiptapEditor from "./TiptapEditor"
+import useHashHighlight from "@/hooks/useHashHighlight"
 
 // =============================================================================
 // CONSTANTS
@@ -137,18 +138,18 @@ const Reply = ({
   const [editText, setEditText] = useState(() => replies?.byId?.[replyId]?.content ?? "")
 
   const dotsRef = useRef(null)
-  
-  const reply    = replies?.byId?.[replyId]
+
+  const reply = replies?.byId?.[replyId]
 
   const { vote, score, handleVote } = useVote(
-  replies?.byId?.[replyId]?.upvotes ?? 0,
-  replies?.byId?.[replyId]?.downvotes ?? 0,
-  replyId,
-  votesMap?.[replyId]?.vote ?? null,
-  votesMap?.[replyId]?.voteDocId ?? null,
-  updateVote,
-  reply?.authorId   // ← pass author for karma update
-)
+    replies?.byId?.[replyId]?.upvotes ?? 0,
+    replies?.byId?.[replyId]?.downvotes ?? 0,
+    replyId,
+    votesMap?.[replyId]?.vote ?? null,
+    votesMap?.[replyId]?.voteDocId ?? null,
+    updateVote,
+    reply?.authorId   // ← pass author for karma update
+  )
 
   const composeState = useComposeState()
   const { createReply, deleteReply, updateReply, pinReply, unpinReply } = useReplyActions(threadId)
@@ -159,15 +160,17 @@ const Reply = ({
   const hasChildren = children.length > 0
   const isPinned = reply?.isPinned === true
   const isOwn = user?.$id === reply?.authorId
-  const isOP  = reply?.authorId === threadAuthor
+  const isOP = reply?.authorId === threadAuthor
   const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
 
+  const isHighlighted = useHashHighlight(reply.$id)
+
   // Author info — { role, avatarUrl, username }
-  const authorInfo   = authorRoles?.[reply?.authorId] ?? null
-  const authorRole   = authorInfo?.role     ?? null
+  const authorInfo = authorRoles?.[reply?.authorId] ?? null
+  const authorRole = authorInfo?.role ?? null
   const authorAvatar = authorInfo?.avatarUrl ?? null
   const authorUsername = authorInfo?.username ?? null
-  const showFlair    = authorRole && authorRole !== "user"
+  const showFlair = authorRole && authorRole !== "user"
 
   const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
   const isTooDeep = !disableDepthLimit && depth >= maxDepth
@@ -200,8 +203,17 @@ const Reply = ({
       imagePublicId: composeState.uploadedImagePublicId,
       authorId: user.$id, authorName: user.username,
       parentReplyId: reply.$id ?? reply.id,
+      parentAuthorId: reply?.authorId ?? null,
+      threadAuthorId: threadAuthor,
+      actorAvatar: user.avatarUrl ?? null,
+      actorUsername: user.username ?? null,
+      
     })
-  }, [createReply, threadId, user, reply, composeState])
+    console.log("submit debug:", {
+  parentAuthorId: reply?.authorId ?? null,
+  threadAuthorId: threadAuthor,
+})
+  }, [createReply, threadId, user, reply, composeState, threadAuthor])
 
   const handleDelete = useCallback(async () => {
     const id = reply.$id ?? reply.id
@@ -246,7 +258,8 @@ const Reply = ({
         />
       )}
 
-      <div id={`reply-${reply.$id}`} className="flex flex-col">
+      <div id={`reply-${reply.$id}`} className={`flex flex-col transition-colors duration-700
+              ${isHighlighted ? "bg-primary/10 rounded-xl" : ""}`}>
 
         <div className="flex" style={{ gap: GAP }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
 

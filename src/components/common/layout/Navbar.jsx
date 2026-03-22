@@ -8,6 +8,7 @@ import {
 import { motion, useScroll, useMotionValueEvent } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { useSidebar } from "@/context/SidebarContext"
+import NotificationBell from "../navigation/NotificationBell"
 
 const NAVBAR_H = 68
 
@@ -25,7 +26,6 @@ const Navbar = () => {
 
   useMotionValueEvent(scrollY, "change", latest => setIsScrolled(latest > 20))
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!dropdownOpen) return
     const handler = (e) => {
@@ -37,7 +37,6 @@ const Navbar = () => {
     return () => document.removeEventListener("pointerdown", handler)
   }, [dropdownOpen])
 
-  // Keep dropdown position synced on scroll/resize
   useEffect(() => {
     if (!dropdownOpen) return
     const update = () => {
@@ -92,7 +91,7 @@ const Navbar = () => {
                    shadow-[0_1px_0_rgba(0,0,0,0.05)]
                    transition-shadow duration-300"
       >
-        {/* Hamburger — uses context toggleSidebar */}
+        {/* Hamburger */}
         <button
           onClick={sidebar.toggleSidebar}
           className="p-2 rounded-lg text-muted-foreground
@@ -112,28 +111,34 @@ const Navbar = () => {
 
         <div className="flex-1" />
 
-        {/* Right — auth */}
+        {/* Right — bell + auth */}
         {isLoading ? (
           <div className="h-8 w-24 rounded-full bg-muted animate-pulse" />
         ) : authStatus ? (
-          <button
-            ref={triggerRef}
-            onClick={handleOpen}
-            className="flex items-center gap-2 rounded-full px-2.5 py-1.5
-                       bg-white/60 dark:bg-white/5
-                       hover:bg-white/80 dark:hover:bg-white/10
-                       border border-white/20 dark:border-white/5
-                       transition-colors duration-150"
-          >
-            <Avatar size="w-7 h-7" />
-            <span className="hidden sm:block text-sm font-medium text-foreground
-                             max-w-[100px] truncate">
-              {currentUser?.name || currentUser?.email}
-            </span>
-            <ChevronDown size={13}
-              className={`hidden sm:block text-muted-foreground transition-transform
-                          duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 🔔 Notification Bell */}
+            <NotificationBell />
+
+            {/* Avatar / user menu trigger */}
+            <button
+              ref={triggerRef}
+              onClick={handleOpen}
+              className="flex items-center gap-2 rounded-full px-2.5 py-1.5
+                         bg-white/60 dark:bg-white/5
+                         hover:bg-white/80 dark:hover:bg-white/10
+                         border border-white/20 dark:border-white/5
+                         transition-colors duration-150"
+            >
+              <Avatar size="w-7 h-7" />
+              <span className="hidden sm:block text-sm font-medium text-foreground
+                               max-w-[100px] truncate">
+                {currentUser?.name || currentUser?.email}
+              </span>
+              <ChevronDown size={13}
+                className={`hidden sm:block text-muted-foreground transition-transform
+                            duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+          </div>
         ) : (
           <Link to="/login"
             className="rounded-full px-4 py-1.5 text-sm font-medium
@@ -144,7 +149,7 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* Dropdown — rendered outside nav to escape stacking context */}
+      {/* User dropdown */}
       {dropdownOpen && triggerRect && (
         <div
           ref={dropdownRef}
@@ -157,7 +162,6 @@ const Navbar = () => {
                      shadow-[0_20px_60px_rgba(0,0,0,0.2)] overflow-hidden p-1.5
                      animate-in fade-in-0 zoom-in-95 duration-150 origin-top-right"
         >
-          {/* User info */}
           <div className="flex items-center gap-2.5 px-3 py-2.5">
             <Avatar size="w-9 h-9" />
             <div className="min-w-0">

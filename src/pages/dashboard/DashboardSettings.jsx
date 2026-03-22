@@ -685,7 +685,35 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
 // TAB: PREFERENCES
 // =============================================================================
 const PreferencesTab = () => {
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  )
+ 
+  // ── Notification prefs — loaded from Appwrite account prefs ───────────────
+  const [notifPrefs, setNotifPrefs] = useState({
+    notif_replies:   true,
+    notif_mentions:  true,
+    notif_follows:   true,
+  })
+  const [prefsLoading, setPrefsLoading] = useState(true)
+  const [saving, setSaving] = useState(null) // key of the pref being saved
+ 
+  // Load prefs on mount
+  useEffect(() => {
+    account.getPrefs()
+      .then((prefs) => {
+        setNotifPrefs({
+          notif_replies:  prefs.notif_replies  !== false,
+          notif_mentions: prefs.notif_mentions !== false,
+          notif_follows:  prefs.notif_follows  !== false,
+        })
+      })
+      .catch(() => {
+        // prefs may be empty for new users — defaults are fine
+      })
+      .finally(() => setPrefsLoading(false))
+  }, [])
+ 
   const applyTheme = (dark) => {
     const apply = () => {
       document.documentElement.classList.toggle("dark", dark)
@@ -693,23 +721,93 @@ const PreferencesTab = () => {
       setIsDark(dark)
     }
     const elementCount = document.querySelectorAll("*").length
-    if (document.startViewTransition && elementCount < 1500) document.startViewTransition(apply)
+    if (document.startViewTransition && elementCount < 1500)
+      document.startViewTransition(apply)
     else apply()
   }
+ 
+  const handleNotifToggle = async (key) => {
+    const newValue = !notifPrefs[key]
+    setNotifPrefs(prev => ({ ...prev, [key]: newValue }))
+    setSaving(key)
+    try {
+      // Appwrite merges prefs — safe to pass partial object
+      await account.updatePrefs({ [key]: newValue })
+      toast.success("Preference saved")
+    } catch {
+      // Revert on error
+      setNotifPrefs(prev => ({ ...prev, [key]: !newValue }))
+      toast.error("Failed to save preference")
+    } finally {
+      setSaving(null)
+    }
+  }
+ 
   return (
     <div>
       <Section title="Appearance">
-        <PrefRow icon={isDark ? Moon : Sun} label="Dark mode" hint="Switch between light and dark theme">
+        <PrefRow
+          icon={isDark ? Moon : Sun}
+          label="Dark mode"
+          hint="Switch between light and dark theme"
+        >
           <Toggle checked={isDark} onChange={applyTheme} />
         </PrefRow>
       </Section>
+ 
       <Section title="Notifications">
-        <PrefRow icon={Bell} label="Forum replies" hint="Get notified when someone replies to your post">
-          <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon</span>
-        </PrefRow>
-        <PrefRow icon={Bell} label="Mentions" hint="Get notified when someone mentions you">
-          <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon</span>
-        </PrefRow>
+        {prefsLoading ? (
+          <div className="py-4 flex items-center justify-center">
+            <Loader2 size={16} className="animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <PrefRow
+              icon={Bell}
+              label="Forum replies"
+              hint="Get notified when someone replies to your post"
+            >
+              {saving === "notif_replies" ? (
+                <Loader2 size={14} className="animate-spin text-muted-foreground" />
+              ) : (
+                <Toggle
+                  checked={notifPrefs.notif_replies}
+                  onChange={() => handleNotifToggle("notif_replies")}
+                />
+              )}
+            </PrefRow>
+ 
+            <PrefRow
+              icon={Bell}
+              label="Mentions"
+              hint="Get notified when someone mentions you"
+            >
+              {saving === "notif_mentions" ? (
+                <Loader2 size={14} className="animate-spin text-muted-foreground" />
+              ) : (
+                <Toggle
+                  checked={notifPrefs.notif_mentions}
+                  onChange={() => handleNotifToggle("notif_mentions")}
+                />
+              )}
+            </PrefRow>
+ 
+            <PrefRow
+              icon={Bell}
+              label="New followers"
+              hint="Get notified when someone follows you"
+            >
+              {saving === "notif_follows" ? (
+                <Loader2 size={14} className="animate-spin text-muted-foreground" />
+              ) : (
+                <Toggle
+                  checked={notifPrefs.notif_follows}
+                  onChange={() => handleNotifToggle("notif_follows")}
+                />
+              )}
+            </PrefRow>
+          </>
+        )}
       </Section>
     </div>
   )

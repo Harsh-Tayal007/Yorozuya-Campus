@@ -1,3 +1,4 @@
+// src/hooks/useReplyActions.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createReply,
@@ -11,21 +12,30 @@ import {
   incrementRepliesCount,
   decrementRepliesCount,
 } from "@/services/forum/threadService";
+import {
+  createNotification,
+  getUserIdByUsername,
+} from "@/services/notification/notificationService";
+
+// Extract @username mentions from plain text or HTML content
+function extractMentions(content = "") {
+  if (!content) return []
+  const plain = content.replace(/<[^>]+>/g, " ")
+  const matches = plain.match(/@([\w]+)/g) ?? []
+  return [...new Set(matches.map(m => m.slice(1).toLowerCase()))]
+}
 
 export default function useReplyActions(threadId) {
   const queryClient = useQueryClient();
 
   // ─── CREATE ───────────────────────────────────────────────────────────────
-
   const createReplyMutation = useMutation({
     mutationFn: createReply,
 
     onMutate: async (newReply) => {
       await queryClient.cancelQueries({ queryKey: ["replies", threadId] });
-
       const previousReplies = queryClient.getQueryData(["replies", threadId]);
       const tempId = "temp-" + Date.now();
-
       const optimisticReply = {
         ...newReply,
         $id: tempId,
@@ -33,7 +43,6 @@ export default function useReplyActions(threadId) {
         upvotes: 0,
         isPinned: false,
       };
-
       queryClient.setQueryData(["replies", threadId], (old) => {
         if (!old) return old;
         const parent = newReply.parentReplyId ?? null;
@@ -44,21 +53,17 @@ export default function useReplyActions(threadId) {
           children: { ...newChildren, [parent]: [tempId, ...newChildren[parent]] },
         };
       });
-
-      // Optimistically increment repliesCount on thread card
       queryClient.setQueryData(["threads"], (old = []) =>
         old.map(t => t.$id === threadId
           ? { ...t, repliesCount: (t.repliesCount ?? 0) + 1 }
           : t
         )
       );
-
       return { previousReplies, tempId };
     },
 
     onError: (err, newReply, context) => {
       queryClient.setQueryData(["replies", threadId], context.previousReplies);
-      // Roll back optimistic increment
       queryClient.setQueryData(["threads"], (old = []) =>
         old.map(t => t.$id === threadId
           ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
@@ -84,17 +89,17 @@ export default function useReplyActions(threadId) {
         return { byId: newById, children: newChildren };
       });
 
-      // Persist repliesCount to Appwrite (fire and forget)
       incrementRepliesCount(threadId).then(() => {
-        // Sync thread cache with real DB value
         queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
         queryClient.invalidateQueries({ queryKey: ["threads"] });
       }).catch(console.error);
+
+      // Fire notifications — never block UI
+      fireReplyNotifications(serverReply, newReply, threadId).catch(console.error);
     },
   });
 
   // ─── DELETE ───────────────────────────────────────────────────────────────
-
   const deleteReplyMutation = useMutation({
     mutationFn: ({ replyId, hasChildren }) =>
       hasChildren ? deleteReply(replyId) : hardDeleteReply(replyId),
@@ -102,10 +107,8 @@ export default function useReplyActions(threadId) {
     onMutate: async ({ replyId, hasChildren }) => {
       await queryClient.cancelQueries({ queryKey: ["replies", threadId] });
       const previousReplies = queryClient.getQueryData(["replies", threadId]);
-
       queryClient.setQueryData(["replies", threadId], (old) => {
         if (!old || !old.byId?.[replyId]) return old;
-
         if (hasChildren) {
           return {
             ...old,
@@ -132,7 +135,6 @@ export default function useReplyActions(threadId) {
           return { byId: newById, children: newChildren };
         }
       });
-
       return { previousReplies };
     },
 
@@ -144,17 +146,13 @@ export default function useReplyActions(threadId) {
 
     onSuccess: (_, { hasChildren }) => {
       queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
-
-      // Only decrement for hard deletes (soft deletes keep the reply visible as [deleted])
       if (!hasChildren) {
-        // Optimistically decrement in threads list cache
         queryClient.setQueryData(["threads"], (old = []) =>
           old.map(t => t.$id === threadId
             ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
             : t
           )
         );
-
         decrementRepliesCount(threadId).then(() => {
           queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
           queryClient.invalidateQueries({ queryKey: ["threads"] });
@@ -164,7 +162,6 @@ export default function useReplyActions(threadId) {
   });
 
   // ─── UPDATE ───────────────────────────────────────────────────────────────
-
   const updateReplyMutation = useMutation({
     mutationFn: updateReply,
     onSuccess: (updatedReply) => {
@@ -187,7 +184,6 @@ export default function useReplyActions(threadId) {
   });
 
   // ─── PIN / UNPIN ──────────────────────────────────────────────────────────
-
   const pinReplyMutation = useMutation({
     mutationFn: ({ replyId, threadId, currentPinnedReplyId }) =>
       pinReply(replyId, threadId, currentPinnedReplyId),
@@ -198,9 +194,7 @@ export default function useReplyActions(threadId) {
       });
       queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
     },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
-    },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["replies", threadId] }),
   });
 
   const unpinReplyMutation = useMutation({
@@ -212,9 +206,7 @@ export default function useReplyActions(threadId) {
       });
       queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
     },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
-    },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["replies", threadId] }),
   });
 
   return {
@@ -224,4 +216,91 @@ export default function useReplyActions(threadId) {
     pinReply: pinReplyMutation,
     unpinReply: unpinReplyMutation,
   };
+}
+
+// =============================================================================
+// NOTIFICATION HELPERS
+// =============================================================================
+async function fireReplyNotifications(serverReply, newReply, threadId) {
+  const actorId       = newReply.authorId
+  const actorName     = newReply.authorName
+  const actorAvatar   = newReply.actorAvatar   ?? null
+  const actorUsername = newReply.actorUsername ?? null
+
+  // Plain-text preview of what was written (max 200 chars)
+  const replyContent = (newReply.content ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200)
+
+  const promises = []
+
+  // ── 1. Reply notification ─────────────────────────────────────────────────
+  // parentAuthorId set  → replying to someone's comment → "replied to your comment"
+  // only threadAuthorId → root reply on thread          → "replied to your thread"
+  const isNestedReply = !!newReply.parentAuthorId
+  const recipientId   = newReply.parentAuthorId ?? newReply.threadAuthorId ?? null
+  const replyMessage  = isNestedReply
+    ? "replied to your comment."
+    : "replied to your thread."
+
+  if (recipientId && recipientId !== actorId) {
+    promises.push(
+      createNotification({
+        recipientId,
+        type:         "reply",
+        actorId,
+        actorName,
+        actorAvatar,
+        actorUsername,
+        threadId,
+        replyId:      serverReply.$id,
+        replyContent,
+        message:      replyMessage,
+      })
+    )
+  }
+
+  // ── 2. Mention notifications ──────────────────────────────────────────────
+  // Notify every @mentioned user, PLUS the author of the parent comment
+  // if they were mentioned (deduplicated via Set below)
+  const mentionedUsernames = extractMentions(newReply.content)
+
+  // Also include anyone in the existing reply chain who might be mentioned
+  // (the parentAuthorUsername if provided — passed from Reply.jsx)
+  const allMentions = new Set(mentionedUsernames)
+
+  if (allMentions.size > 0) {
+    const userDocs = await Promise.all(
+      [...allMentions].map(username => getUserIdByUsername(username))
+    )
+    for (const doc of userDocs) {
+      if (!doc) continue
+      const mentionedUserId = doc.userId
+      // Skip actor and skip anyone already notified by the reply notification
+      if (!mentionedUserId || mentionedUserId === actorId) continue
+      if (mentionedUserId === recipientId) continue // avoid double-notif
+
+      promises.push(
+        createNotification({
+          recipientId:  mentionedUserId,
+          type:         "mention",
+          actorId,
+          actorName,
+          actorAvatar,
+          actorUsername,
+          threadId,
+          replyId:      serverReply.$id,
+          replyContent,
+          message:      "mentioned you in a reply.",
+        })
+      )
+    }
+  }
+
+  const results = await Promise.allSettled(promises)
+  results.forEach(r => {
+    if (r.status === "rejected") console.error("Notification failed:", r.reason)
+  })
 }
