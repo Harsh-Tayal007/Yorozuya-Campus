@@ -12,8 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Footer } from "@/components"
 
 const fadeUp = (delay = 0) => ({
-  initial:    { opacity: 0, y: 20 },
-  animate:    { opacity: 1, y: 0  },
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, delay, ease: "easeOut" },
 })
 
@@ -81,9 +81,9 @@ export default function Home() {
   // Single query — staleTime prevents duplicate fetches across components
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["public-stats"],
-    queryFn:  getPublicStats,
+    queryFn: getPublicStats,
     staleTime: 1000 * 60 * 60,  // 1 hour — avoids re-fetch on navigation
-    gcTime:    1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24,
   })
 
   // getPublicStats returns: { syllabus, units, resources, pyqs }
@@ -166,10 +166,10 @@ export default function Home() {
         {/* ── STATS — uses actual getPublicStats fields ── */}
         <motion.section {...fadeUp(0.18)}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard value={stats?.syllabus}  label="Syllabus items" loading={statsLoading} />
-            <StatCard value={stats?.units}     label="Units"          loading={statsLoading} />
-            <StatCard value={stats?.resources} label="Resources"      loading={statsLoading} />
-            <StatCard value={stats?.pyqs}      label="PYQs"          loading={statsLoading} />
+            <StatCard value={stats?.syllabus} label="Syllabus items" loading={statsLoading} />
+            <StatCard value={stats?.units} label="Units" loading={statsLoading} />
+            <StatCard value={stats?.resources} label="Resources" loading={statsLoading} />
+            <StatCard value={stats?.pyqs} label="PYQs" loading={statsLoading} />
           </div>
         </motion.section>
 
@@ -249,18 +249,28 @@ export default function Home() {
                 Work in progress
               </span>
             </div>
+
             <div className="space-y-3">
+              {/* ── Completed ── */}
               <RoadmapItem label="University, program and branch management" done />
-              <RoadmapItem label="Syllabus and unit uploads"                done />
-              <RoadmapItem label="PYQ uploads and browsing"                 done />
-              <RoadmapItem label="Study resource uploads"                   done />
-              <RoadmapItem label="Student forum with threaded replies"      done />
-              <RoadmapItem label="User profiles, karma and followers"       done />
-              <RoadmapItem label="Bookmarks and saved threads"              done />
-              <RoadmapItem label="Notification system"                      done />
-              <RoadmapItem label="Mobile app (PWA improvements)"            />
-              <RoadmapItem label="AI-powered study assistant"               />
-              <RoadmapItem label="Collaborative notes"                      />
+              <RoadmapItem label="Syllabus and unit uploads" done />
+              <RoadmapItem label="PYQ uploads and browsing" done />
+              <RoadmapItem label="Study resource uploads" done />
+              <RoadmapItem label="Student forum with threaded replies" done />
+              <RoadmapItem label="User profiles, karma and followers" done />
+              <RoadmapItem label="Bookmarks and saved threads" done />
+              <RoadmapItem label="Notification system" done />
+              <RoadmapItem label="Personalised academic dashboard" done />
+              <RoadmapItem label="University notices & events feed" done />
+
+              {/* ── Upcoming ── */}
+              <RoadmapItem label="CGPA & grade calculator" />
+              <RoadmapItem label="Study to-do list & task tracker" />
+              <RoadmapItem label="Class timetable builder" />
+              <RoadmapItem label="Direct messages & group chats" />
+              <RoadmapItem label="AI-powered study assistant" />
+              <RoadmapItem label="Collaborative notes" />
+              <RoadmapItem label="Mobile app (PWA improvements)" />
             </div>
           </GlassCard>
         </motion.section>
