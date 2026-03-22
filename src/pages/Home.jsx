@@ -257,7 +257,7 @@ export default function Home() {
               <RoadmapItem label="Student forum with threaded replies"      done />
               <RoadmapItem label="User profiles, karma and followers"       done />
               <RoadmapItem label="Bookmarks and saved threads"              done />
-              <RoadmapItem label="Notification system"                      />
+              <RoadmapItem label="Notification system"                      done />
               <RoadmapItem label="Mobile app (PWA improvements)"            />
               <RoadmapItem label="AI-powered study assistant"               />
               <RoadmapItem label="Collaborative notes"                      />

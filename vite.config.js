@@ -50,6 +50,12 @@ export default defineConfig({
     }),
   ],
 
+  server: {
+  host: true,
+  port: 5173,
+  hmr: false   // 🔥 THIS LINE IS THE KEY
+},
+
   define: {
     // Inject build timestamp at build time — used as cache buster in main.jsx
     "import.meta.env.VITE_BUILD_TIME": JSON.stringify(Date.now().toString()),
@@ -61,3 +67,4 @@ export default defineConfig({
     },
   },
 });
+
