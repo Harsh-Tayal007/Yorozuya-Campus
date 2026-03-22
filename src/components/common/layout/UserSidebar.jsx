@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { Pin, PinOff, X, ChevronDown } from "lucide-react"
 import { useSidebar } from "@/context/SidebarContext"
 import { useAuth } from "@/context/AuthContext"
-import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
 import {
   dashboardRootLink,
   dashboardSidebarSections,
@@ -30,8 +29,7 @@ export default function UserSidebar() {
 
   const [openSections, setOpenSections] = useState([])
 
-  // On mobile only: close sidebar on route change
-  // On desktop: never auto-close — user controls it via pin/hover
+  // On mobile: close on route change
   useEffect(() => {
     if (isMobile) setIsOpen(false)
   }, [location.pathname, isMobile])
@@ -50,12 +48,10 @@ export default function UserSidebar() {
 
   const visible = isOpen || isPinned
 
-  // Top-level nav links — always show Home and Forum regardless of auth
-  // Dashboard only if logged in
   const topLinks = [
     homeRootLink,
     ...(isLoggedIn ? [dashboardRootLink] : []),
-    forumRootLink,  // always visible
+    forumRootLink,
   ]
 
   return (
@@ -122,8 +118,13 @@ export default function UserSidebar() {
               ? location.pathname === "/"
               : location.pathname.startsWith(item.path)
             return (
-              <SidebarLink key={item.path} to={item.path}
-                icon={item.icon} label={item.label} isActive={isActive} />
+              <SidebarLink
+                key={item.path}
+                to={item.path}
+                icon={item.icon}
+                label={item.label}
+                isActive={isActive}
+              />
             )
           })}
 
@@ -138,6 +139,7 @@ export default function UserSidebar() {
 
                 return (
                   <div key={section.id}>
+                    {/* Section header button */}
                     <button
                       onClick={() => setOpenSections(prev =>
                         prev.includes(section.id)
@@ -153,21 +155,48 @@ export default function UserSidebar() {
                       <div className="flex items-center gap-2">
                         <SIcon size={13} />
                         {section.label}
+                        {/* "new" badge — only shown when section.badge is set */}
+                        {section.badge && (
+                          <span className="ml-1 px-1.5 py-0.5 rounded text-[10px]
+                                           font-semibold leading-none
+                                           bg-indigo-500 text-white">
+                            {section.badge}
+                          </span>
+                        )}
                       </div>
-                      <ChevronDown size={13}
+                      <ChevronDown
+                        size={13}
                         className={`transition-transform duration-200
-                                    ${isExpanded ? "rotate-180" : ""}`} />
+                                    ${isExpanded ? "rotate-180" : ""}`}
+                      />
                     </button>
 
+                    {/* Section children */}
                     {isExpanded && (
                       <div className="ml-4 border-l border-border/40 pl-2
                                       mt-0.5 space-y-0.5">
                         {section.children.map(item => {
+                          // "soon" items: show greyed-out, non-clickable
+                          if (item.soon) {
+                            return (
+                              <SidebarLinkSoon
+                                key={item.id}
+                                icon={item.icon}
+                                label={item.label}
+                              />
+                            )
+                          }
+
                           const isActive = location.pathname.startsWith(item.path)
                           return (
-                            <SidebarLink key={item.path} to={item.path}
-                              icon={item.icon} label={item.label}
-                              isActive={isActive} small />
+                            <SidebarLink
+                              key={item.path}
+                              to={item.path}
+                              icon={item.icon}
+                              label={item.label}
+                              isActive={isActive}
+                              small
+                            />
                           )
                         })}
                       </div>
@@ -183,6 +212,7 @@ export default function UserSidebar() {
   )
 }
 
+// ─── Active / normal link ─────────────────────────────────────────────────────
 function SidebarLink({ to, icon: Icon, label, isActive, small }) {
   return (
     <Link
@@ -202,5 +232,25 @@ function SidebarLink({ to, icon: Icon, label, isActive, small }) {
       <Icon size={small ? 14 : 16} className="shrink-0" />
       {label}
     </Link>
+  )
+}
+
+// ─── "Coming soon" link — greyed out, no click ────────────────────────────────
+function SidebarLinkSoon({ icon: Icon, label }) {
+  return (
+    <div
+      className="relative flex items-center justify-between gap-2.5 rounded-lg
+                 px-2.5 py-1.5 text-xs
+                 text-muted-foreground/40 cursor-not-allowed select-none"
+    >
+      <div className="flex items-center gap-2.5">
+        <Icon size={14} className="shrink-0 opacity-40" />
+        {label}
+      </div>
+      <span className="px-1.5 py-0.5 rounded text-[9px] font-medium leading-none
+                       border border-border/40 text-muted-foreground/50">
+        soon
+      </span>
+    </div>
   )
 }

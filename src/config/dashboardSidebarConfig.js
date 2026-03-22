@@ -7,6 +7,11 @@ import {
   SlidersHorizontal,
   MessageSquare,
   Home,
+  Calculator,
+  CalendarDays,
+  CheckSquare,
+  GraduationCap,
+  Wrench,
 } from "lucide-react"
 
 export const dashboardRootLink = {
@@ -36,11 +41,26 @@ export const dashboardSidebarSections = [
     label: "Academics",
     icon: BookOpen,
     children: [
-      { id: "syllabus", label: "Syllabus", path: "/dashboard/syllabus", icon: FileText },
-      { id: "resources", label: "Resources", path: "/dashboard/resources", icon: ClipboardList },
-      { id: "pyqs", label: "PYQs", path: "/dashboard/pyqs", icon: FileText },
+      { id: "syllabus",   label: "Syllabus",   path: "/dashboard/syllabus",   icon: FileText },
+      { id: "resources",  label: "Resources",  path: "/dashboard/resources",  icon: ClipboardList },
+      { id: "pyqs",       label: "PYQs",       path: "/dashboard/pyqs",       icon: FileText },
     ],
   },
+
+  // ── Tools ── badge:"new" shows indigo pill on header; soon:true grays the child out
+  {
+    id: "tools",
+    label: "Tools",
+    icon: Wrench,
+    badge: "new",
+    children: [
+      { id: "cgpa",       label: "CGPA Calculator",   path: "/dashboard/cgpa",       icon: Calculator  },
+      { id: "timetable",  label: "Timetable Builder",  path: "/dashboard/timetable",  icon: CalendarDays, soon: true },
+      { id: "tasks",      label: "Task Tracker",       path: "/dashboard/tasks",      icon: CheckSquare,  soon: true },
+      { id: "grade-calc", label: "Grade Calculator",   path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
+    ],
+  },
+
   {
     id: "preferences",
     label: "Preferences",

@@ -12,7 +12,6 @@ import PublicRoute from "./PublicRoute"
 
 import Forum from "../pages/forum/Forum"
 import ThreadDetail from "../pages/forum/ThreadDetail"
-import Tools from "../pages/tools/Tools"
 import NotFound from "../pages/errors/NotFound"
 import ResourcesUserView from "@/pages/resources/ResourcesUserView"
 import SyllabusUserView from "../pages/admin/syllabus/SyllabusUserView"
@@ -70,6 +69,8 @@ import { PageTitleManager } from "@/components"
 import UserProfile from "@/pages/profile/UserProfile"
 import BranchesAdmin from "@/pages/branches/BranchesAdmin"
 
+import CGPACalculator from "@/pages/tools/CGPACalculator"
+
 const AppRoutes = () => {
   return (
     <>
@@ -80,7 +81,6 @@ const AppRoutes = () => {
           <Route path="/" element={<Home />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/forum/:threadId" element={<ThreadDetail />} />
-          <Route path="/tools" element={<Tools />} />
           <Route path="/universities" element={<Universities />} />
           <Route path="/profile/:username" element={<UserProfile />} />
           <Route path="/university/:universityId" element={<UniversityDetail />} />
@@ -118,6 +118,7 @@ const AppRoutes = () => {
                 <Route index element={<Dashboard />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="notices" element={<UniversityNoticesPage />} />
+                <Route path="cgpa" element={<CGPACalculator />} />
 
                 <Route path="syllabus">
                   <Route index element={<DashboardSyllabus />} />
