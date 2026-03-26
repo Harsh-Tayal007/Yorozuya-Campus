@@ -16,6 +16,8 @@ import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram } from "@/services/university/branchService"
 import { uploadAvatar } from "@/services/user/profileService"
 import { account, functions } from "@/lib/appwrite"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
+import { usePush } from "@/context/PushNotificationContext"
 
 const YEAR_OPTIONS = [
   { value: "1", label: "1st Year" }, { value: "2", label: "2nd Year" },
@@ -24,9 +26,9 @@ const YEAR_OPTIONS = [
 ]
 
 const TABS = [
-  { key: "profile",     label: "Profile",     icon: User },
-  { key: "account",     label: "Account",     icon: Shield },
-  { key: "academic",    label: "Academic",    icon: GraduationCap },
+  { key: "profile", label: "Profile", icon: User },
+  { key: "account", label: "Account", icon: Shield },
+  { key: "academic", label: "Academic", icon: GraduationCap },
   { key: "preferences", label: "Preferences", icon: Bell },
 ]
 
@@ -76,8 +78,8 @@ const Dropdown = ({ value, onChange, options, disabled, placeholder }) => {
         className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl
                     border text-sm text-left transition-all duration-150 outline-none
                     ${disabled ? "border-border/40 bg-muted/20 text-muted-foreground/50 cursor-not-allowed"
-                      : open ? "border-primary bg-background ring-2 ring-primary/20"
-                        : "border-border bg-background hover:border-primary/40"}`}>
+            : open ? "border-primary bg-background ring-2 ring-primary/20"
+              : "border-border bg-background hover:border-primary/40"}`}>
         <span className={selected ? "text-foreground" : "text-muted-foreground/60"}>{selected ? selected.label : placeholder}</span>
         <ChevronDown size={14} className={`text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
@@ -211,12 +213,12 @@ const OAuthBadge = ({ provider }) => {
 // =============================================================================
 const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
   const fileInputRef = useRef(null)
-  const [name,          setName]          = useState(user?.name        || "")
-  const [bio,           setBio]           = useState(user?.bio         || "")
-  const [yearOfStudy,   setYearOfStudy]   = useState(user?.yearOfStudy || "")
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl   || null)
-  const [avatarFile,    setAvatarFile]    = useState(null)
-  const [saving,        setSaving]        = useState(false)
+  const [name, setName] = useState(user?.name || "")
+  const [bio, setBio] = useState(user?.bio || "")
+  const [yearOfStudy, setYearOfStudy] = useState(user?.yearOfStudy || "")
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl || null)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [saving, setSaving] = useState(false)
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
@@ -259,7 +261,7 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
           <div className="relative shrink-0 group">
             {avatarPreview ? (
               <img src={avatarPreview} alt="Avatar"
-                   className="w-14 h-14 rounded-full object-cover border-2 border-border group-hover:border-primary/50 transition-colors" />
+                className="w-14 h-14 rounded-full object-cover border-2 border-border group-hover:border-primary/50 transition-colors" />
             ) : (
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                               border-2 border-border group-hover:border-primary/50 flex items-center
@@ -304,19 +306,19 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
 // TAB: ACCOUNT  (OAuth detection + set/change password + forgot password)
 // =============================================================================
 const AccountTab = ({ user }) => {
-  const [activeForm,  setActiveForm]  = useState(null)
-  const [email,       setEmail]       = useState("")
-  const [password,    setPassword]    = useState("")
+  const [activeForm, setActiveForm] = useState(null)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPass, setConfirmPass] = useState("")
-  const [showPass,    setShowPass]    = useState(false)
-  const [showNew,     setShowNew]     = useState(false)
+  const [showPass, setShowPass] = useState(false)
+  const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [saving,      setSaving]      = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // ── Detect OAuth provider ─────────────────────────────────────────────────
-  const [oauthProvider,   setOauthProvider]   = useState(null)
-  const [hasPassword,     setHasPassword]     = useState(false) // OAuth user who also set a password
+  const [oauthProvider, setOauthProvider] = useState(null)
+  const [hasPassword, setHasPassword] = useState(false) // OAuth user who also set a password
   const [identityLoading, setIdentityLoading] = useState(true)
 
   useEffect(() => {
@@ -392,8 +394,8 @@ const AccountTab = ({ user }) => {
   const handleSetPasswordSubmit = async (e) => {
     e.preventDefault()
     if (!newPassword || !confirmPass) { toast.error("All fields required"); return }
-    if (newPassword !== confirmPass)  { toast.error("Passwords don't match"); return }
-    if (newPassword.length < 8)       { toast.error("Min 8 characters"); return }
+    if (newPassword !== confirmPass) { toast.error("Passwords don't match"); return }
+    if (newPassword.length < 8) { toast.error("Min 8 characters"); return }
     try {
       setSaving(true)
       // Pass empty string as oldPassword — Appwrite accepts this for OAuth accounts
@@ -608,14 +610,14 @@ const AccountTab = ({ user }) => {
 // =============================================================================
 const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
   const [universityId, setUniversityId] = useState(user?.universityId || "")
-  const [programId,    setProgramId]    = useState(user?.programId    || "")
-  const [branchId,     setBranchId]     = useState(user?.branchId     || "")
-  const [saving,       setSaving]       = useState(false)
+  const [programId, setProgramId] = useState(user?.programId || "")
+  const [branchId, setBranchId] = useState(user?.branchId || "")
+  const [saving, setSaving] = useState(false)
 
   const academicDirty = (
     universityId !== (user?.universityId || "") ||
-    programId    !== (user?.programId    || "") ||
-    branchId     !== (user?.branchId     || "")
+    programId !== (user?.programId || "") ||
+    branchId !== (user?.branchId || "")
   )
 
   const { data: universities = [] } = useQuery({ queryKey: ["universities"], queryFn: getUniversities })
@@ -626,8 +628,8 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
     queryKey: ["branches", programId], queryFn: () => getBranchesByProgram(programId), enabled: !!programId,
   })
 
-  const prevUniRef     = useRef(user?.universityId || "")
-  const prevProgramRef = useRef(user?.programId    || "")
+  const prevUniRef = useRef(user?.universityId || "")
+  const prevProgramRef = useRef(user?.programId || "")
 
   useEffect(() => {
     const prev = prevUniRef.current; prevUniRef.current = universityId
@@ -684,36 +686,48 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
 // =============================================================================
 // TAB: PREFERENCES
 // =============================================================================
+
 const PreferencesTab = () => {
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains("dark")
   )
- 
-  // ── Notification prefs — loaded from Appwrite account prefs ───────────────
+
+  // ── In-app notification prefs (Appwrite account prefs) ────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
-    notif_replies:   true,
-    notif_mentions:  true,
-    notif_follows:   true,
+    notif_replies: true,
+    notif_mentions: true,
+    notif_follows: true,
   })
   const [prefsLoading, setPrefsLoading] = useState(true)
-  const [saving, setSaving] = useState(null) // key of the pref being saved
- 
-  // Load prefs on mount
+  const [saving, setSaving] = useState(null)
+
+  // ── Push notification state ───────────────────────────────────────────────
+  const {
+    supported: pushSupported,
+    subscribed: pushSubscribed,
+    permission: pushPermission,
+    loading: pushLoading,
+    subscribe: pushSubscribe,
+    unsubscribe: pushUnsubscribe,
+  } = usePush()
+
+  const isLocalhost = typeof window !== "undefined" &&
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+
+  // Load in-app prefs on mount
   useEffect(() => {
     account.getPrefs()
       .then((prefs) => {
         setNotifPrefs({
-          notif_replies:  prefs.notif_replies  !== false,
+          notif_replies: prefs.notif_replies !== false,
           notif_mentions: prefs.notif_mentions !== false,
-          notif_follows:  prefs.notif_follows  !== false,
+          notif_follows: prefs.notif_follows !== false,
         })
       })
-      .catch(() => {
-        // prefs may be empty for new users — defaults are fine
-      })
+      .catch(() => { })
       .finally(() => setPrefsLoading(false))
   }, [])
- 
+
   const applyTheme = (dark) => {
     const apply = () => {
       document.documentElement.classList.toggle("dark", dark)
@@ -725,24 +739,40 @@ const PreferencesTab = () => {
       document.startViewTransition(apply)
     else apply()
   }
- 
+
   const handleNotifToggle = async (key) => {
     const newValue = !notifPrefs[key]
     setNotifPrefs(prev => ({ ...prev, [key]: newValue }))
     setSaving(key)
     try {
-      // Appwrite merges prefs — safe to pass partial object
       await account.updatePrefs({ [key]: newValue })
       toast.success("Preference saved")
     } catch {
-      // Revert on error
       setNotifPrefs(prev => ({ ...prev, [key]: !newValue }))
       toast.error("Failed to save preference")
     } finally {
       setSaving(null)
     }
   }
- 
+
+  const handlePushToggle = async () => {
+    if (pushSubscribed) {
+      await pushUnsubscribe()
+      toast.success("Push notifications disabled")
+    } else {
+      const result = await pushSubscribe()
+      if (result.ok) {
+        toast.success("Push notifications enabled")
+      } else if (result.reason === "denied") {
+        toast.error("Notifications blocked — allow them in browser settings")
+      } else {
+        toast.error("Could not enable push notifications")
+      }
+    }
+  }
+
+  const pushDenied = pushPermission === "denied"
+
   return (
     <div>
       <Section title="Appearance">
@@ -754,8 +784,38 @@ const PreferencesTab = () => {
           <Toggle checked={isDark} onChange={applyTheme} />
         </PrefRow>
       </Section>
- 
+
       <Section title="Notifications">
+        {/* ── Push notifications row ── */}
+        <PrefRow
+          icon={Bell}
+          label="Push notifications"
+          hint={
+            !pushSupported
+              ? "Not supported in this browser"
+              : pushDenied
+                ? "Blocked — click the lock icon in your address bar to allow"
+                : isLocalhost
+                  ? pushSubscribed
+                    ? "Active (localhost: in-tab only — deploy to https for full background push)"
+                    : "Enable in-app notifications (full background push requires https)"
+                  : pushSubscribed
+                    ? "You'll be notified even when the tab is closed"
+                    : "Get notified about replies, mentions and follows — even with the tab closed"
+          }
+        >
+          {!pushSupported || pushDenied ? (
+            <span className={`text-xs font-medium ${pushDenied ? "text-rose-500" : "text-muted-foreground"}`}>
+              {pushDenied ? "Blocked" : "Unsupported"}
+            </span>
+          ) : pushLoading ? (
+            <Loader2 size={14} className="animate-spin text-muted-foreground" />
+          ) : (
+            <Toggle checked={pushSubscribed} onChange={handlePushToggle} />
+          )}
+        </PrefRow>
+
+        {/* ── In-app notification type prefs ── */}
         {prefsLoading ? (
           <div className="py-4 flex items-center justify-center">
             <Loader2 size={16} className="animate-spin text-muted-foreground" />
@@ -776,7 +836,7 @@ const PreferencesTab = () => {
                 />
               )}
             </PrefRow>
- 
+
             <PrefRow
               icon={Bell}
               label="Mentions"
@@ -791,7 +851,7 @@ const PreferencesTab = () => {
                 />
               )}
             </PrefRow>
- 
+
             <PrefRow
               icon={Bell}
               label="New followers"
@@ -818,7 +878,7 @@ const PreferencesTab = () => {
 // =============================================================================
 const DashboardSettings = () => {
   const queryClient = useQueryClient()
-  const navigate    = useNavigate()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user, completeAcademicProfile, updateProfile } = useAuth()
   const activeTab = searchParams.get("tab") || "profile"
@@ -853,9 +913,9 @@ const DashboardSettings = () => {
       <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
-          {activeTab === "profile"     && <ProfileTab     user={user} updateProfile={updateProfile} queryClient={queryClient} navigate={navigate} />}
-          {activeTab === "account"     && <AccountTab     user={user} />}
-          {activeTab === "academic"    && <AcademicTab    user={user} completeAcademicProfile={completeAcademicProfile} queryClient={queryClient} />}
+          {activeTab === "profile" && <ProfileTab user={user} updateProfile={updateProfile} queryClient={queryClient} navigate={navigate} />}
+          {activeTab === "account" && <AccountTab user={user} />}
+          {activeTab === "academic" && <AcademicTab user={user} completeAcademicProfile={completeAcademicProfile} queryClient={queryClient} />}
           {activeTab === "preferences" && <PreferencesTab />}
         </motion.div>
       </AnimatePresence>

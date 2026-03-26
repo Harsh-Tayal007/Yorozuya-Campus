@@ -47,17 +47,16 @@ export const dashboardSidebarSections = [
     ],
   },
 
-  // ── Tools ── badge:"new" shows indigo pill on header; soon:true grays the child out
   {
     id: "tools",
     label: "Tools",
     icon: Wrench,
     badge: "new",
     children: [
-      { id: "cgpa",       label: "CGPA Calculator",   path: "/dashboard/cgpa",       icon: Calculator  },
-      { id: "timetable",  label: "Timetable Builder",  path: "/dashboard/timetable",  icon: CalendarDays, soon: true },
-      { id: "tasks",      label: "Task Tracker",       path: "/dashboard/tasks",      icon: CheckSquare,  soon: true },
-      { id: "grade-calc", label: "Grade Calculator",   path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
+      { id: "cgpa",       label: "CGPA Calculator",  path: "/dashboard/cgpa",       icon: Calculator   },
+      { id: "tasks",      label: "Task Tracker",      path: "/dashboard/tasks",      icon: CheckSquare  },
+      { id: "timetable",  label: "Timetable Builder", path: "/dashboard/timetable",  icon: CalendarDays,  soon: true },
+      { id: "grade-calc", label: "Grade Calculator",  path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
     ],
   },
 

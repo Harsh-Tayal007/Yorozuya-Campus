@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { Toaster } from "sonner"
+import { PushNotificationProvider } from "./context/PushNotificationContext"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,11 +59,13 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <PushNotificationProvider>
         <App />
-      </AuthProvider>
-    </QueryClientProvider>
-    <Toaster position="bottom-right" richColors closeButton toastOptions={{ duration: 4000 }} />
-  </React.StrictMode>
+      </PushNotificationProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+  <Toaster position="bottom-right" richColors closeButton toastOptions={{ duration: 4000 }} />
+</React.StrictMode>
 )

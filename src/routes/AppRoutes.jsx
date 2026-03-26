@@ -70,6 +70,7 @@ import UserProfile from "@/pages/profile/UserProfile"
 import BranchesAdmin from "@/pages/branches/BranchesAdmin"
 
 import CGPACalculator from "@/pages/tools/CGPACalculator"
+import TaskTracker from "@/pages/tools/TaskTracker"
 
 const AppRoutes = () => {
   return (
@@ -119,6 +120,7 @@ const AppRoutes = () => {
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="notices" element={<UniversityNoticesPage />} />
                 <Route path="cgpa" element={<CGPACalculator />} />
+                <Route path="tasks" element={<TaskTracker />} />
 
                 <Route path="syllabus">
                   <Route index element={<DashboardSyllabus />} />

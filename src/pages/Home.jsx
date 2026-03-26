@@ -262,9 +262,9 @@ export default function Home() {
               <RoadmapItem label="Notification system" done />
               <RoadmapItem label="Personalised academic dashboard" done />
               <RoadmapItem label="University notices & events feed" done />
+              <RoadmapItem label="CGPA & grade calculator" done />
 
               {/* ── Upcoming ── */}
-              <RoadmapItem label="CGPA & grade calculator" />
               <RoadmapItem label="Study to-do list & task tracker" />
               <RoadmapItem label="Class timetable builder" />
               <RoadmapItem label="Direct messages & group chats" />

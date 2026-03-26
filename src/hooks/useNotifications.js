@@ -1,133 +1,158 @@
-// src/hooks/useNotifications.js
-import { useState, useEffect, useCallback, useRef } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useAuth } from "@/context/AuthContext"
-import client from "@/lib/appwrite"
+/**
+ * useNotifications.js
+ * Place at: src/hooks/useNotifications.js
+ *
+ * Uses sendViaWorker (CF Worker) for background push,
+ * falls back to sendLocal for foreground / localhost.
+ */
+
+import { useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
+import client from "@/lib/appwrite";
 import {
   getNotifications,
   getUnreadCount,
   markAsRead,
   markAllAsRead,
   deleteNotification,
-} from "@/services/notification/notificationService"
+} from "@/services/notification/notificationService";
+import { usePush } from "@/context/PushNotificationContext";
 
-const NOTIF_COL = import.meta.env.VITE_APPWRITE_NOTIFICATIONS_COLLECTION_ID
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const NOTIF_COL   = import.meta.env.VITE_APPWRITE_NOTIFICATIONS_COLLECTION_ID;
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
+
+const TYPE_VERB = {
+  reply:   "replied to your post",
+  mention: "mentioned you",
+  follow:  "started following you",
+};
 
 export default function useNotifications() {
-  const { currentUser } = useAuth()
-  const queryClient = useQueryClient()
-  const unsubRef = useRef(null)
+  const { currentUser }               = useAuth();
+  const queryClient                   = useQueryClient();
+  const unsubRef                      = useRef(null);
+  const { sendLocal, sendViaWorker }  = usePush();
 
-  const userId = currentUser?.$id
+  const userId = currentUser?.$id;
 
-  // ── Fetch notifications ────────────────────────────────────────────────────
-  const {
-    data: notifications = [],
-    isLoading,
-  } = useQuery({
+  // ── Fetch notifications ───────────────────────────────────────────────────
+  const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", userId],
     queryFn:  () => getNotifications(userId),
     enabled:  !!userId,
     staleTime: 1000 * 30,
-  })
+  });
 
-  // ── Unread count ───────────────────────────────────────────────────────────
+  // ── Unread count ──────────────────────────────────────────────────────────
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["notifications-unread", userId],
     queryFn:  () => getUnreadCount(userId),
     enabled:  !!userId,
     staleTime: 1000 * 30,
-  })
+  });
 
-  // ── Appwrite Realtime subscription ────────────────────────────────────────
+  // ── Realtime subscription ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!userId) return
+    if (!userId) return;
 
-    // Subscribe to all changes on the notifications collection for this user
-    const channel = `databases.${DATABASE_ID}.collections.${NOTIF_COL}.documents`
+    const channel = `databases.${DATABASE_ID}.collections.${NOTIF_COL}.documents`;
 
-    unsubRef.current = client.subscribe(channel, (response) => {
-      const { events, payload } = response
+    unsubRef.current = client.subscribe(channel, async (response) => {
+      const { events, payload } = response;
+      if (payload?.recipientId !== userId) return;
 
-      // Only react to events targeted at this user
-      if (payload?.recipientId !== userId) return
-
-      const isCreate = events.some(e => e.includes(".create"))
-      const isUpdate = events.some(e => e.includes(".update"))
-      const isDelete = events.some(e => e.includes(".delete"))
+      const isCreate = events.some(e => e.includes(".create"));
+      const isUpdate = events.some(e => e.includes(".update"));
+      const isDelete = events.some(e => e.includes(".delete"));
 
       if (isCreate) {
-        // Prepend new notification optimistically
-        queryClient.setQueryData(["notifications", userId], (old = []) => [
-          payload,
-          ...old,
-        ])
+        // Update cache
+        queryClient.setQueryData(["notifications", userId], (old = []) => [payload, ...old]);
         queryClient.setQueryData(["notifications-unread", userId], (old = 0) =>
           payload.read ? old : old + 1
-        )
+        );
+
+        // ── Push notification ─────────────────────────────────────────────
+        if (!payload.read) {
+          const verb  = TYPE_VERB[payload.type] ?? "sent you a notification";
+          const title = `${payload.actorName} ${verb}`;
+          const body  = payload.replyContent
+            ? payload.replyContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120)
+            : "";
+
+          let url = "/dashboard";
+          if (payload.type === "follow" && payload.actorUsername) {
+            url = `/profile/${payload.actorUsername}`;
+          } else if (payload.threadId) {
+            url = payload.replyId
+              ? `/forum/${payload.threadId}#reply-${payload.replyId}`
+              : `/forum/${payload.threadId}`;
+          }
+
+          const tag = `notif-${payload.$id}`;
+
+          // Try background push via CF Worker first, fall back to in-app
+          const sent = await sendViaWorker({ title, body, url, tag, type: payload.type });
+          if (!sent) sendLocal({ title, body, url, tag });
+        }
       }
 
       if (isUpdate) {
         queryClient.setQueryData(["notifications", userId], (old = []) =>
           old.map(n => n.$id === payload.$id ? payload : n)
-        )
-        // Recount unread from updated list
-        queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] })
+        );
+        queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
       }
 
       if (isDelete) {
         queryClient.setQueryData(["notifications", userId], (old = []) =>
           old.filter(n => n.$id !== payload.$id)
-        )
-        queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] })
+        );
+        queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
       }
-    })
+    });
 
-    return () => {
-      unsubRef.current?.()
-    }
-  }, [userId, queryClient])
+    return () => { unsubRef.current?.(); };
+  }, [userId, queryClient, sendLocal, sendViaWorker]);
 
-  // ── Mark one read ──────────────────────────────────────────────────────────
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const markReadMutation = useMutation({
     mutationFn: markAsRead,
     onMutate: async (notifId) => {
       queryClient.setQueryData(["notifications", userId], (old = []) =>
         old.map(n => n.$id === notifId ? { ...n, read: true } : n)
-      )
+      );
       queryClient.setQueryData(["notifications-unread", userId], (old = 0) =>
         Math.max(0, old - 1)
-      )
+      );
     },
-  })
+  });
 
-  // ── Mark all read ──────────────────────────────────────────────────────────
   const markAllReadMutation = useMutation({
     mutationFn: () => markAllAsRead(userId),
     onMutate: () => {
       queryClient.setQueryData(["notifications", userId], (old = []) =>
         old.map(n => ({ ...n, read: true }))
-      )
-      queryClient.setQueryData(["notifications-unread", userId], 0)
+      );
+      queryClient.setQueryData(["notifications-unread", userId], 0);
     },
-  })
+  });
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: deleteNotification,
     onMutate: async (notifId) => {
-      const notif = notifications.find(n => n.$id === notifId)
+      const notif = notifications.find(n => n.$id === notifId);
       queryClient.setQueryData(["notifications", userId], (old = []) =>
         old.filter(n => n.$id !== notifId)
-      )
+      );
       if (notif && !notif.read) {
         queryClient.setQueryData(["notifications-unread", userId], (old = 0) =>
           Math.max(0, old - 1)
-        )
+        );
       }
     },
-  })
+  });
 
   return {
     notifications,
@@ -136,5 +161,5 @@ export default function useNotifications() {
     markRead:    (id) => markReadMutation.mutate(id),
     markAllRead: () => markAllReadMutation.mutate(),
     remove:      (id) => deleteMutation.mutate(id),
-  }
+  };
 }

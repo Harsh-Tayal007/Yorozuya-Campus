@@ -1,11 +1,13 @@
 // src/components/common/navigation/NotificationBell.jsx
+// Changes from original:
+//   1. NotifAvatar badge background fixed — now solid color, always visible
+//   2. Task reminder type added to TYPE_META
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Bell, CheckCheck, MessageSquare, AtSign, UserPlus, X } from "lucide-react"
+import { Bell, CheckCheck, MessageSquare, AtSign, UserPlus, X, CheckSquare } from "lucide-react"
 import { motion, AnimatePresence, useAnimation, useDragControls, useMotionValue, useTransform } from "framer-motion"
 import useNotifications from "@/hooks/useNotifications"
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
@@ -22,29 +24,44 @@ const stripHtml = (html = "") =>
   html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
 
 const TYPE_META = {
-  reply:   { Icon: MessageSquare, color: "text-blue-500",   bg: "bg-blue-500/10",   ring: "ring-blue-500/20"   },
-  mention: { Icon: AtSign,        color: "text-purple-500", bg: "bg-purple-500/10", ring: "ring-purple-500/20" },
-  follow:  { Icon: UserPlus,      color: "text-green-500",  bg: "bg-green-500/10",  ring: "ring-green-500/20"  },
+  reply:   { Icon: MessageSquare, color: "text-white", iconBg: "bg-blue-500",   avatarBg: "bg-blue-500/15",   ring: "ring-blue-500/30"   },
+  mention: { Icon: AtSign,        color: "text-white", iconBg: "bg-purple-500", avatarBg: "bg-purple-500/15", ring: "ring-purple-500/30" },
+  follow:  { Icon: UserPlus,      color: "text-white", iconBg: "bg-green-500",  avatarBg: "bg-green-500/15",  ring: "ring-green-500/30"  },
+  task:    { Icon: CheckSquare,   color: "text-white", iconBg: "bg-violet-500", avatarBg: "bg-violet-500/15", ring: "ring-violet-500/30" },
 }
 
 // ── Avatar with type badge ─────────────────────────────────────────────────────
 const NotifAvatar = ({ notif }) => {
-  const { Icon, color, bg, ring } = TYPE_META[notif.type] ?? TYPE_META.reply
+  const meta = TYPE_META[notif.type] ?? TYPE_META.reply
+  const { Icon, color, iconBg, avatarBg, ring } = meta
+
+  // Task notifications have no actor — show a task icon instead
+  if (notif.type === "task") {
+    return (
+      <div className="relative shrink-0">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${avatarBg} ring-1 ${ring}`}>
+          <CheckSquare size={18} className="text-violet-500" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative shrink-0">
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center
-                       ${bg} ring-1 ${ring} overflow-hidden`}>
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${avatarBg} ring-1 ${ring} overflow-hidden`}>
         {notif.actorAvatar ? (
           <img src={notif.actorAvatar} alt={notif.actorName}
                className="w-full h-full object-cover rounded-full" />
         ) : (
-          <span className={`text-sm font-bold ${color}`}>
+          <span className="text-sm font-bold text-foreground">
             {notif.actorName?.charAt(0).toUpperCase()}
           </span>
         )}
       </div>
+      {/* Badge — solid background so it's always visible on any bg */}
       <div className={`absolute -bottom-0.5 -right-0.5 w-[16px] h-[16px] rounded-full
-                       ${bg} ring-2 ring-background flex items-center justify-center`}>
+                       ${iconBg} ring-2 ring-background
+                       flex items-center justify-center shadow-sm`}>
         <Icon size={8} className={color} />
       </div>
     </div>
@@ -60,6 +77,8 @@ const NotifItem = ({ notif, onRead, onDelete, onNavigate, large = false }) => {
 
   const rawPreview = (notif.type === "reply" || notif.type === "mention")
     ? stripHtml(notif.replyContent || "")
+    : notif.type === "task"
+    ? notif.message ?? ""
     : ""
   const preview = rawPreview.length > 100 ? rawPreview.slice(0, 100) + "…" : rawPreview
 
@@ -81,15 +100,26 @@ const NotifItem = ({ notif, onRead, onDelete, onNavigate, large = false }) => {
       <NotifAvatar notif={notif} />
       <div className="flex-1 min-w-0 pt-0.5">
         <p className={`leading-snug ${large ? "text-sm" : "text-xs"}`}>
-          <span className="font-semibold text-foreground">{notif.actorName}</span>
-          <span className="text-muted-foreground"> {notif.message}</span>
+          {notif.type === "task" ? (
+            <span className="font-semibold text-foreground">{notif.title ?? "Task Reminder"}</span>
+          ) : (
+            <>
+              <span className="font-semibold text-foreground">{notif.actorName}</span>
+              <span className="text-muted-foreground"> {notif.message}</span>
+            </>
+          )}
         </p>
-        {preview && (
+        {preview && notif.type !== "task" && (
           <p className={`mt-1.5 text-muted-foreground/70 leading-snug
                           bg-muted/60 rounded-md px-2 py-1.5
                           border-l-2 border-border italic line-clamp-2
                           ${large ? "text-xs" : "text-[11px]"}`}>
             "{preview}"
+          </p>
+        )}
+        {notif.type === "task" && notif.message && (
+          <p className={`mt-0.5 text-muted-foreground/70 ${large ? "text-xs" : "text-[11px]"}`}>
+            {notif.message}
           </p>
         )}
         <p className={`text-muted-foreground/40 mt-1 ${large ? "text-xs" : "text-[10px]"}`}>
@@ -141,7 +171,6 @@ const LoadingSkeleton = ({ count = 3, large = false }) => (
 const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
                         markAllRead, remove, onNavigate, large = false, onClose }) => (
   <>
-    {/* Header */}
     <div className={`flex items-center justify-between border-b border-border shrink-0
                      ${large ? "px-5 py-3.5" : "px-4 py-3"}`}>
       <div className="flex items-center gap-2">
@@ -166,7 +195,6 @@ const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
             Mark all read
           </button>
         )}
-        {/* Only show X on desktop — mobile uses swipe/tap-backdrop */}
         {!large && (
           <button onClick={onClose}
             className="w-6 h-6 rounded-full flex items-center justify-center
@@ -178,7 +206,6 @@ const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
       </div>
     </div>
 
-    {/* List */}
     <div className={`divide-y divide-border/30
                      ${large ? "flex-1 overflow-y-auto overscroll-contain" : "max-h-[440px] overflow-y-auto"}`}>
       {isLoading
@@ -196,7 +223,6 @@ const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
       }
     </div>
 
-    {/* Footer */}
     {notifications.length > 0 && (
       <div className={`border-t border-border/50 flex items-center justify-center shrink-0
                        ${large ? "py-3" : "py-2"}`}>
@@ -262,73 +288,46 @@ const BellButton = ({ bellRef, onClick, hasUnread, unreadCount }) => {
   )
 }
 
-// ── Mobile bottom sheet with swipe-to-close ────────────────────────────────────
+// ── Mobile bottom sheet ────────────────────────────────────────────────────────
 const MobileSheet = ({ onClose, contentProps }) => {
   const y            = useMotionValue(0)
   const dragControls = useDragControls()
-
-  // Backdrop fades out as sheet is dragged down
   const backdropOpacity = useTransform(y, [0, 300], [1, 0])
-  // Sheet rounds more as dragged
   const borderRadius    = useTransform(y, [0, 100], [16, 28])
 
   const handleDragEnd = (_, info) => {
-    // Close if dragged down > 120px OR velocity > 500
-    if (info.offset.y > 120 || info.velocity.y > 500) {
-      onClose()
-    }
+    if (info.offset.y > 120 || info.velocity.y > 500) onClose()
   }
 
   return (
     <>
-      {/* Backdrop — tapping closes, opacity tied to drag */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{    opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         style={{
-          position: "fixed", inset: 0,
-          zIndex: 999998,
+          position: "fixed", inset: 0, zIndex: 999998,
           backgroundColor: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
           opacity: backdropOpacity,
         }}
         onClick={onClose}
       />
-
-      {/* Sheet */}
       <motion.div
-        drag="y"
-        dragControls={dragControls}
-        dragListener={false}         // only drag from handle, not whole sheet
-        dragConstraints={{ top: 0 }} // can't drag up
-        dragElastic={{ top: 0.05, bottom: 0.3 }}
+        drag="y" dragControls={dragControls} dragListener={false}
+        dragConstraints={{ top: 0 }} dragElastic={{ top: 0.05, bottom: 0.3 }}
         onDragEnd={handleDragEnd}
         style={{
-          position: "fixed",
-          left: 0, right: 0, bottom: 0,
-          top: 68,
-          zIndex: 999999,
-          y,
-          borderTopLeftRadius:  borderRadius,
-          borderTopRightRadius: borderRadius,
+          position: "fixed", left: 0, right: 0, bottom: 0, top: 68,
+          zIndex: 999999, y,
+          borderTopLeftRadius: borderRadius, borderTopRightRadius: borderRadius,
         }}
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{    y: "100%" }}
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 380, damping: 36 }}
         className="bg-background border-t border-border flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Drag handle area — this is where drag starts ── */}
-        <div
-          className="flex flex-col items-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing
-                     touch-none select-none"
-          onPointerDown={(e) => dragControls.start(e)}
-        >
-          {/* Pill */}
+        <div className="flex flex-col items-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
+             onPointerDown={(e) => dragControls.start(e)}>
           <motion.div
             style={{
               width: useTransform(y, [0, 80], [40, 56]),
@@ -336,7 +335,6 @@ const MobileSheet = ({ onClose, contentProps }) => {
             }}
             className="h-1 rounded-full bg-muted-foreground"
           />
-          {/* Subtle "drag down to close" hint that appears when dragging */}
           <motion.p
             style={{ opacity: useTransform(y, [40, 100], [0, 1]) }}
             className="text-[10px] text-muted-foreground/50 mt-1.5 font-medium"
@@ -344,7 +342,6 @@ const MobileSheet = ({ onClose, contentProps }) => {
             Release to close
           </motion.p>
         </div>
-
         <NotifContent {...contentProps} large />
       </motion.div>
     </>
@@ -396,7 +393,6 @@ export default function NotificationBell() {
     }
   }, [open, isMobile])
 
-  // Lock body scroll on mobile
   useEffect(() => {
     if (open && isMobile) document.body.style.overflow = "hidden"
     else                  document.body.style.overflow = ""
@@ -409,6 +405,12 @@ export default function NotificationBell() {
   const handleNavigate = (notif) => {
     close()
 
+    // Task reminder → navigate to task tracker
+    if (notif.type === "task") {
+      window.location.href = "/dashboard/tasks"
+      return
+    }
+
     if (notif.type === "follow") {
       if (notif.actorUsername) window.location.href = `/profile/${notif.actorUsername}`
       return
@@ -417,8 +419,6 @@ export default function NotificationBell() {
     if (!notif.threadId) return
 
     if (notif.type === "reply" && notif.message?.includes("thread")) {
-      // Root reply on thread → go to full thread, scroll to the reply via hash
-      // Shows thread + all replies with the specific reply highlighted
       window.location.href = notif.replyId
         ? `/forum/${notif.threadId}#reply-${notif.replyId}`
         : `/forum/${notif.threadId}`
@@ -426,7 +426,6 @@ export default function NotificationBell() {
     }
 
     if (notif.type === "reply" && notif.message?.includes("comment")) {
-      // Nested reply → use ?focus= which shows parent comment + the reply below it
       window.location.href = notif.replyId
         ? `/forum/${notif.threadId}?focus=${notif.replyId}`
         : `/forum/${notif.threadId}`
@@ -434,14 +433,12 @@ export default function NotificationBell() {
     }
 
     if (notif.type === "mention") {
-      // Mention → full thread, scroll to the reply with the mention
       window.location.href = notif.replyId
         ? `/forum/${notif.threadId}#reply-${notif.replyId}`
         : `/forum/${notif.threadId}`
       return
     }
 
-    // Fallback
     window.location.href = `/forum/${notif.threadId}`
   }
 
@@ -463,7 +460,6 @@ export default function NotificationBell() {
 
       {open && createPortal(
         <AnimatePresence>
-          {/* Desktop dropdown */}
           {!isMobile && pos && (
             <motion.div
               key="desktop-dropdown"
@@ -481,13 +477,8 @@ export default function NotificationBell() {
             </motion.div>
           )}
 
-          {/* Mobile swipeable sheet */}
           {isMobile && (
-            <MobileSheet
-              key="mobile-sheet"
-              onClose={close}
-              contentProps={contentProps}
-            />
+            <MobileSheet key="mobile-sheet" onClose={close} contentProps={contentProps} />
           )}
         </AnimatePresence>,
         document.body

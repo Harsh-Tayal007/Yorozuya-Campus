@@ -5,7 +5,6 @@ import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => {
-  // loadEnv reads your .env file properly — process.env doesn't work in Vite config
   const env = loadEnv(mode, process.cwd(), "");
 
   return {
@@ -19,7 +18,13 @@ export default defineConfig(({ mode }) => {
           type: "module",
         },
         workbox: {
+          // Exclude push-sw.js — it must register itself independently
+          // so the PushManager scope is correct and it isn't versioned/cached
+          // by Workbox (which would break push subscription renewal)
           globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
+          globIgnores: ["push-sw.js"],
+          // Don't let the PWA SW claim push-sw.js routes
+          navigateFallbackDenylist: [/^\/push-sw\.js/],
         },
         manifest: {
           id: "/",
