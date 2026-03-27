@@ -12,6 +12,7 @@ import {
   CheckSquare,
   GraduationCap,
   Wrench,
+  CalendarDaysIcon,
 } from "lucide-react"
 
 export const dashboardRootLink = {
@@ -55,7 +56,7 @@ export const dashboardSidebarSections = [
     children: [
       { id: "cgpa",       label: "CGPA Calculator",  path: "/dashboard/cgpa",       icon: Calculator   },
       { id: "tasks",      label: "Task Tracker",      path: "/dashboard/tasks",      icon: CheckSquare  },
-      { id: "timetable",  label: "Timetable Builder", path: "/dashboard/timetable",  icon: CalendarDays,  soon: true },
+      { id: "timetable",  label: "Timetable",       path: "/dashboard/timetable",  icon: CalendarDaysIcon  },
       { id: "grade-calc", label: "Grade Calculator",  path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
     ],
   },
