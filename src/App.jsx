@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/context/SidebarContext"
 import { useAuth } from "./context/AuthContext"
 import ScrollToTop from "./components/common/navigation/ScrollToTop"
 import { usePWAInstall } from "./hooks/usePWAInstall"
+import CookieNotice from "./components/common/auth/CookieNotice"
 
 const App = () => {
   const { isLoading } = useAuth()
@@ -22,6 +23,7 @@ const App = () => {
       <ScrollToTop />
       <SidebarProvider>
         <AppRoutes />
+        <CookieNotice />
       </SidebarProvider>
     </BrowserRouter>
   )

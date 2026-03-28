@@ -1,4 +1,3 @@
-// src/components/Footer.jsx
 import { Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 
@@ -10,125 +9,143 @@ const PLATFORM_LINKS = [
   { label: "PYQs",         to: "/universities" },
 ]
 
-const ACCOUNT_LINKS = [
-  { label: "Dashboard", to: "/dashboard",          auth: true  },
-  { label: "Profile",   to: null,                  auth: true  }, // built below
-  { label: "Settings",  to: "/dashboard/settings", auth: true  },
-  { label: "Login",     to: "/login",               auth: false },
-  { label: "Sign Up",   to: "/signup",              auth: false },
+const LEGAL_LINKS = [
+  { label: "Privacy Policy", to: "/privacy" },
 ]
 
 export default function Footer() {
   const { currentUser } = useAuth()
 
   return (
-    <footer className="relative border-t border-border/40 bg-background/60 backdrop-blur-md mt-auto">
-      {/* Top gradient blend */}
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b
-                      from-indigo-500/5 to-transparent pointer-events-none" />
+    <footer className="relative mt-auto">
+      {/* Seamless gradient fade from page background into footer */}
+      <div className="absolute inset-x-0 top-0 h-32 pointer-events-none
+        bg-gradient-to-b
+        from-transparent
+        via-slate-100/60
+        to-slate-100
+        dark:via-[#080e1a]/60
+        dark:to-[#080e1a]" />
 
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-10">
+      {/* Footer body */}
+      <div className="relative
+        bg-slate-100 dark:bg-[#080e1a]
+        border-t border-slate-200/60 dark:border-white/[0.04]">
 
-          {/* Brand */}
-          <div className="col-span-2 sm:col-span-1">
-            <Link to="/" className="inline-block">
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-400
-                               to-indigo-400 bg-clip-text text-transparent">
-                Unizuya
-              </span>
-            </Link>
-            <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-xs">
-              A unified academic platform helping students access syllabus,
-              resources, and PYQs — all in one place.
-            </p>
-            <p className="mt-4 text-xs text-muted-foreground/60">
-              🚧 Currently in active development
-            </p>
+        <div className="max-w-5xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-10">
+
+            {/* Brand */}
+            <div className="col-span-2">
+              <Link to="/" className="inline-block mb-4">
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-500
+                                 to-indigo-500 bg-clip-text text-transparent">
+                  Unizuya
+                </span>
+              </Link>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
+                A unified academic platform helping students access syllabus,
+                resources, PYQs, and connect through a student forum — all in one place.
+              </p>
+              <div className="mt-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                              bg-amber-50 dark:bg-amber-500/10
+                              border border-amber-200/60 dark:border-amber-500/20">
+                <span className="text-amber-500 text-xs">🚧</span>
+                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  Active development
+                </span>
+              </div>
+            </div>
+
+            {/* Platform */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-widest
+                             text-slate-400 dark:text-slate-500 mb-4">
+                Platform
+              </h4>
+              <ul className="space-y-2.5">
+                {PLATFORM_LINKS.map(link => (
+                  <li key={link.label}>
+                    <Link to={link.to}
+                      className="text-sm text-slate-500 dark:text-slate-400
+                                 hover:text-blue-600 dark:hover:text-blue-400
+                                 transition-colors duration-150">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Account */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-widest
+                             text-slate-400 dark:text-slate-500 mb-4">
+                Account
+              </h4>
+              <ul className="space-y-2.5">
+                {currentUser ? (
+                  <>
+                    {[
+                      { label: "Dashboard", to: "/dashboard" },
+                      { label: "Profile",   to: `/profile/${currentUser.username}` },
+                      { label: "Settings",  to: "/dashboard/settings" },
+                    ].map(link => (
+                      <li key={link.label}>
+                        <Link to={link.to}
+                          className="text-sm text-slate-500 dark:text-slate-400
+                                     hover:text-blue-600 dark:hover:text-blue-400
+                                     transition-colors duration-150">
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {[
+                      { label: "Login",   to: "/login"  },
+                      { label: "Sign Up", to: "/signup" },
+                    ].map(link => (
+                      <li key={link.label}>
+                        <Link to={link.to}
+                          className="text-sm text-slate-500 dark:text-slate-400
+                                     hover:text-blue-600 dark:hover:text-blue-400
+                                     transition-colors duration-150">
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </>
+                )}
+              </ul>
+            </div>
+
           </div>
 
-          {/* Platform */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider
-                           text-foreground mb-4">
-              Platform
-            </h4>
-            <ul className="space-y-2.5">
-              {PLATFORM_LINKS.map(link => (
-                <li key={link.label}>
-                  <Link to={link.to}
-                    className="text-sm text-muted-foreground hover:text-primary
-                               transition-colors duration-150">
-                    {link.label}
-                  </Link>
-                </li>
+          {/* Bottom bar */}
+          <div className="mt-10 pt-6 border-t border-slate-200/60 dark:border-white/[0.04]
+                          flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              © {new Date().getFullYear()} Unizuya. All rights reserved.
+            </p>
+
+            {/* Legal links */}
+            <div className="flex items-center gap-4">
+              {LEGAL_LINKS.map(link => (
+                <Link key={link.label} to={link.to}
+                  className="text-xs text-slate-400 dark:text-slate-500
+                             hover:text-blue-600 dark:hover:text-blue-400
+                             transition-colors duration-150">
+                  {link.label}
+                </Link>
               ))}
-            </ul>
+              <span className="text-xs text-slate-300 dark:text-slate-600">·</span>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Built for students, by students
+              </p>
+            </div>
           </div>
-
-          {/* Account */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider
-                           text-foreground mb-4">
-              Account
-            </h4>
-            <ul className="space-y-2.5">
-              {currentUser ? (
-                <>
-                  <li>
-                    <Link to="/dashboard"
-                      className="text-sm text-muted-foreground hover:text-primary
-                                 transition-colors duration-150">
-                      Dashboard
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to={`/profile/${currentUser.username}`}
-                      className="text-sm text-muted-foreground hover:text-primary
-                                 transition-colors duration-150">
-                      Profile
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/dashboard/settings"
-                      className="text-sm text-muted-foreground hover:text-primary
-                                 transition-colors duration-150">
-                      Settings
-                    </Link>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li>
-                    <Link to="/login"
-                      className="text-sm text-muted-foreground hover:text-primary
-                                 transition-colors duration-150">
-                      Login
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/signup"
-                      className="text-sm text-muted-foreground hover:text-primary
-                                 transition-colors duration-150">
-                      Sign Up
-                    </Link>
-                  </li>
-                </>
-              )}
-            </ul>
-          </div>
-
-        </div>
-
-        {/* Bottom bar */}
-        <div className="mt-10 pt-6 border-t border-border/40 flex flex-col sm:flex-row
-                        items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Unizuya. All rights reserved.
-          </p>
-          <p className="text-xs text-muted-foreground/50">
-            Built for students, by students
-          </p>
         </div>
       </div>
     </footer>

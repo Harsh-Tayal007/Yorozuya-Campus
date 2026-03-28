@@ -72,6 +72,7 @@ import BranchesAdmin from "@/pages/branches/BranchesAdmin"
 import CGPACalculator from "@/pages/tools/CGPACalculator"
 import TaskTracker from "@/pages/tools/TaskTracker"
 import TimetableBuilder from "@/pages/tools/TimetableBuilder"
+import PrivacyPolicy from "@/pages/auth/PrivacyPolicy"
 
 const AppRoutes = () => {
   return (
@@ -102,6 +103,7 @@ const AppRoutes = () => {
           <Route path="/resources" element={<ResourcesUserView />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
         </Route>
 
         {/* Auth routes */}
