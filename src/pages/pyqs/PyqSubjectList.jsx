@@ -14,6 +14,8 @@ import { getProgramById } from "@/services/university/programService"
 import { DATABASE_ID, SUBJECTS_COLLECTION_ID } from "@/config/appwrite"
 import { isMobileDevice } from "@/utils/isMobileDevice"
 import { FileTypeBadge } from "@/components"
+import ShareButton from "@/components/common/navigation/ShareButton"
+import { useShareLink } from "@/hooks/useShareLink"
 
 const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, isDashboard }) => {
   const params   = useParams()
@@ -54,6 +56,8 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
     staleTime: 1000 * 60 * 5,
   })
 
+  const getSharePath = useShareLink({ programId, branchName: decodedBranch })
+
   const handleView     = (pyq) => {
     if (isMobileDevice()) { window.open(storage.getFileView(pyq.bucketId, pyq.fileId), "_blank"); return }
     setPreviewPyq(pyq)
@@ -75,14 +79,18 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
       )}
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
-          <FileText size={18} className="text-red-500" />
+        className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
+            <FileText size={18} className="text-red-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">PYQs</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{subjectName ?? decodedBranch}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">PYQs</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{subjectName ?? decodedBranch}</p>
-        </div>
+
+        <ShareButton path={getSharePath(`pyqs/semester/${semester}/subject/${subjectId}`)} />
       </motion.div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>

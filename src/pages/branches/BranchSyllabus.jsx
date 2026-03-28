@@ -8,6 +8,8 @@ import { getProgramById } from "@/services/university/programService"
 import SemesterCard from "@/components/academic/SemesterCard"
 import { BackButton } from "@/components"
 import { Breadcrumbs } from "@/components"
+import ShareButton from "@/components/common/navigation/ShareButton"
+import { useShareLink } from "@/hooks/useShareLink"
 
 const BranchSyllabus = ({
   programId: propProgramId,
@@ -40,6 +42,8 @@ const BranchSyllabus = ({
     staleTime: 1000 * 60 * 10,
   })
 
+  const getSharePath = useShareLink({ programId: finalProgramId, branchName: decodedBranch })
+
   if (!canFetch) return null
 
   const wrapClass = isDashboard
@@ -69,15 +73,19 @@ const BranchSyllabus = ({
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="flex items-center gap-3"
+        className="flex items-center justify-between gap-3"
       >
-        <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-          <ClipboardList size={18} className="text-cyan-500" />
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+            <ClipboardList size={18} className="text-cyan-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Syllabus</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Select a semester to view</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Syllabus</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Select a semester to view</p>
-        </div>
+
+        <ShareButton path={getSharePath("syllabus")} />
       </motion.div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>

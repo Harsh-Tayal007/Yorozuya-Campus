@@ -17,6 +17,8 @@ import { downloadFileXHR } from "@/services/shared/downloadService"
 import { formatFileSize } from "@/utils/formatFileSize"
 import { getProgramById } from "@/services/university/programService"
 import { FileTypeBadge } from "@/components"
+import ShareButton from "@/components/common/navigation/ShareButton"
+import { useShareLink } from "@/hooks/useShareLink"
 
 const DATABASE_ID        = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const SYLLABUS_BUCKET_ID = STORAGE_BUCKET_ID
@@ -49,9 +51,6 @@ export default function SyllabusUserView({
   const branchName = propBranchName ?? params.branchName
   const semester   = propSemester   ?? params.semester
 
-  // When isDashboard, branchName is already a plain string from the branch document (e.g. "Computer Science Engineering")
-  // When public, branchName comes from URL params and may be URL-encoded
-  // decodeURIComponent on a plain string is safe (no-op), but guard against undefined
   const decodedBranch = branchName && branchName !== "undefined"
     ? decodeURIComponent(branchName)
     : null
@@ -97,6 +96,8 @@ export default function SyllabusUserView({
     staleTime: 1000 * 60 * 10,
   })
 
+  const getSharePath = useShareLink({ programId, branchName: decodedBranch })
+
   if (!canFetch) return null
 
   const publicBase = `/programs/${programId}/branches/${branchName}/syllabus`
@@ -121,15 +122,19 @@ export default function SyllabusUserView({
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="flex items-center gap-3"
+        className="flex items-center justify-between gap-3"
       >
-        <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-          <ClipboardList size={18} className="text-cyan-500" />
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+            <ClipboardList size={18} className="text-cyan-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Semester {semester} · Syllabus</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Semester {semester} · Syllabus</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
-        </div>
+
+        <ShareButton path={getSharePath(`syllabus/semester/${semester}`)} />
       </motion.div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>

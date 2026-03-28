@@ -8,6 +8,8 @@ import { getProgramById } from "@/services/university/programService"
 import { Breadcrumbs } from "@/components"
 import { BackButton } from "@/components"
 import GlowCard from "@/components/common/display/GlowCard"
+import ShareButton from "@/components/common/navigation/ShareButton"
+import { useShareLink } from "@/hooks/useShareLink"
 
 const PyqSemesterSubjects = ({ programId: propProgramId, branchName: propBranchName, isDashboard }) => {
   const params    = useParams()
@@ -22,7 +24,7 @@ const PyqSemesterSubjects = ({ programId: propProgramId, branchName: propBranchN
 
   const canFetch = !!programId && programId !== "undefined" && !!semester
 
-  const { data: subjects = [], isLoading, error } = useQuery({
+  const { data: subjects = [], isLoading } = useQuery({
     queryKey: ["pyq-subjects", programId, semester],
     queryFn:  () => getSubjectsForPyqSemester({ programId, semester: Number(semester) }),
     enabled:  canFetch,
@@ -36,6 +38,8 @@ const PyqSemesterSubjects = ({ programId: propProgramId, branchName: propBranchN
     staleTime: 1000 * 60 * 10,
   })
 
+  const getSharePath = useShareLink({ programId, branchName: decodedBranch })
+
   if (!canFetch) return null
 
   const wrapClass = isDashboard ? "space-y-5" : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6"
@@ -48,14 +52,18 @@ const PyqSemesterSubjects = ({ programId: propProgramId, branchName: propBranchN
       )}
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
-          <FileText size={18} className="text-red-500" />
+        className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
+            <FileText size={18} className="text-red-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Semester {semester} · PYQs</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Semester {semester} · PYQs</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
-        </div>
+
+        <ShareButton path={getSharePath(`pyqs/semester/${semester}`)} />
       </motion.div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>

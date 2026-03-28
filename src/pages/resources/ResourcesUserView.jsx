@@ -21,6 +21,8 @@ import { isMobileDevice } from "@/utils/isMobileDevice"
 import { formatFileSize } from "@/utils/formatFileSize"
 import GlowCard from "@/components/common/display/GlowCard"
 import { FileTypeBadge } from "@/components"
+import ShareButton from "@/components/common/navigation/ShareButton"
+import { useShareLink } from "@/hooks/useShareLink"
 
 const DATABASE_ID         = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const SYLLABUS_COLLECTION = import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID
@@ -91,14 +93,14 @@ export default function ResourcesUserView({
     staleTime: 1000 * 60 * 5,
   })
 
-  const { data: subjects = [], isLoading: loadingSubjects, refetch: refetchSubjects } = useQuery({
+  const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
     queryKey: ["subjects", programId, decodedBranch, semester],
     queryFn:  () => getSubjectsBySemesterContext({ programId, branch: decodedBranch, semester }),
     enabled:  canFetch && !!semester && !subjectId,
     staleTime: 1000 * 60 * 5,
   })
 
-  const { data: resources = [], isLoading: loadingResources, refetch: refetchResources } = useQuery({
+  const { data: resources = [], isLoading: loadingResources } = useQuery({
     queryKey: ["resources", programId, semester, subjectId],
     queryFn:  () => getResolvedResourcesForSubject({ programId, semester, subjectId }),
     enabled:  canFetch && !!semester && !!subjectId,
@@ -116,6 +118,15 @@ export default function ResourcesUserView({
     queryFn:  () => databases.getDocument(DATABASE_ID, UNITS_COLLECTION_ID, unitId),
     enabled:  !!unitId, staleTime: 1000 * 60 * 30,
   })
+
+  const getSharePath = useShareLink({ programId, branchName: decodedBranch })
+
+  // Build the share path for the current view level
+  const sharePath = (() => {
+    if (subjectId && semester) return getSharePath(`resources/semester/${semester}/subject/${subjectId}`)
+    if (semester)              return getSharePath(`resources/semester/${semester}`)
+    return                            getSharePath("resources")
+  })()
 
   if (!canFetch) return null
 
@@ -160,14 +171,18 @@ export default function ResourcesUserView({
 
       {/* ── Page header ── */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-          <Library size={18} className="text-amber-500" />
+        className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <Library size={18} className="text-amber-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Resources</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Resources</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{decodedBranch}</p>
-        </div>
+
+        <ShareButton path={sharePath} />
       </motion.div>
 
       {/* ── Semester grid ── */}
