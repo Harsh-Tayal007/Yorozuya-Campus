@@ -3,8 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect } from "react"
 import {
   Loader2, CalendarDays, BookOpen, GraduationCap, GitBranch,
-  Bookmark, UserPlus, UserCheck, Loader, X, ArrowLeft
+  Bookmark, UserPlus, UserCheck, Loader, X, ArrowLeft, Link2
 } from "lucide-react"
+import { copyShareLink } from "@/utils/share"
 import PageWrapper from "@/components/common/layout/PageWrapper"
 import {
   getUserByUsername, getUserBookmarks,
@@ -20,8 +21,8 @@ import { useAuth } from "@/context/AuthContext"
 import ThreadCard from "@/components/forum/ThreadCard"
 import useFollowStatus from "@/hooks/useFollowStatus"
 
-const DATABASE_ID    = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const REPLIES_COL    = import.meta.env.VITE_APPWRITE_REPLIES_COLLECTION_ID
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const REPLIES_COL = import.meta.env.VITE_APPWRITE_REPLIES_COLLECTION_ID
 const USERS_TABLE_ID = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
@@ -29,9 +30,9 @@ const isAppwriteId = (id) => typeof id === "string" && id.length >= 20
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const d = Math.floor(diff / 86400000)
-  if (d < 1)   return "today"
-  if (d < 7)   return `${d}d ago`
-  if (d < 30)  return `${Math.floor(d / 7)}w ago`
+  if (d < 1) return "today"
+  if (d < 7) return `${d}d ago`
+  if (d < 30) return `${Math.floor(d / 7)}w ago`
   if (d < 365) return `${Math.floor(d / 30)}mo ago`
   return `${Math.floor(d / 365)}y ago`
 }
@@ -44,8 +45,8 @@ const YEAR_LABELS = {
 const Tag = ({ icon: Icon, label, primary }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border
                     ${primary
-                      ? "bg-primary/10 text-primary border-primary/20 font-semibold"
-                      : "bg-muted text-muted-foreground border-border/60"}`}>
+      ? "bg-primary/10 text-primary border-primary/20 font-semibold"
+      : "bg-muted text-muted-foreground border-border/60"}`}>
     {Icon && <Icon size={11} />}
     {label}
   </span>
@@ -86,7 +87,7 @@ const ReplyCard = ({ reply, threadTitle, threadId }) => {
       )}
       {(reply.gifUrl || reply.imageUrl) && (
         <img src={reply.gifUrl || reply.imageUrl} alt=""
-             className="max-h-32 rounded-lg border border-border object-cover" />
+          className="max-h-32 rounded-lg border border-border object-cover" />
       )}
       <p className="text-xs text-muted-foreground">
         {(reply.upvotes ?? 0) - (reply.downvotes ?? 0)} points
@@ -113,8 +114,8 @@ const FollowButton = ({ targetUserId, size = "md" }) => {
                   transition-all duration-150 active:scale-95 disabled:opacity-60 shrink-0
                   ${sizeClass}
                   ${isFollowing
-                    ? "border-border text-muted-foreground hover:border-destructive hover:text-destructive hover:bg-destructive/5"
-                    : "border-primary bg-primary text-primary-foreground hover:bg-primary/90"}`}
+          ? "border-border text-muted-foreground hover:border-destructive hover:text-destructive hover:bg-destructive/5"
+          : "border-primary bg-primary text-primary-foreground hover:bg-primary/90"}`}
     >
       {isPending
         ? <Loader size={12} className="animate-spin" />
@@ -185,7 +186,7 @@ const UserListItem = ({ userId, onClose }) => {
       >
         {userDoc.avatarUrl ? (
           <img src={userDoc.avatarUrl} alt={userDoc.name}
-               className="w-10 h-10 rounded-full object-cover border border-border" />
+            className="w-10 h-10 rounded-full object-cover border border-border" />
         ) : (
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                           border border-primary/20 flex items-center justify-center
@@ -220,7 +221,7 @@ const FollowModal = ({ isOpen, onClose, title, userIds = [], isLoading }) => {
   // Lock body scroll when open
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden"
-    else        document.body.style.overflow = ""
+    else document.body.style.overflow = ""
     return () => { document.body.style.overflow = "" }
   }, [isOpen])
 
@@ -296,7 +297,7 @@ const UserProfile = () => {
 
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ["profile", username],
-    queryFn:  () => getUserByUsername(username),
+    queryFn: () => getUserByUsername(username),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -306,28 +307,28 @@ const UserProfile = () => {
 
   const { data: uniDoc } = useQuery({
     queryKey: ["university", profile?.universityId],
-    queryFn:  () => getUniversityById(profile.universityId),
-    enabled:  !!profile && isAppwriteId(profile.universityId),
+    queryFn: () => getUniversityById(profile.universityId),
+    enabled: !!profile && isAppwriteId(profile.universityId),
     staleTime: Infinity, retry: false,
   })
   const { data: programDoc } = useQuery({
     queryKey: ["program", profile?.programId],
-    queryFn:  () => getProgramById(profile.programId),
-    enabled:  !!profile && isAppwriteId(profile.programId),
+    queryFn: () => getProgramById(profile.programId),
+    enabled: !!profile && isAppwriteId(profile.programId),
     staleTime: Infinity, retry: false,
   })
   const { data: branchDoc } = useQuery({
     queryKey: ["branch", profile?.branchId],
-    queryFn:  () => getBranchById(profile.branchId),
-    enabled:  !!profile && isAppwriteId(profile.branchId),
+    queryFn: () => getBranchById(profile.branchId),
+    enabled: !!profile && isAppwriteId(profile.branchId),
     staleTime: Infinity, retry: false,
   })
 
   const { data: allThreads = [], isLoading: threadsLoading } = useQuery({
     queryKey: ["threads"],
-    queryFn:  fetchThreads,
+    queryFn: fetchThreads,
     staleTime: 1000 * 60 * 5,
-    enabled:  !!profile,
+    enabled: !!profile,
   })
   const userThreads = allThreads.filter(t => t.authorId === profile?.userId)
 
@@ -340,7 +341,7 @@ const UserProfile = () => {
         Query.orderDesc("$createdAt"),
         Query.limit(50),
         Query.select(["$id", "threadId", "content", "gifUrl", "imageUrl",
-                      "upvotes", "downvotes", "$createdAt"]),
+          "upvotes", "downvotes", "$createdAt"]),
       ])
       return res.documents
     },
@@ -350,8 +351,8 @@ const UserProfile = () => {
 
   const { data: bookmarkDocs = [], isLoading: bookmarksLoading } = useQuery({
     queryKey: ["user-bookmarks", profile?.userId],
-    queryFn:  () => getUserBookmarks(profile.userId),
-    enabled:  !!profile && isOwnProfile && activeTab === "saved",
+    queryFn: () => getUserBookmarks(profile.userId),
+    enabled: !!profile && isOwnProfile && activeTab === "saved",
     staleTime: 1000 * 60 * 2,
   })
 
@@ -374,15 +375,15 @@ const UserProfile = () => {
   // Followers / Following lists — lazy, only fetch when modal opens
   const { data: followerIds = [], isLoading: followersLoading } = useQuery({
     queryKey: ["followers-list", profile?.userId],
-    queryFn:  () => getFollowers(profile.userId),
-    enabled:  !!profile?.userId && modal === "followers",
+    queryFn: () => getFollowers(profile.userId),
+    enabled: !!profile?.userId && modal === "followers",
     staleTime: 1000 * 60 * 2,
   })
 
   const { data: followingIds = [], isLoading: followingLoading } = useQuery({
     queryKey: ["following-list", profile?.userId],
-    queryFn:  () => getFollowing(profile.userId),
-    enabled:  !!profile?.userId && modal === "following",
+    queryFn: () => getFollowing(profile.userId),
+    enabled: !!profile?.userId && modal === "following",
     staleTime: 1000 * 60 * 2,
   })
 
@@ -419,13 +420,13 @@ const UserProfile = () => {
     )
   }
 
-  const uniLabel     = uniDoc?.name     ?? null
+  const uniLabel = uniDoc?.name ?? null
   const programLabel = programDoc?.name ?? null
-  const branchLabel  = branchDoc?.name  ?? null
+  const branchLabel = branchDoc?.name ?? null
 
   const TABS = [
-    { key: "posts",   label: "Posts",   count: userThreads.length },
-    { key: "replies", label: "Replies", count: null               },
+    { key: "posts", label: "Posts", count: userThreads.length },
+    { key: "replies", label: "Replies", count: null },
     ...(isOwnProfile ? [{ key: "saved", label: "Saved", count: null }] : []),
   ]
 
@@ -443,7 +444,7 @@ const UserProfile = () => {
             <div className="shrink-0">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt={profile.username}
-                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-border" />
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-border" />
               ) : (
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary/30
                                 to-primary/10 border-2 border-primary/20 flex items-center justify-center
@@ -464,12 +465,23 @@ const UserProfile = () => {
                   </h1>
                   <p className="text-xs text-muted-foreground truncate">@{profile.username}</p>
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 flex items-center gap-2">
+                  {/* Share profile — always visible */}
+                  <button
+                    onClick={() => copyShareLink(`/profile/${profile.username}`)}
+                    className="p-1.5 rounded-xl border border-border text-muted-foreground
+               hover:border-primary/40 hover:text-primary transition-all duration-150
+               active:scale-95"
+                    title="Share profile"
+                  >
+                    <Link2 size={13} />
+                  </button>
+
                   {isOwnProfile ? (
                     <Link to="/dashboard/settings"
                       className="px-3 py-1.5 rounded-xl border border-border text-xs
-                                 font-medium text-muted-foreground hover:text-foreground
-                                 hover:border-primary/50 transition-colors whitespace-nowrap">
+                 font-medium text-muted-foreground hover:text-foreground
+                 hover:border-primary/50 transition-colors whitespace-nowrap">
                       Edit Profile
                     </Link>
                   ) : (
@@ -509,9 +521,9 @@ const UserProfile = () => {
           {/* Academic tags + join date */}
           <div className="space-y-2 px-1">
             <div className="flex flex-wrap gap-1.5">
-              {uniLabel     && <Tag icon={GraduationCap} label={uniLabel}     primary />}
-              {programLabel && <Tag icon={BookOpen}      label={programLabel} />}
-              {branchLabel  && <Tag icon={GitBranch}     label={branchLabel}  />}
+              {uniLabel && <Tag icon={GraduationCap} label={uniLabel} primary />}
+              {programLabel && <Tag icon={BookOpen} label={programLabel} />}
+              {branchLabel && <Tag icon={GitBranch} label={branchLabel} />}
               {profile.yearOfStudy && (
                 <Tag label={YEAR_LABELS[profile.yearOfStudy] ?? profile.yearOfStudy} />
               )}
@@ -531,8 +543,8 @@ const UserProfile = () => {
               onClick={() => setActiveTab(tab.key)}
               className={`px-4 py-2.5 text-sm font-medium transition-colors relative
                           ${activeTab === tab.key
-                            ? "text-foreground"
-                            : "text-muted-foreground hover:text-foreground"}`}
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"}`}
             >
               {tab.label}
               {tab.count !== null && tab.count > 0 && (
@@ -554,8 +566,8 @@ const UserProfile = () => {
               : userThreads.length > 0
                 ? <div className="space-y-2.5">{userThreads.map(t => <ThreadCard key={t.$id} thread={t} />)}</div>
                 : <div className="rounded-2xl border border-dashed border-border py-12 text-center">
-                    <p className="text-sm text-muted-foreground">No posts yet.</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">No posts yet.</p>
+                </div>
           )}
 
           {activeTab === "replies" && (
@@ -563,15 +575,15 @@ const UserProfile = () => {
               ? <div className="space-y-2.5">{[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}</div>
               : userReplies.length > 0
                 ? <div className="space-y-2.5">
-                    {userReplies.map(reply => (
-                      <ReplyCard key={reply.$id} reply={reply}
-                        threadId={reply.threadId}
-                        threadTitle={threadTitleMap[reply.threadId] ?? null} />
-                    ))}
-                  </div>
+                  {userReplies.map(reply => (
+                    <ReplyCard key={reply.$id} reply={reply}
+                      threadId={reply.threadId}
+                      threadTitle={threadTitleMap[reply.threadId] ?? null} />
+                  ))}
+                </div>
                 : <div className="rounded-2xl border border-dashed border-border py-12 text-center">
-                    <p className="text-sm text-muted-foreground">No replies yet.</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">No replies yet.</p>
+                </div>
           )}
 
           {activeTab === "saved" && (
@@ -580,9 +592,9 @@ const UserProfile = () => {
               : bookmarkedThreads.length > 0
                 ? <div className="space-y-2.5">{bookmarkedThreads.map(t => <ThreadCard key={t.$id} thread={t} />)}</div>
                 : <div className="rounded-2xl border border-dashed border-border py-12 text-center">
-                    <Bookmark size={20} className="mx-auto mb-2 text-muted-foreground/40" />
-                    <p className="text-sm text-muted-foreground">No saved posts yet.</p>
-                  </div>
+                  <Bookmark size={20} className="mx-auto mb-2 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No saved posts yet.</p>
+                </div>
           )}
 
         </div>

@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom"
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { deleteThread } from "@/services/forum/threadService"
-import { MessageSquare, Clock, MoreVertical, Trash2, AlertTriangle, Loader2 } from "lucide-react"
+import { MessageSquare, Clock, MoreVertical, Trash2, AlertTriangle, Loader2, Link2 } from "lucide-react"
+import { copyShareLink } from "@/utils/share"
 import { getProgramById } from "@/services/university/programService"
 import { getBranchById } from "@/services/university/branchService"
 import { databases } from "@/lib/appwrite"
@@ -104,7 +105,7 @@ const ThreadAuthorAvatar = ({ authorId, authorName }) => {
       </div>
       {avatarUrl && (
         <img src={avatarUrl} alt={authorName}
-             className="absolute inset-0 w-full h-full rounded-full object-cover border border-border" />
+          className="absolute inset-0 w-full h-full rounded-full object-cover border border-border" />
       )}
     </div>
   )
@@ -228,25 +229,36 @@ const ThreadCard = ({ thread, searchQuery }) => {
                 <Clock size={10} className="opacity-40 shrink-0" />
                 <span className="shrink-0">{timeAgo(thread.$createdAt)}</span>
               </div>
-              {canDelete && (
-                <div ref={menuRef} className="relative shrink-0">
-                  <button onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
-                    className="p-1.5 rounded-lg transition-colors duration-150 -mr-1
+
+              <div ref={menuRef} className="relative shrink-0">
+                <button onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                  className="p-1.5 rounded-lg transition-colors duration-150 -mr-1
                                text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted">
-                    <MoreVertical size={15} />
-                  </button>
-                  {menuOpen && (
-                    <div className="absolute right-0 top-8 z-50 w-44 rounded-xl border border-border
-                                    bg-popover shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100 origin-top-right">
-                      <button onClick={e => { e.stopPropagation(); setMenuOpen(false); setShowConfirm(true) }}
-                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm
-                                   text-destructive hover:bg-destructive/10 transition-colors">
-                        <Trash2 size={13} /> Delete thread
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                  <MoreVertical size={15} />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-8 z-50 w-44 rounded-xl border border-border
+                  bg-popover shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100 origin-top-right">
+                    <button
+                      onClick={e => { e.stopPropagation(); copyShareLink(`/forum/${thread.$id}`); setMenuOpen(false) }}
+                      className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm
+                 text-foreground hover:bg-muted transition-colors">
+                      <Link2 size={13} /> Share thread
+                    </button>
+                    {canDelete && (
+                      <>
+                        <div className="h-px bg-border mx-2" />
+                        <button onClick={e => { e.stopPropagation(); setMenuOpen(false); setShowConfirm(true) }}
+                          className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm
+                     text-destructive hover:bg-destructive/10 transition-colors">
+                          <Trash2 size={13} /> Delete thread
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
             </div>
             <h3 className="font-semibold text-[14px] leading-snug text-foreground
                            group-hover:text-primary transition-colors duration-200 line-clamp-2 mb-1.5">

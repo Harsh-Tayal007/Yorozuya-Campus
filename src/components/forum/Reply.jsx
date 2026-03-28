@@ -388,6 +388,7 @@ const Reply = ({
                     onDelete={handleDelete}
                     onEdit={() => { setEditing(true); setShowOptions(false) }}
                     onClose={() => setShowOptions(false)}
+                    threadId={threadId}
                   />
                 )}
 

@@ -7,24 +7,25 @@ import { getProgramById } from "@/services/university/programService"
 import { getBranchById } from "@/services/university/branchService"
 import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
-import { Loader2, Clock, ArrowLeft, Bookmark } from "lucide-react"
+import { Loader2, Clock, ArrowLeft, Bookmark, Link2 } from "lucide-react"
+import { copyShareLink } from "@/utils/share"
 import { RepliesProvider } from "@/components/forum/RepliesProvider"
 import RepliesSection from "@/components/forum/RepliesSection"
 import useBookmarkStatus from "@/hooks/useBookmarkStatus"
 import { useAuth } from "@/context/AuthContext"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const USERS_COL   = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
+const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1)  return "just now"
+  if (m < 1) return "just now"
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
-  if (d < 7)  return `${d}d ago`
+  if (d < 7) return `${d}d ago`
   return new Date(dateStr).toLocaleDateString()
 }
 
@@ -44,8 +45,8 @@ const BookmarkButton = ({ threadId, threadAuthorId, bookmarkCount }) => {
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium
                   transition-all duration-150 active:scale-95 disabled:opacity-60
                   ${isBookmarked
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"}`}
+          ? "border-primary/40 bg-primary/10 text-primary"
+          : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"}`}
     >
       <Bookmark size={13} className={isBookmarked ? "fill-primary" : ""} />
       {bookmarkCount > 0 && <span>{bookmarkCount}</span>}
@@ -62,29 +63,29 @@ const ThreadDetail = () => {
 
   const { data: thread, isLoading } = useQuery({
     queryKey: ["thread", threadId],
-    queryFn:  () => fetchThreadById(threadId),
-    enabled:  !!threadId,
+    queryFn: () => fetchThreadById(threadId),
+    enabled: !!threadId,
   })
 
   const { data: uniDoc } = useQuery({
     queryKey: ["university", thread?.universityId],
-    queryFn:  () => import("@/services/university/universityService")
-                      .then(m => m.getUniversityById(thread.universityId)),
-    enabled:  !!thread && isAppwriteId(thread.universityId),
+    queryFn: () => import("@/services/university/universityService")
+      .then(m => m.getUniversityById(thread.universityId)),
+    enabled: !!thread && isAppwriteId(thread.universityId),
     staleTime: Infinity, gcTime: Infinity, retry: false,
   })
 
   const { data: programDoc } = useQuery({
     queryKey: ["program", thread?.courseId],
-    queryFn:  () => getProgramById(thread.courseId),
-    enabled:  !!thread && isAppwriteId(thread.courseId),
+    queryFn: () => getProgramById(thread.courseId),
+    enabled: !!thread && isAppwriteId(thread.courseId),
     staleTime: Infinity, gcTime: Infinity, retry: false,
   })
 
   const { data: branchDoc } = useQuery({
     queryKey: ["branch", thread?.branchId],
-    queryFn:  () => getBranchById(thread.branchId),
-    enabled:  !!thread && isAppwriteId(thread.branchId),
+    queryFn: () => getBranchById(thread.branchId),
+    enabled: !!thread && isAppwriteId(thread.branchId),
     staleTime: Infinity, gcTime: Infinity, retry: false,
   })
 
@@ -100,18 +101,18 @@ const ThreadDetail = () => {
         ? { avatarUrl: res.documents[0].avatarUrl ?? null, username: res.documents[0].username ?? null }
         : null
     },
-    enabled:   !!thread?.authorId,
+    enabled: !!thread?.authorId,
     staleTime: Infinity,
-    gcTime:    Infinity,
+    gcTime: Infinity,
     retry: false,
   })
 
-  const uniLabel       = uniDoc?.name       ?? thread?.universityId
-  const courseLabel    = programDoc?.name   ?? thread?.courseId
-  const branchLabel    = branchDoc?.name    ?? thread?.branchId
-  const avatarUrl      = authorData?.avatarUrl  ?? null
-  const authorUsername = authorData?.username   ?? null
-  const profileHref    = authorUsername ? `/profile/${authorUsername}` : null
+  const uniLabel = uniDoc?.name ?? thread?.universityId
+  const courseLabel = programDoc?.name ?? thread?.courseId
+  const branchLabel = branchDoc?.name ?? thread?.branchId
+  const avatarUrl = authorData?.avatarUrl ?? null
+  const authorUsername = authorData?.username ?? null
+  const profileHref = authorUsername ? `/profile/${authorUsername}` : null
 
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1)
@@ -146,7 +147,7 @@ const ThreadDetail = () => {
       </div>
       {avatarUrl && (
         <img src={avatarUrl} alt={thread.authorName}
-             className="absolute inset-0 w-full h-full rounded-full object-cover border border-border" />
+          className="absolute inset-0 w-full h-full rounded-full object-cover border border-border" />
       )}
     </div>
   )
@@ -159,8 +160,8 @@ const ThreadDetail = () => {
           items={[
             { label: "Forum", href: "/forum" },
             thread.universityId && { label: uniLabel },
-            thread.courseId     && { label: courseLabel },
-            thread.branchId     && { label: branchLabel },
+            thread.courseId && { label: courseLabel },
+            thread.branchId && { label: branchLabel },
             { label: thread.title },
           ].filter(Boolean)}
         />
@@ -179,7 +180,16 @@ const ThreadDetail = () => {
             <h1 className="text-lg sm:text-xl font-bold leading-snug text-foreground break-words flex-1">
               {thread.title}
             </h1>
-            <div className="shrink-0 pt-0.5">
+            <div className="shrink-0 pt-0.5 flex items-center gap-2">
+              <button
+                onClick={() => copyShareLink(`/forum/${thread.$id}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border
+               text-xs font-medium text-muted-foreground transition-all duration-150
+               hover:border-primary/40 hover:text-primary active:scale-95"
+              >
+                <Link2 size={13} />
+                Share
+              </button>
               <BookmarkButton
                 threadId={thread.$id}
                 threadAuthorId={thread.authorId}
@@ -220,8 +230,8 @@ const ThreadDetail = () => {
 
             {profileHref ? (
               <Link to={profileHref}
-                    className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-                    onClick={e => e.stopPropagation()}>
+                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                onClick={e => e.stopPropagation()}>
                 {thread.authorName}
               </Link>
             ) : (

@@ -7,12 +7,13 @@
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import useResolvedColors from "@/hooks/useResolvedColors"
-import { ChevronsDownUp, Copy, Pencil, Trash2, Pin, PinOff } from "lucide-react"
+import { ChevronsDownUp, Copy, Link2, Pencil, Trash2, Pin, PinOff } from "lucide-react"
+import { copyShareLink } from "@/utils/share"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 
-export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse, onDelete, onEdit, onClose }) {
+export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse, onDelete, onEdit, onClose, threadId }) {
 
   const colors = useResolvedColors()
   const isMobile = useIsMobile()
@@ -137,6 +138,7 @@ export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse
         }}
       >
         <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
+        <Row icon={Link2} label="Share comment" onClick={() => copyShareLink(`/forum/${threadId}?focus=${reply.$id}`)} />
         <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
 
         {/* Pin / Unpin — visible to admin, moderator, OP */}
@@ -199,6 +201,7 @@ export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse
         </div>
 
         <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
+        <Row icon={Link2} label="Share comment" onClick={() => copyShareLink(`/forum/${threadId}?focus=${reply.$id}`)} />
         <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
 
         {/* Pin / Unpin — visible to admin, moderator, OP */}
