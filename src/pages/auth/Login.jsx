@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -58,6 +58,29 @@ const GoogleIcon = () => (
   </svg>
 )
 
+// ── Switch target banner ──────────────────────────────────────────────────────
+const SwitchBanner = ({ target }) => {
+  if (!target) return null
+  return (
+    <div className="mb-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 px-4 py-3 flex items-center gap-3">
+      {target.avatarUrl ? (
+        <img src={target.avatarUrl} alt={target.name}
+          className="w-8 h-8 rounded-full object-cover shrink-0 border border-white/10" />
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+          {target.name?.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">
+          Switching to @{target.username}
+        </p>
+        <p className="text-xs text-blue-500 dark:text-blue-400 truncate">{target.email}</p>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const Login = () => {
   const { login } = useAuth()
@@ -66,15 +89,55 @@ const Login = () => {
 
   // Respect redirect-after-login
   const searchParams = new URLSearchParams(location.search)
-  const from = searchParams.get("redirect")
-    || location.state?.from?.pathname
-    || "/dashboard"
+  const isSwitch = searchParams.get("switch") === "1"
+  const from = !isSwitch
+    ? (searchParams.get("redirect") || location.state?.from?.pathname || "/dashboard")
+    : "/dashboard"
 
-  const [form, setForm] = useState({ email: "", password: "" })
+  // Read switch target from sessionStorage (set by SwitchAccountModal)
+  const switchTarget = (() => {
+    try { return JSON.parse(sessionStorage.getItem("unizuya_switch_to")) }
+    catch { return null }
+  })()
+
+  const [form, setForm] = useState({
+    email: switchTarget?.email || "",
+    password: "",
+  })
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // Auto-submit via PasswordCredential API when switching
+  useEffect(() => {
+    if (!isSwitch || !switchTarget) return
+    if (!window.PasswordCredential) return // not supported, stay on form
+
+    const trySeamlessSwitch = async () => {
+      try {
+        const cred = await navigator.credentials.get({
+          password: true,
+          mediation: "silent", // never show UI — fail silently if not saved
+        })
+
+        // Make sure retrieved credential matches the account we're switching to
+        if (!cred || cred.id !== switchTarget.email) return
+
+        setLoading(true)
+        setForm({ email: cred.id, password: cred.password })
+
+        await login({ email: cred.id, password: cred.password })
+        sessionStorage.removeItem("unizuya_switch_to")
+        window.location.href = "/dashboard"
+      } catch {
+        // Credential not saved or login failed — stay on form for manual entry
+        setLoading(false)
+      }
+    }
+
+    trySeamlessSwitch()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const validate = () => {
     const newErrors = {}
@@ -98,6 +161,20 @@ const Login = () => {
     setError(null)
     try {
       await login({ email: form.email, password: form.password })
+
+      // Store in browser's password manager for future seamless switches
+      if (window.PasswordCredential) {
+        try {
+          const cred = new PasswordCredential({
+            id: form.email,
+            password: form.password,
+            name: switchTarget?.username || form.email,
+          })
+          await navigator.credentials.store(cred)
+        } catch { /* user declined or not supported */ }
+      }
+
+      sessionStorage.removeItem("unizuya_switch_to")
       navigate(from, { replace: true })
     } catch (err) {
       setError(err?.message || "Login failed. Please check your credentials.")
@@ -115,11 +192,9 @@ const Login = () => {
     ">
       {/* Glow blobs */}
       <div className="pointer-events-none absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-40
-        bg-blue-400 dark:bg-blue-600
-        top-[-160px] left-[-160px]" />
+        bg-blue-400 dark:bg-blue-600 top-[-160px] left-[-160px]" />
       <div className="pointer-events-none absolute w-[400px] h-[400px] rounded-full blur-3xl opacity-30
-        bg-indigo-400 dark:bg-violet-700
-        bottom-[-120px] right-[-120px]" />
+        bg-indigo-400 dark:bg-violet-700 bottom-[-120px] right-[-120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 32 }}
@@ -128,7 +203,8 @@ const Login = () => {
         className="relative z-10 w-full max-w-md"
       >
         <Card className="
-          bg-white/90 dark:bg-[#0f1b2e]/80
+        relative
+         bg-white/90 dark:bg-[#0f1b2e]/80
           backdrop-blur-2xl
           border border-slate-200/80 dark:border-white/[0.07]
           shadow-2xl shadow-slate-200/60 dark:shadow-black/60
@@ -142,19 +218,58 @@ const Login = () => {
               </svg>
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Welcome back
+              {isSwitch && switchTarget ? `Welcome back` : "Welcome back"}
             </CardTitle>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Sign in to your Unizuya account
+              {isSwitch && switchTarget
+                ? "Enter your password to continue"
+                : "Sign in to your Unizuya account"}
             </p>
           </CardHeader>
 
           <CardContent className="px-8 pb-8 pt-4">
-            {/* OAuth Button */}
-            <OAuthButton onClick={loginWithGoogle} icon={<GoogleIcon />} label="Continue with Google" />
-            <div className="mb-5" />
 
-            <OrDivider />
+            {/* Seamless switch loading overlay */}
+            {loading && isSwitch && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-2xl
+               bg-white/90 dark:bg-[#0f1b2e]/90 backdrop-blur-sm"
+              >
+                {switchTarget?.avatarUrl ? (
+                  <img src={switchTarget.avatarUrl}
+                    className="w-14 h-14 rounded-full object-cover border-2 border-white/20 shadow-xl" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
+                      flex items-center justify-center text-white text-xl font-bold shadow-xl">
+                    {switchTarget?.name?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Switching to @{switchTarget?.username}
+                  </p>
+                  <p className="text-xs text-slate-400">Signing you in…</p>
+                </div>
+                <svg className="animate-spin w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </motion.div>
+            )}
+
+            {/* Switch banner — shown when switching accounts */}
+            <SwitchBanner target={switchTarget} />
+
+            {/* OAuth — hide when switching (we know which account) */}
+            {!switchTarget && (
+              <>
+                <OAuthButton onClick={loginWithGoogle} icon={<GoogleIcon />} label="Continue with Google" />
+                <div className="mb-5" />
+                <OrDivider />
+              </>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               {/* Email */}
@@ -169,7 +284,7 @@ const Login = () => {
                   placeholder="you@example.com"
                   value={form.email}
                   onChange={handleChange}
-                  disabled={loading}
+                  disabled={loading || !!switchTarget}
                   className="
                     h-10
                     bg-slate-50 dark:bg-white/5
@@ -178,6 +293,7 @@ const Login = () => {
                     placeholder:text-slate-400 dark:placeholder:text-slate-600
                     focus:border-blue-500 focus:ring-blue-500/20
                     transition
+                    disabled:opacity-70
                   "
                 />
                 {errors.email && <p className="text-xs text-red-500 dark:text-red-400">{errors.email}</p>}
@@ -189,13 +305,15 @@ const Login = () => {
                   <Label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Password
                   </Label>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/forgot-password")}
-                    className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition"
-                  >
-                    Forgot password?
-                  </button>
+                  {!switchTarget && (
+                    <button
+                      type="button"
+                      onClick={() => navigate("/forgot-password")}
+                      className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
                 </div>
                 <div className="relative">
                   <Input
@@ -206,6 +324,7 @@ const Login = () => {
                     value={form.password}
                     onChange={handleChange}
                     disabled={loading}
+                    autoFocus={!!switchTarget}
                     className="
                       h-10 pr-10
                       bg-slate-50 dark:bg-white/5
@@ -255,21 +374,37 @@ const Login = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Signing in…
+                    {isSwitch ? "Switching…" : "Signing in…"}
                   </span>
-                ) : "Sign in"}
+                ) : isSwitch ? "Switch Account" : "Sign in"}
               </Button>
+
+              {/* Cancel switch */}
+              {isSwitch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.removeItem("unizuya_switch_to")
+                    window.location.href = "/dashboard"  // ← user still has session, this works!
+                  }}
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                >
+                  Cancel
+                </button>
+              )}
             </form>
 
-            <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
-              Don't have an account?{" "}
-              <Link
-                to="/signup"
-                className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition"
-              >
-                Sign up
-              </Link>
-            </p>
+            {!isSwitch && (
+              <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
+                Don't have an account?{" "}
+                <Link
+                  to="/signup"
+                  className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition"
+                >
+                  Sign up
+                </Link>
+              </p>
+            )}
           </CardContent>
         </Card>
       </motion.div>

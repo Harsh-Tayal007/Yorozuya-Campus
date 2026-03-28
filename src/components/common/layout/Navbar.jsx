@@ -1,14 +1,14 @@
-// src/components/common/navigation/Navbar.jsx
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import {
   Menu, User, LayoutDashboard, Settings,
-  LogOut, ChevronDown, ShieldCheck,
+  LogOut, ChevronDown, ShieldCheck, Users,
 } from "lucide-react"
 import { motion, useScroll, useMotionValueEvent } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { useSidebar } from "@/context/SidebarContext"
 import NotificationBell from "../navigation/NotificationBell"
+import SwitchAccountModal from "../navigation/SwitchAccountModal"
 
 const NAVBAR_H = 68
 
@@ -16,9 +16,10 @@ const Navbar = () => {
   const navigate   = useNavigate()
   const sidebar    = useSidebar()
   const { scrollY } = useScroll()
-  const [isScrolled,   setIsScrolled]   = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [triggerRect,  setTriggerRect]  = useState(null)
+  const [isScrolled,       setIsScrolled]       = useState(false)
+  const [dropdownOpen,     setDropdownOpen]     = useState(false)
+  const [triggerRect,      setTriggerRect]      = useState(null)
+  const [switchModalOpen,  setSwitchModalOpen]  = useState(false)
   const triggerRef  = useRef(null)
   const dropdownRef = useRef(null)
 
@@ -116,10 +117,7 @@ const Navbar = () => {
           <div className="h-8 w-24 rounded-full bg-muted animate-pulse" />
         ) : authStatus ? (
           <div className="flex items-center gap-2">
-            {/* 🔔 Notification Bell */}
             <NotificationBell />
-
-            {/* Avatar / user menu trigger */}
             <button
               ref={triggerRef}
               onClick={handleOpen}
@@ -130,13 +128,11 @@ const Navbar = () => {
                          transition-colors duration-150"
             >
               <Avatar size="w-7 h-7" />
-              <span className="hidden sm:block text-sm font-medium text-foreground
-                               max-w-[100px] truncate">
+              <span className="hidden sm:block text-sm font-medium text-foreground max-w-[100px] truncate">
                 {currentUser?.name || currentUser?.email}
               </span>
               <ChevronDown size={13}
-                className={`hidden sm:block text-muted-foreground transition-transform
-                            duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+                className={`hidden sm:block text-muted-foreground transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
             </button>
           </div>
         ) : (
@@ -162,6 +158,7 @@ const Navbar = () => {
                      shadow-[0_20px_60px_rgba(0,0,0,0.2)] overflow-hidden p-1.5
                      animate-in fade-in-0 zoom-in-95 duration-150 origin-top-right"
         >
+          {/* User info */}
           <div className="flex items-center gap-2.5 px-3 py-2.5">
             <Avatar size="w-9 h-9" />
             <div className="min-w-0">
@@ -183,6 +180,18 @@ const Navbar = () => {
           <DropItem to="/dashboard/settings"
             icon={Settings} label="Settings" onClose={() => setDropdownOpen(false)} />
 
+          {/* Switch Account */}
+          <div className="h-px bg-border mx-1 my-1" />
+          <button
+            onClick={() => { setDropdownOpen(false); setSwitchModalOpen(true) }}
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl
+                       text-sm text-foreground hover:bg-muted transition-colors duration-150"
+          >
+            <Users size={14} className="text-muted-foreground shrink-0" />
+            Switch Account
+          </button>
+
+          {/* Admin */}
           {hasAnyPermission(["view:admin-dashboard"]) && (
             <>
               <div className="h-px bg-border mx-1 my-1" />
@@ -207,6 +216,12 @@ const Navbar = () => {
           </button>
         </div>
       )}
+
+      {/* Switch Account Modal */}
+      <SwitchAccountModal
+        open={switchModalOpen}
+        onClose={() => setSwitchModalOpen(false)}
+      />
     </>
   )
 }

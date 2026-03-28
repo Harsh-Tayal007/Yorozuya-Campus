@@ -4,8 +4,9 @@ import { account, databases } from "@/lib/appwrite"
 import { ID, Query } from "appwrite"
 import { USERS_COLLECTION_ID } from "@/config/appwrite"
 import { generateAvailableUsername } from "@/services/admin/authService"
+import { upsertSavedAccount } from "@/lib/savedAccounts"
 
-const DATABASE_ID    = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const USERS_TABLE_ID = USERS_COLLECTION_ID
 
 const OAuthCallback = () => {
@@ -16,63 +17,63 @@ const OAuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Small delay to ensure Appwrite session cookie is set
         await new Promise(r => setTimeout(r, 800))
-
         const accountUser = await account.get()
+
+        // ── helper: save & redirect ────────────────────────────────────────
+        const saveAndRedirect = (doc) => {
+          upsertSavedAccount({
+            userId: accountUser.$id,
+            name: doc?.name || accountUser.name,
+            username: doc?.username || "",
+            email: accountUser.email,
+            avatarUrl: doc?.avatarUrl || null,
+          })
+          window.location.replace("/dashboard")
+        }
 
         const byUserId = await databases.listDocuments(
           DATABASE_ID, USERS_TABLE_ID,
           [Query.equal("userId", accountUser.$id)]
         )
-
-        if (byUserId.total > 0) {
-          window.location.replace("/dashboard")
-          return
-        }
+        if (byUserId.total > 0) { saveAndRedirect(byUserId.documents[0]); return }
 
         setStatus("Checking your account…")
-
         const byEmail = await databases.listDocuments(
           DATABASE_ID, USERS_TABLE_ID,
           [Query.equal("email", accountUser.email)]
         )
-
         if (byEmail.total > 0) {
           setStatus("Linking your account…")
           const existingDoc = byEmail.documents[0]
           await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, existingDoc.$id, {
             userId: accountUser.$id
           })
-          window.location.replace("/dashboard")
+          saveAndRedirect(existingDoc)
           return
         }
 
         setStatus("Setting up your profile…")
         const username = await generateAvailableUsername(accountUser.name || "user")
-
         await databases.createDocument(DATABASE_ID, USERS_TABLE_ID, ID.unique(), {
-          userId:           accountUser.$id,
-          email:            accountUser.email,
-          name:             accountUser.name || "",
+          userId: accountUser.$id,
+          email: accountUser.email,
+          name: accountUser.name || "",
           username,
-          role:             "user",
-          universityId:     null,
-          programId:        null,
-          branchId:         null,
+          role: "user",
+          universityId: null,
+          programId: null,
+          branchId: null,
           profileCompleted: false,
-          avatarUrl:        null,
-          avatarPublicId:   null,
-          bio:              null,
-          yearOfStudy:      null,
+          avatarUrl: null,
+          avatarPublicId: null,
+          bio: null,
+          yearOfStudy: null,
         })
-
-        window.location.replace("/dashboard")
+        saveAndRedirect({ name: accountUser.name, username, avatarUrl: null })
 
       } catch (err) {
         console.error("OAuth callback failed:", err)
-        // Show error on screen instead of immediately redirecting
-        // so we can see what's actually failing
         setErrorDetail(err?.message || String(err))
         setStatus("Something went wrong.")
         setTimeout(() => navigate("/login", { replace: true }), 5000)
