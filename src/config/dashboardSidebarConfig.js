@@ -1,3 +1,5 @@
+// src/config/dashboardSidebarConfig.js
+// CHANGES: added  lockedForPublic: true  to tools and preferences sections
 import {
   LayoutDashboard,
   BookOpen,
@@ -41,6 +43,8 @@ export const dashboardSidebarSections = [
     id: "academics",
     label: "Academics",
     icon: BookOpen,
+    lockedForPublic: true,
+    // Academics stays unlocked — public users can browse syllabus/pyqs via public routes
     children: [
       { id: "syllabus",   label: "Syllabus",   path: "/dashboard/syllabus",   icon: FileText },
       { id: "resources",  label: "Resources",  path: "/dashboard/resources",  icon: ClipboardList },
@@ -53,11 +57,12 @@ export const dashboardSidebarSections = [
     label: "Tools",
     icon: Wrench,
     badge: "new",
+    lockedForPublic: true,          // ← NEW: show but lock for logged-out users
     children: [
-      { id: "cgpa",       label: "CGPA Calculator",  path: "/dashboard/cgpa",       icon: Calculator   },
-      { id: "tasks",      label: "Task Tracker",      path: "/dashboard/tasks",      icon: CheckSquare  },
-      { id: "timetable",  label: "Timetable",       path: "/dashboard/timetable",  icon: CalendarDaysIcon  },
-      { id: "grade-calc", label: "Grade Calculator",  path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
+      { id: "cgpa",       label: "CGPA Calculator",  path: "/dashboard/cgpa",       icon: Calculator      },
+      { id: "tasks",      label: "Task Tracker",     path: "/dashboard/tasks",      icon: CheckSquare     },
+      { id: "timetable",  label: "Timetable",        path: "/dashboard/timetable",  icon: CalendarDaysIcon },
+      { id: "grade-calc", label: "Grade Calculator", path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
     ],
   },
 
@@ -65,6 +70,7 @@ export const dashboardSidebarSections = [
     id: "preferences",
     label: "Preferences",
     icon: SlidersHorizontal,
+    lockedForPublic: true,          // ← NEW
     children: [
       { id: "settings", label: "Settings", path: "/dashboard/settings", icon: Settings },
     ],

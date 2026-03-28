@@ -1,7 +1,7 @@
 // src/components/common/navigation/UserSidebar.jsx
 import { useLocation, Link } from "react-router-dom"
-import { useEffect, useState } from "react"
-import { Pin, PinOff, X, ChevronDown } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { Pin, PinOff, X, ChevronDown, Lock } from "lucide-react"
 import { useSidebar } from "@/context/SidebarContext"
 import { useAuth } from "@/context/AuthContext"
 import {
@@ -10,6 +10,7 @@ import {
   forumRootLink,
   homeRootLink,
 } from "@/config/dashboardSidebarConfig"
+import LoginGateSheet from "@/components/common/auth/LoginGateSheet"
 
 const NAVBAR_H  = 68
 const SIDEBAR_W = 256
@@ -23,13 +24,22 @@ export default function UserSidebar() {
     togglePin, handleSidebarLeave,
   } = useSidebar()
 
-  const location = useLocation()
-  const { user } = useAuth()
+  const location   = useLocation()
+  const { user }   = useAuth()
   const isLoggedIn = !!user
 
   const [openSections, setOpenSections] = useState([])
 
-  // On mobile: close on route change
+  // ── LoginGateSheet state ──────────────────────────────────────────────────
+  const [gateSheet, setGateSheet] = useState({ open: false, feature: "", redirect: "" })
+  const openGate = useCallback((featureName, redirectTo) => {
+    setGateSheet({ open: true, feature: featureName, redirect: redirectTo })
+  }, [])
+  const closeGate = useCallback(() => {
+    setGateSheet(s => ({ ...s, open: false }))
+  }, [])
+
+  // On mobile: close sidebar on route change
   useEffect(() => {
     if (isMobile) setIsOpen(false)
   }, [location.pathname, isMobile])
@@ -48,11 +58,8 @@ export default function UserSidebar() {
 
   const visible = isOpen || isPinned
 
-  const topLinks = [
-    homeRootLink,
-    ...(isLoggedIn ? [dashboardRootLink] : []),
-    forumRootLink,
-  ]
+  // Always-visible top links (no auth required)
+  const topLinks = [homeRootLink, forumRootLink]
 
   return (
     <>
@@ -82,7 +89,7 @@ export default function UserSidebar() {
                    transition-transform duration-200 ease-in-out
                    overflow-hidden"
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 py-3
                         border-b border-border/40 shrink-0">
           <Link to="/" className="flex items-center gap-2.5 min-w-0">
@@ -109,10 +116,10 @@ export default function UserSidebar() {
           </button>
         </div>
 
-        {/* Nav */}
+        {/* ── Nav ── */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5">
 
-          {/* Top flat links */}
+          {/* Home + Forum (always accessible) */}
           {topLinks.map(item => {
             const isActive = item.path === "/"
               ? location.pathname === "/"
@@ -128,91 +135,122 @@ export default function UserSidebar() {
             )
           })}
 
-          {/* Collapsible sections — logged-in only */}
-          {isLoggedIn && (
-            <>
-              <div className="h-px bg-border/40 mx-1 my-2" />
+          {/* Dashboard link — locked for public users */}
+          {isLoggedIn ? (
+            <SidebarLink
+              to={dashboardRootLink.path}
+              icon={dashboardRootLink.icon}
+              label={dashboardRootLink.label}
+              isActive={location.pathname.startsWith(dashboardRootLink.path)}
+            />
+          ) : (
+            <SidebarLinkLocked
+              icon={dashboardRootLink.icon}
+              label={dashboardRootLink.label}
+              onLockClick={() => openGate("Dashboard", dashboardRootLink.path)}
+            />
+          )}
 
-              {dashboardSidebarSections.map(section => {
-                const isExpanded = openSections.includes(section.id)
-                const SIcon = section.icon
+          {/* Divider */}
+          <div className="h-px bg-border/40 mx-1 my-2" />
 
-                return (
-                  <div key={section.id}>
-                    {/* Section header button */}
-                    <button
-                      onClick={() => setOpenSections(prev =>
-                        prev.includes(section.id)
-                          ? prev.filter(id => id !== section.id)
-                          : [...prev, section.id]
-                      )}
-                      className="w-full flex items-center justify-between
-                                 px-3 py-2 rounded-lg
-                                 text-xs font-semibold uppercase tracking-wide
-                                 text-muted-foreground hover:text-foreground
-                                 hover:bg-muted transition-colors duration-150"
-                    >
-                      <div className="flex items-center gap-2">
-                        <SIcon size={13} />
-                        {section.label}
-                        {/* "new" badge — only shown when section.badge is set */}
-                        {section.badge && (
-                          <span className="ml-1 px-1.5 py-0.5 rounded text-[10px]
-                                           font-semibold leading-none
-                                           bg-indigo-500 text-white">
-                            {section.badge}
-                          </span>
-                        )}
-                      </div>
-                      <ChevronDown
+          {/* Collapsible sections — always visible, locked per section when logged out */}
+          {dashboardSidebarSections.map(section => {
+            const sectionLocked = !isLoggedIn && section.lockedForPublic
+            const isExpanded    = openSections.includes(section.id)
+            const SIcon         = section.icon
+
+            return (
+              <div key={section.id}>
+                {/* Section header */}
+                <button
+                  onClick={() => {
+                    if (sectionLocked) {
+                      openGate(section.label, section.children[0]?.path ?? "/login")
+                      return
+                    }
+                    setOpenSections(prev =>
+                      prev.includes(section.id)
+                        ? prev.filter(id => id !== section.id)
+                        : [...prev, section.id]
+                    )
+                  }}
+                  className={`w-full flex items-center justify-between
+                               px-3 py-2 rounded-lg
+                               text-xs font-semibold uppercase tracking-wide
+                               transition-colors duration-150
+                               ${sectionLocked
+                                 ? "text-muted-foreground/40 hover:text-muted-foreground/60 cursor-pointer"
+                                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                               }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <SIcon size={13} className={sectionLocked ? "opacity-40" : ""} />
+                    <span className={sectionLocked ? "opacity-40" : ""}>{section.label}</span>
+                    {section.badge && !sectionLocked && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px]
+                                       font-semibold leading-none
+                                       bg-indigo-500 text-white">
+                        {section.badge}
+                      </span>
+                    )}
+                  </div>
+                  {sectionLocked
+                    ? <Lock size={11} className="opacity-40 shrink-0" />
+                    : <ChevronDown
                         size={13}
                         className={`transition-transform duration-200
                                     ${isExpanded ? "rotate-180" : ""}`}
                       />
-                    </button>
+                  }
+                </button>
 
-                    {/* Section children */}
-                    {isExpanded && (
-                      <div className="ml-4 border-l border-border/40 pl-2
-                                      mt-0.5 space-y-0.5">
-                        {section.children.map(item => {
-                          // "soon" items: show greyed-out, non-clickable
-                          if (item.soon) {
-                            return (
-                              <SidebarLinkSoon
-                                key={item.id}
-                                icon={item.icon}
-                                label={item.label}
-                              />
-                            )
-                          }
-
-                          const isActive = location.pathname.startsWith(item.path)
-                          return (
-                            <SidebarLink
-                              key={item.path}
-                              to={item.path}
-                              icon={item.icon}
-                              label={item.label}
-                              isActive={isActive}
-                              small
-                            />
-                          )
-                        })}
-                      </div>
-                    )}
+                {/* Section children — only when expanded AND unlocked */}
+                {isExpanded && !sectionLocked && (
+                  <div className="ml-4 border-l border-border/40 pl-2
+                                  mt-0.5 space-y-0.5">
+                    {section.children.map(item => {
+                      if (item.soon) {
+                        return (
+                          <SidebarLinkSoon
+                            key={item.id}
+                            icon={item.icon}
+                            label={item.label}
+                          />
+                        )
+                      }
+                      const isActive = location.pathname.startsWith(item.path)
+                      return (
+                        <SidebarLink
+                          key={item.path}
+                          to={item.path}
+                          icon={item.icon}
+                          label={item.label}
+                          isActive={isActive}
+                          small
+                        />
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </>
-          )}
+                )}
+              </div>
+            )
+          })}
         </nav>
+
+        {/* Login gate sheet — mounted once, controlled by state */}
+        <LoginGateSheet
+          isOpen={gateSheet.open}
+          onClose={closeGate}
+          featureName={gateSheet.feature}
+          redirectTo={gateSheet.redirect}
+        />
       </aside>
     </>
   )
 }
 
-// ─── Active / normal link ─────────────────────────────────────────────────────
+// ─── Normal link ──────────────────────────────────────────────────────────────
 function SidebarLink({ to, icon: Icon, label, isActive, small }) {
   return (
     <Link
@@ -235,7 +273,27 @@ function SidebarLink({ to, icon: Icon, label, isActive, small }) {
   )
 }
 
-// ─── "Coming soon" link — greyed out, no click ────────────────────────────────
+// ─── Locked link (public users) ───────────────────────────────────────────────
+function SidebarLinkLocked({ icon: Icon, label, onLockClick }) {
+  return (
+    <button
+      onClick={onLockClick}
+      className="w-full group relative flex items-center justify-between gap-2.5
+                 rounded-lg px-3 py-2 text-sm font-medium
+                 text-muted-foreground/50 hover:text-muted-foreground
+                 hover:bg-muted/50 transition-colors duration-150 cursor-pointer"
+    >
+      <div className="flex items-center gap-2.5">
+        <Icon size={16} className="shrink-0 opacity-50" />
+        <span className="opacity-50">{label}</span>
+      </div>
+      <Lock size={12} className="shrink-0 opacity-40 group-hover:opacity-70
+                                  transition-opacity duration-150" />
+    </button>
+  )
+}
+
+// ─── "Coming soon" link ───────────────────────────────────────────────────────
 function SidebarLinkSoon({ icon: Icon, label }) {
   return (
     <div

@@ -65,7 +65,10 @@ const Login = () => {
   const navigate = useNavigate()
 
   // Respect redirect-after-login
-  const from = location.state?.from?.pathname || "/dashboard"
+  const searchParams = new URLSearchParams(location.search)
+  const from = searchParams.get("redirect")
+    || location.state?.from?.pathname
+    || "/dashboard"
 
   const [form, setForm] = useState({ email: "", password: "" })
   const [errors, setErrors] = useState({})

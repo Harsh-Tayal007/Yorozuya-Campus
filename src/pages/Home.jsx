@@ -265,9 +265,9 @@ export default function Home() {
               <RoadmapItem label="CGPA & grade calculator" done />
               <RoadmapItem label="Study to-do list & task tracker" done />
               <RoadmapItem label="Class timetable builder" done />
+              <RoadmapItem label="Shareable link option" done />
 
               {/* ── Upcoming ── */}
-              <RoadmapItem label="Shareable link option" />
               <RoadmapItem label="Direct messages & group chats" />
               <RoadmapItem label="AI-powered study assistant" />
               <RoadmapItem label="Collaborative notes" />
