@@ -45,15 +45,15 @@ const Signup = () => {
 
   // ── Resolved names for summary ────────────────────────────────────────────
   const [universityName, setUniversityName] = useState("")
-  const [programName,    setProgramName]    = useState("")
-  const [branchName,     setBranchName]     = useState("")
+  const [programName, setProgramName] = useState("")
+  const [branchName, setBranchName] = useState("")
 
   useEffect(() => {
     if (!signupData.universityId) return
     getUniversities().then(list => {
       const u = list.find(u => u.$id === signupData.universityId)
       if (u) setUniversityName(u.name)
-    }).catch(() => {})
+    }).catch(() => { })
   }, [signupData.universityId])
 
   useEffect(() => {
@@ -61,7 +61,7 @@ const Signup = () => {
     getProgramsByUniversity(signupData.universityId).then(list => {
       const p = list.find(p => p.$id === signupData.programId)
       if (p) setProgramName(p.name)
-    }).catch(() => {})
+    }).catch(() => { })
   }, [signupData.programId])
 
   useEffect(() => {
@@ -69,7 +69,7 @@ const Signup = () => {
     getBranchesByProgram(signupData.programId).then(list => {
       const b = list.find(b => b.$id === signupData.branchId)
       if (b) setBranchName(b.name)
-    }).catch(() => {})
+    }).catch(() => { })
   }, [signupData.branchId])
 
   const { completeSignup } = useAuth()
@@ -85,6 +85,12 @@ const Signup = () => {
       setError(null)
       await completeSignup(signupData)
       setSignupSuccess(true)
+      // ── or admin dashboard statsF ──────────────────────────────────────────────────
+      navigator.sendBeacon(
+        "https://unizuya-stats.harshtayal710.workers.dev/track/activity",
+        JSON.stringify({ userId: null, isNewSignup: true })
+      )
+      // ─────────────────────────────────────────────────────────────
       setTimeout(() => navigate("/dashboard"), 1200)
     } catch (err) {
       setError(err.message || "Signup failed. Please try again.")
@@ -127,7 +133,7 @@ const Signup = () => {
               </div>
             </div>
 
-                        {/* Step Indicator */}
+            {/* Step Indicator */}
             <div className="flex items-center justify-center mb-8">
               {STEP_LABELS.map((label, idx) => {
                 const s = idx + 1
@@ -143,14 +149,13 @@ const Signup = () => {
                         className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-semibold
                           ${isCompleted ? "bg-green-500 text-white" :
                             isActive ? "bg-blue-600 text-white" :
-                            "bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-slate-500"}`}
+                              "bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-slate-500"}`}
                       >
                         {isCompleted ? <Check size={16} /> : s}
                       </motion.div>
-                      <span className={`text-[10px] font-medium tracking-wide ${
-                        isActive ? "text-blue-600 dark:text-blue-400" :
-                        isCompleted ? "text-green-600 dark:text-green-400" :
-                        "text-slate-400 dark:text-slate-600"}`}>
+                      <span className={`text-[10px] font-medium tracking-wide ${isActive ? "text-blue-600 dark:text-blue-400" :
+                          isCompleted ? "text-green-600 dark:text-green-400" :
+                            "text-slate-400 dark:text-slate-600"}`}>
                         {label}
                       </span>
                     </div>
@@ -221,12 +226,12 @@ const Signup = () => {
                     </div>
 
                     <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4 space-y-2.5">
-                      <SummaryRow label="Name"       value={signupData.name} />
-                      <SummaryRow label="Email"      value={signupData.email} />
-                      <SummaryRow label="Password"   value="••••••••" />
+                      <SummaryRow label="Name" value={signupData.name} />
+                      <SummaryRow label="Email" value={signupData.email} />
+                      <SummaryRow label="Password" value="••••••••" />
                       {universityName && <SummaryRow label="University" value={universityName} />}
-                      {programName    && <SummaryRow label="Program"    value={programName} />}
-                      {branchName     && <SummaryRow label="Branch"     value={branchName} />}
+                      {programName && <SummaryRow label="Program" value={programName} />}
+                      {branchName && <SummaryRow label="Branch" value={branchName} />}
                     </div>
 
                     {error && (

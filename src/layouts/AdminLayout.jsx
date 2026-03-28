@@ -6,8 +6,9 @@ import { PERMISSIONS } from "@/config/permissions"
 import {
   LayoutDashboard, School, BookOpen, Layers, FileText,
   Activity, Menu, Users, GitBranch, Upload, ClipboardList,
-  ChevronDown, LogOut, User as UserIcon,
+  ChevronDown, LogOut, User as UserIcon,BarChart2
 } from "lucide-react"
+import { useTrackActivity } from "@/hooks/useTrackActivity"
 
 const NAVBAR_H    = 58
 const SIDEBAR_W   = 224  // 14rem
@@ -23,6 +24,7 @@ const adminNav = [
   { label: "Resources",    to: "/admin/resources/upload", icon: Upload,          permission: PERMISSIONS.MANAGE_RESOURCES },
   { label: "PYQs",         to: "/admin/pyq/upload",       icon: FileText,        permission: PERMISSIONS.MANAGE_RESOURCES },
   { label: "Activity",     to: "/admin/activity",         icon: Activity,        permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
+  { label: "Stats",        to: "/admin/stats",            icon: BarChart2, permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
   { label: "User Roles",   to: "/admin/roles",            icon: Users,           permission: PERMISSIONS.MANAGE_USERS },
 ]
 
@@ -167,6 +169,7 @@ function AdminTopBar({ sidebarOpen, setSidebarOpen }) {
 }
 
 export default function AdminLayout() {
+  useTrackActivity()
   const { hasPermission } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024)
   const [isMobile, setIsMobile]       = useState(() => window.innerWidth < 1024)

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 // ─── Appwrite ─────────────────────────────────────────────────────────────────
-const DATABASE_ID   = import.meta.env.VITE_APPWRITE_DATABASE_ID;
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const COLLECTION_ID = "cgpa_records";
 
 // ─── Gemini API — free tier, no proxy needed (CORS allowed) ──────────────────
@@ -25,7 +25,7 @@ function computeSGPA(subjects) {
   let earned = 0, total = 0;
   for (const s of subjects) {
     const cr = Number(s.credits) || 0;
-    total  += cr;
+    total += cr;
     earned += (GRADE_POINTS[s.grade] ?? 0) * cr;
   }
   return total === 0 ? null : earned / total;
@@ -35,41 +35,41 @@ function computeCGPA(semesters) {
   if (!sgpas.length) return 0;
   return sgpas.reduce((a, b) => a + b, 0) / sgpas.length;
 }
-const toPercent  = (c) => (c * 9.5).toFixed(2);
+const toPercent = (c) => (c * 9.5).toFixed(2);
 const gradeLabel = (c) =>
   c >= 9 ? "Outstanding" : c >= 8 ? "Excellent" : c >= 7 ? "Very Good" :
-  c >= 6 ? "Good" : c >= 5 ? "Average" : c > 0 ? "Needs Improvement" : "—";
+    c >= 6 ? "Good" : c >= 5 ? "Average" : c > 0 ? "Needs Improvement" : "—";
 
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 const scoreColor = (v) =>
   !v ? "text-muted-foreground"
-  : v >= 8.5 ? "text-emerald-600 dark:text-emerald-400"
-  : v >= 7   ? "text-blue-600 dark:text-blue-400"
-  : v >= 5   ? "text-amber-600 dark:text-amber-400"
-  : "text-red-600 dark:text-red-400";
+    : v >= 8.5 ? "text-emerald-600 dark:text-emerald-400"
+      : v >= 7 ? "text-blue-600 dark:text-blue-400"
+        : v >= 5 ? "text-amber-600 dark:text-amber-400"
+          : "text-red-600 dark:text-red-400";
 
 const scoreDot = (v) =>
   !v ? "bg-muted-foreground/30"
-  : v >= 8.5 ? "bg-emerald-500"
-  : v >= 7   ? "bg-blue-500"
-  : v >= 5   ? "bg-amber-500"
-  : "bg-red-500";
+    : v >= 8.5 ? "bg-emerald-500"
+      : v >= 7 ? "bg-blue-500"
+        : v >= 5 ? "bg-amber-500"
+          : "bg-red-500";
 
 const scoreHex = (v) =>
   !v ? "#94a3b8"
-  : v >= 8.5 ? "#10b981" : v >= 7 ? "#3b82f6"
-  : v >= 5   ? "#f59e0b" : "#ef4444";
+    : v >= 8.5 ? "#10b981" : v >= 7 ? "#3b82f6"
+      : v >= 5 ? "#f59e0b" : "#ef4444";
 
 // ─── Factories ────────────────────────────────────────────────────────────────
-const uid         = () => crypto.randomUUID();
-const newSubject  = () => ({ id: uid(), name: "", credits: "", grade: "O" });
+const uid = () => crypto.randomUUID();
+const newSubject = () => ({ id: uid(), name: "", credits: "", grade: "O" });
 const newSemester = (n) => ({ id: uid(), name: `Semester ${n}`, subjects: [newSubject()] });
 
 // ─── File → base64 ───────────────────────────────────────────────────────────
 function fileToBase64(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload  = () => res(r.result.split(",")[1]);
+    r.onload = () => res(r.result.split(",")[1]);
     r.onerror = rej;
     r.readAsDataURL(file);
   });
@@ -81,8 +81,8 @@ function fileToBase64(file) {
 function buildExportHTML(semesters, cgpa, percentage) {
   const scoreC = (v) =>
     !v ? "#64748b"
-    : v >= 8.5 ? "#10b981" : v >= 7 ? "#3b82f6"
-    : v >= 5   ? "#f59e0b" : "#ef4444";
+      : v >= 8.5 ? "#10b981" : v >= 7 ? "#3b82f6"
+        : v >= 5 ? "#f59e0b" : "#ef4444";
 
   const semRows = semesters.map((sem, i) => {
     const sgpa = computeSGPA(sem.subjects);
@@ -100,7 +100,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:8px;height:8px;border-radius:50%;background:${scoreC(sgpa)}"></div>
             <span style="font-size:13px;font-weight:600;color:#1e293b">${sem.name}</span>
-            <span style="font-size:11px;color:#94a3b8">${sem.subjects.reduce((a,s)=>a+(Number(s.credits)||0),0)} credits</span>
+            <span style="font-size:11px;color:#94a3b8">${sem.subjects.reduce((a, s) => a + (Number(s.credits) || 0), 0)} credits</span>
           </div>
           <div style="text-align:right">
             <div style="font-size:16px;font-weight:700;color:${scoreC(sgpa)}">${sgpa ? sgpa.toFixed(3) : "—"}</div>
@@ -124,7 +124,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
   const sgpaChips = semesters.map((sem, i) => {
     const sgpa = computeSGPA(sem.subjects);
     return sgpa ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;font-size:11px;margin-right:6px">
-      <span style="color:#64748b">S${i+1}</span>
+      <span style="color:#64748b">S${i + 1}</span>
       <span style="font-weight:700;color:${scoreC(sgpa)}">${sgpa.toFixed(3)}</span>
     </span>` : "";
   }).join("");
@@ -146,7 +146,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
           <div style="font-size:11px;color:#94a3b8">Unizuya · JC Bose / 10-point grading</div>
         </div>
       </div>
-      <div style="font-size:11px;color:#94a3b8">${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</div>
+      <div style="font-size:11px;color:#94a3b8">${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
     </div>
 
     <!-- Summary -->
@@ -164,7 +164,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center">
         <div style="font-size:28px;font-weight:700;color:#f59e0b">${semesters.length}</div>
         <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Semesters</div>
-        <div style="font-size:11px;color:#64748b;margin-top:4px">${semesters.reduce((s,sem)=>s+sem.subjects.reduce((a,sub)=>a+(Number(sub.credits)||0),0),0)} total credits</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px">${semesters.reduce((s, sem) => s + sem.subjects.reduce((a, sub) => a + (Number(sub.credits) || 0), 0), 0)} total credits</div>
       </div>
     </div>
 
@@ -186,10 +186,10 @@ function buildExportHTML(semesters, cgpa, percentage) {
 }
 
 function exportAsPDF(semesters, cgpa, percentage) {
-  const html    = buildExportHTML(semesters, cgpa, percentage);
-  const blob    = new Blob([html], { type: "text/html" });
-  const url     = URL.createObjectURL(blob);
-  const win     = window.open(url, "_blank");
+  const html = buildExportHTML(semesters, cgpa, percentage);
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank");
   if (win) {
     win.onload = () => { win.print(); URL.revokeObjectURL(url); };
   }
@@ -197,9 +197,9 @@ function exportAsPDF(semesters, cgpa, percentage) {
 
 async function exportAsImage(semesters, cgpa, percentage) {
   // render to hidden iframe → canvas via html2canvas CDN
-  const html     = buildExportHTML(semesters, cgpa, percentage);
-  const iframe   = document.createElement("iframe");
-  iframe.style   = "position:fixed;top:-9999px;left:-9999px;width:720px;height:1px;border:0";
+  const html = buildExportHTML(semesters, cgpa, percentage);
+  const iframe = document.createElement("iframe");
+  iframe.style = "position:fixed;top:-9999px;left:-9999px;width:720px;height:1px;border:0";
   document.body.appendChild(iframe);
   iframe.contentDocument.open();
   iframe.contentDocument.write(html);
@@ -210,9 +210,9 @@ async function exportAsImage(semesters, cgpa, percentage) {
   // load html2canvas dynamically
   await new Promise((res, rej) => {
     if (window.html2canvas) { res(); return; }
-    const s   = document.createElement("script");
-    s.src     = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-    s.onload  = res;
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = res;
     s.onerror = rej;
     document.head.appendChild(s);
   });
@@ -223,9 +223,9 @@ async function exportAsImage(semesters, cgpa, percentage) {
   });
   document.body.removeChild(iframe);
 
-  const a    = document.createElement("a");
-  a.href     = canvas.toDataURL("image/png");
-  a.download = `cgpa-report-${new Date().toISOString().slice(0,10)}.png`;
+  const a = document.createElement("a");
+  a.href = canvas.toDataURL("image/png");
+  a.download = `cgpa-report-${new Date().toISOString().slice(0, 10)}.png`;
   a.click();
 }
 
@@ -235,9 +235,9 @@ function GradeRing({ value, size = 100, stroke = 8 }) {
   const pct = value ? Math.min(value / 10, 1) : 0;
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)", display: "block" }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none"
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke="currentColor" strokeWidth={stroke} className="text-border/30" />
-      <circle cx={size/2} cy={size/2} r={r} fill="none"
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={scoreHex(value)} strokeWidth={stroke}
         strokeDasharray={`${pct * circ} ${circ}`} strokeLinecap="round"
         style={{ transition: "stroke-dasharray .7s cubic-bezier(.4,0,.2,1), stroke .4s" }} />
@@ -270,7 +270,7 @@ function SubjectRow({ sub, onChange, onRemove, canRemove }) {
       <button onClick={onRemove} disabled={!canRemove}
         className={`flex items-center justify-center h-8 w-8 rounded-md transition-colors
           ${canRemove ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      : "text-muted-foreground/20 cursor-not-allowed"}`}>
+            : "text-muted-foreground/20 cursor-not-allowed"}`}>
         <Trash2 size={13} />
       </button>
     </div>
@@ -279,14 +279,14 @@ function SubjectRow({ sub, onChange, onRemove, canRemove }) {
 
 // ─── SemesterCard ──────────────────────────────────────────────────────────────
 function SemesterCard({ sem, onUpdate, onRemove, canRemove, isOpen, onToggle }) {
-  const sgpa    = computeSGPA(sem.subjects);
+  const sgpa = computeSGPA(sem.subjects);
   const credits = sem.subjects.reduce((s, sub) => s + (Number(sub.credits) || 0), 0);
 
   const updateSubject = (idx, u) => {
     const subs = [...sem.subjects]; subs[idx] = u; onUpdate({ ...sem, subjects: subs });
   };
   const removeSubject = (idx) => onUpdate({ ...sem, subjects: sem.subjects.filter((_, i) => i !== idx) });
-  const addSubject    = ()    => onUpdate({ ...sem, subjects: [...sem.subjects, newSubject()] });
+  const addSubject = () => onUpdate({ ...sem, subjects: [...sem.subjects, newSubject()] });
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden mb-3 transition-shadow hover:shadow-sm">
@@ -315,30 +315,30 @@ function SemesterCard({ sem, onUpdate, onRemove, canRemove, isOpen, onToggle }) 
             </button>
           )}
           {isOpen ? <ChevronUp size={15} className="text-muted-foreground/50" />
-                  : <ChevronDown size={15} className="text-muted-foreground/50" />}
+            : <ChevronDown size={15} className="text-muted-foreground/50" />}
         </div>
       </button>
 
       {isOpen && (
         <div className="px-4 pb-4 pt-1 border-t border-border/50">
           <div className="overflow-x-auto -mx-4 px-4">
-          <div className="grid gap-2 mb-2 px-0.5" style={{ gridTemplateColumns: "1fr 70px 100px 32px", minWidth: 340 }}>
-            {["Subject", "Credits", "Grade", ""].map(h => (
-              <div key={h} className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">{h}</div>
+            <div className="grid gap-2 mb-2 px-0.5" style={{ gridTemplateColumns: "1fr 70px 100px 32px", minWidth: 340 }}>
+              {["Subject", "Credits", "Grade", ""].map(h => (
+                <div key={h} className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">{h}</div>
+              ))}
+            </div>
+            {sem.subjects.map((sub, i) => (
+              <SubjectRow key={sub.id} sub={sub}
+                onChange={u => updateSubject(i, u)}
+                onRemove={() => removeSubject(i)}
+                canRemove={sem.subjects.length > 1} />
             ))}
-          </div>
-          {sem.subjects.map((sub, i) => (
-            <SubjectRow key={sub.id} sub={sub}
-              onChange={u => updateSubject(i, u)}
-              onRemove={() => removeSubject(i)}
-              canRemove={sem.subjects.length > 1} />
-          ))}
-          <button onClick={addSubject}
-            className="mt-2 w-full flex items-center justify-center gap-1.5 h-8 text-xs
+            <button onClick={addSubject}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 h-8 text-xs
                        text-muted-foreground border border-dashed border-border/60 rounded-md
                        hover:border-border hover:text-foreground hover:bg-muted/30 transition-colors">
-            <Plus size={12} /> Add Subject
-          </button>
+              <Plus size={12} /> Add Subject
+            </button>
           </div>
         </div>
       )}
@@ -357,7 +357,7 @@ function SGPAProgressionBar({ semesters }) {
       <div className="flex items-end gap-3" style={{ height: 96 }}>
         {semesters.map((sem, i) => {
           const sgpa = computeSGPA(sem.subjects);
-          const h    = sgpa ? Math.max(14, (sgpa / 10) * 56) : 14;
+          const h = sgpa ? Math.max(14, (sgpa / 10) * 56) : 14;
           return (
             <div key={sem.id} className="flex flex-col flex-1 items-center" style={{ gap: 8 }}>
               <span className="text-xs font-semibold tabular-nums"
@@ -409,11 +409,11 @@ function SavedRecord({ record, onLoad, onDelete }) {
 
 // ─── AIScanModal ───────────────────────────────────────────────────────────────
 function AIScanModal({ onClose, onApply, semesterName }) {
-  const [file,    setFile]    = useState(null);
+  const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [status,  setStatus]  = useState("idle"); // idle | scanning | review | error
-  const [parsed,  setParsed]  = useState([]);
-  const [errMsg,  setErrMsg]  = useState("");
+  const [status, setStatus] = useState("idle"); // idle | scanning | review | error
+  const [parsed, setParsed] = useState([]);
+  const [errMsg, setErrMsg] = useState("");
   const fileRef = useRef();
 
   const handleFile = (f) => {
@@ -475,8 +475,17 @@ Rules:
         throw new Error(err.error?.message || `API error ${res.status}`);
       }
 
-      const data  = await res.json();
-      const text  = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? "";
+      const data = await res.json();
+
+      // ── For admin dashboard stats ──────────────────────────────────────────
+      const tokens = data.usageMetadata?.totalTokenCount || 0;
+      navigator.sendBeacon(
+        "https://unizuya-stats.harshtayal710.workers.dev/track/gemini",
+        JSON.stringify({ tool: "cgpa", tokens })
+      );
+      // ────────────────────────────────────────────────────────────
+
+      const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? "";
       const clean = text.replace(/```json|```/g, "").trim();
       const subjects = JSON.parse(clean);
 
@@ -485,10 +494,10 @@ Rules:
 
       // Normalise
       const normalised = subjects.map(s => ({
-        id:      uid(),
-        name:    String(s.name || "").trim(),
+        id: uid(),
+        name: String(s.name || "").trim(),
         credits: String(s.credits || ""),
-        grade:   GRADE_LABELS.includes(s.grade) ? s.grade : "B",
+        grade: GRADE_LABELS.includes(s.grade) ? s.grade : "B",
       }));
 
       setParsed(normalised);
@@ -656,23 +665,23 @@ Rules:
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════
 export default function CGPACalculator() {
-  const [semesters,  setSemesters]  = useState([newSemester(1)]);
-  const [openSems,   setOpenSems]   = useState({ 0: true });
-  const [view,       setView]       = useState("calc");
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
-  const [saveError,  setSaveError]  = useState("");
-  const [records,    setRecords]    = useState([]);
+  const [semesters, setSemesters] = useState([newSemester(1)]);
+  const [openSems, setOpenSems] = useState({ 0: true });
+  const [view, setView] = useState("calc");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [records, setRecords] = useState([]);
   const [loadingRec, setLoadingRec] = useState(true);
-  const [userId,     setUserId]     = useState(null);
-  const [exporting,  setExporting]  = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   // AI scan modal — tracks which semester index triggered it
-  const [scanModal,  setScanModal]  = useState(null); // null | semIndex
+  const [scanModal, setScanModal] = useState(null); // null | semIndex
 
-  const cgpa       = computeCGPA(semesters);
+  const cgpa = computeCGPA(semesters);
   const percentage = cgpa > 0 ? toPercent(cgpa) : "0.00";
-  const totalCr    = semesters.reduce((s, sem) =>
+  const totalCr = semesters.reduce((s, sem) =>
     s + sem.subjects.reduce((a, sub) => a + (Number(sub.credits) || 0), 0), 0);
   const validSgpas = semesters.map(s => computeSGPA(s.subjects)).filter(v => v !== null);
 
@@ -681,11 +690,11 @@ export default function CGPACalculator() {
       try {
         const user = await account.get();
         setUserId(user.$id);
-        const res  = await databases.listDocuments(DATABASE_ID, COLLECTION_ID);
+        const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID);
         setRecords(res.documents
           .filter(d => d.userId === user.$id)
           .sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)));
-      } catch (_) {}
+      } catch (_) { }
       finally { setLoadingRec(false); }
     })();
   }, []);
@@ -707,7 +716,7 @@ export default function CGPACalculator() {
     });
   };
   const toggleSem = (idx) => setOpenSems(p => ({ ...p, [idx]: !p[idx] }));
-  const resetAll  = () => { setSemesters([newSemester(1)]); setOpenSems({ 0: true }); };
+  const resetAll = () => { setSemesters([newSemester(1)]); setOpenSems({ 0: true }); };
 
   // Apply AI-scanned subjects to a semester
   const applyAIScan = (semIdx, subjects) => {
@@ -722,10 +731,10 @@ export default function CGPACalculator() {
     try {
       const doc = await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), {
         userId,
-        cgpa:       parseFloat(cgpa.toFixed(4)),
+        cgpa: parseFloat(cgpa.toFixed(4)),
         percentage: parseFloat(percentage),
-        semesters:  JSON.stringify(semesters),
-        savedAt:    new Date().toISOString(),
+        semesters: JSON.stringify(semesters),
+        savedAt: new Date().toISOString(),
       });
       setRecords(p => [doc, ...p]);
       setSaved(true);
@@ -785,8 +794,8 @@ export default function CGPACalculator() {
             className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg
                         border transition-colors
                         ${view === "history"
-                          ? "border-primary/40 text-primary bg-primary/5"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+                ? "border-primary/40 text-primary bg-primary/5"
+                : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
             <History size={13} />
             History {records.length > 0 && `(${records.length})`}
           </button>
@@ -797,8 +806,8 @@ export default function CGPACalculator() {
           <div>
             <p className="text-sm text-muted-foreground mb-4">
               {loadingRec ? "Loading…"
-               : records.length === 0 ? "No saved snapshots yet."
-               : "Your saved snapshots — load any to restore."}
+                : records.length === 0 ? "No saved snapshots yet."
+                  : "Your saved snapshots — load any to restore."}
             </p>
             {records.map(r => (
               <SavedRecord key={r.$id} record={r} onLoad={handleLoad} onDelete={handleDelete} />
@@ -934,12 +943,12 @@ export default function CGPACalculator() {
                 className={`flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl
                             border transition-colors
                             ${saved
-                              ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
-                              : "border-primary/40 text-primary bg-primary/5 hover:bg-primary/10"}
+                    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
+                    : "border-primary/40 text-primary bg-primary/5 hover:bg-primary/10"}
                             ${(saving || cgpa === 0) ? "opacity-50 cursor-not-allowed" : ""}`}>
                 {saved ? <><CheckCircle2 size={15} /> Saved!</>
                   : saving ? <><Save size={15} /> Saving…</>
-                  : <><Save size={15} /> Save Snapshot</>}
+                    : <><Save size={15} /> Save Snapshot</>}
               </button>
 
               {/* Export buttons */}

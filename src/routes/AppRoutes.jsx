@@ -43,6 +43,7 @@ import PyqUpload from "@/pages/admin/pyq/PyqUpload"
 import AdminPyqsPage from "@/pages/admin/pyq/AdminPyqsPage"
 import UnitsAdmin from "@/pages/admin/units/Units"
 import AdminActivity from "@/pages/dashboard/AdminActivity"
+import AdminStats from "@/pages/admin/stats/AdminStats"
 
 import Unauthorized from "../pages/errors/Unauthorized"
 import { Navigate } from "react-router-dom"
@@ -170,6 +171,7 @@ const AppRoutes = () => {
           <Route path="pyq/upload" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PYQS}><PyqUpload /></RequirePermissionRoute>} />
           <Route path="pyqs" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_PYQS}><AdminPyqsPage /></RequirePermissionRoute>} />
           <Route path="activity" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminActivity /></RequirePermissionRoute>} />
+        <Route path="stats" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminStats /></RequirePermissionRoute>} />
         </Route>
 
         {/* ⚠️ System routes */}

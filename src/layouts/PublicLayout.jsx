@@ -4,8 +4,10 @@ import { Navbar } from "@/components"
 import { SIDEBAR_W, NAVBAR_H } from "@/components/common/layout/UserSidebar"
 import { UserSidebar } from "@/components"
 import { useSidebar } from "@/context/SidebarContext"
+import { useTrackActivity } from "@/hooks/useTrackActivity"
 
 const PublicLayout = () => {
+  useTrackActivity()
   const { isPinned, isMobile, handleEdgeHover } = useSidebar()
 
   // Shift content right only when pinned/docked — overlay when just hovering

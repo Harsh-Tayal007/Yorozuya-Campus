@@ -15,10 +15,10 @@ const FUNCTION_ID = import.meta.env.VITE_APPWRITE_RECOVERY_FUNCTION_ID
 
 const ForgotPassword = () => {
   const navigate = useNavigate()
-  const [email,   setEmail]   = useState("")
+  const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
-  const [sent,    setSent]    = useState(false)
+  const [error, setError] = useState(null)
+  const [sent, setSent] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,6 +41,13 @@ const ForgotPassword = () => {
       if (result.error) throw new Error(result.error)
 
       setSent(true)
+
+      // ── For admin dashboard stats ──────────────────────────────────────────────────
+      navigator.sendBeacon(
+        "https://unizuya-stats.harshtayal710.workers.dev/track/resend",
+        JSON.stringify({ type: "password-reset" })
+      )
+      // ─────────────────────────────────────────────────────────────
     } catch (err) {
       setError(err?.message ?? "Something went wrong. Please try again.")
     } finally {

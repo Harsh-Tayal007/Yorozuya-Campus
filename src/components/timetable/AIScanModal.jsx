@@ -77,12 +77,12 @@ When uncertain between two counts, prefer the higher number.
 }
 
 export function AIScanModal({ onClose, onApply }) {
-  const [mode,    setMode]    = useState("full")
-  const [file,    setFile]    = useState(null)
+  const [mode, setMode] = useState("full")
+  const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
-  const [status,  setStatus]  = useState("idle")   // idle | scanning | review | error
-  const [result,  setResult]  = useState(null)
-  const [error,   setError]   = useState("")
+  const [status, setStatus] = useState("idle")   // idle | scanning | review | error
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState("")
   const fileRef = useRef()
 
   const handleFile = (f) => {
@@ -106,16 +106,18 @@ export function AIScanModal({ onClose, onApply }) {
     setStatus("scanning")
     setError("")
     try {
-      const base64    = await fileToBase64(file)
+      const base64 = await fileToBase64(file)
       const mediaType = file.type.startsWith("image/") ? file.type : "application/pdf"
 
       const body = {
-        contents: [{ parts: [
-          { inline_data: { mime_type: mediaType, data: base64 } },
-          { text: buildPrompt(mode) },
-        ]}],
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: mediaType, data: base64 } },
+            { text: buildPrompt(mode) },
+          ]
+        }],
         generationConfig: {
-          temperature:     0,
+          temperature: 0,
           maxOutputTokens: 16000,
         },
       }
@@ -127,8 +129,17 @@ export function AIScanModal({ onClose, onApply }) {
       })
       if (!res.ok) throw new Error(`Gemini error ${res.status}`)
 
-      const data  = await res.json()
-      const text  = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? ""
+      const data = await res.json()
+
+      // ── for admin dashboard stats ──────────────────────────────────────────────────
+      const tokens = data.usageMetadata?.totalTokenCount || 0
+      navigator.sendBeacon(
+        "https://unizuya-stats.harshtayal710.workers.dev/track/gemini",
+        JSON.stringify({ tool: "timetable", tokens })
+      )
+      // ─────────────────────────────────────────────────────────────
+
+      const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? ""
       const clean = text.replace(/```json|```/g, "").trim()
       if (!clean) throw new Error("Gemini returned an empty response. Try again.")
 
@@ -167,14 +178,14 @@ export function AIScanModal({ onClose, onApply }) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-         style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>
       <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-700 shadow-2xl flex flex-col max-h-[88vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-zinc-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
-              <Sparkles size={14} className="text-violet-500"/>
+              <Sparkles size={14} className="text-violet-500" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">AI Scan Timetable</p>
@@ -188,8 +199,8 @@ export function AIScanModal({ onClose, onApply }) {
           {/* Mode selector */}
           <div className="flex gap-2">
             {[
-              { value: "full",     title: "Full scan",      desc: "Extracts periods, subjects, and places all classes" },
-              { value: "subjects", title: "Subjects only",  desc: "Extracts subject list — you place them manually" },
+              { value: "full", title: "Full scan", desc: "Extracts periods, subjects, and places all classes" },
+              { value: "subjects", title: "Subjects only", desc: "Extracts subject list — you place them manually" },
             ].map(opt => (
               <button key={opt.value} type="button"
                 onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
@@ -210,15 +221,15 @@ export function AIScanModal({ onClose, onApply }) {
               className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl
                           border-2 border-dashed cursor-pointer transition-colors
                           ${file
-                            ? "border-violet-400/60 bg-violet-50/50 dark:bg-violet-950/20"
-                            : "border-gray-200 dark:border-zinc-700 hover:border-violet-300 hover:bg-muted/30"}`}>
+                  ? "border-violet-400/60 bg-violet-50/50 dark:bg-violet-950/20"
+                  : "border-gray-200 dark:border-zinc-700 hover:border-violet-300 hover:bg-muted/30"}`}>
               <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden"
-                onChange={e => handleFile(e.target.files?.[0])}/>
+                onChange={e => handleFile(e.target.files?.[0])} />
               {preview
-                ? <img src={preview} alt="preview" className="max-h-28 rounded-lg object-contain border border-gray-200"/>
+                ? <img src={preview} alt="preview" className="max-h-28 rounded-lg object-contain border border-gray-200" />
                 : <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                    <ImageIcon size={18} className="text-muted-foreground"/>
-                  </div>
+                  <ImageIcon size={18} className="text-muted-foreground" />
+                </div>
               }
               <div className="text-center">
                 <p className="text-sm font-medium text-foreground">{file ? file.name : "Click to upload timetable"}</p>
@@ -230,7 +241,7 @@ export function AIScanModal({ onClose, onApply }) {
           {/* Error */}
           {status === "error" && (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-2">
-              <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0"/>
+              <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
               <p className="text-xs text-destructive">{error}</p>
             </div>
           )}
@@ -242,9 +253,9 @@ export function AIScanModal({ onClose, onApply }) {
                 <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">Scan complete ✓</p>
                 {mode === "full" ? (
                   <div className="text-xs text-emerald-600 dark:text-emerald-500 space-y-0.5">
-                    <p>{result.periods?.length  || 0} periods found</p>
+                    <p>{result.periods?.length || 0} periods found</p>
                     <p>{result.subjects?.length || 0} subjects found</p>
-                    <p>{result.slots?.length    || 0} class slots found</p>
+                    <p>{result.slots?.length || 0} class slots found</p>
                   </div>
                 ) : (
                   <p className="text-xs text-emerald-600 dark:text-emerald-500">
@@ -277,8 +288,8 @@ export function AIScanModal({ onClose, onApply }) {
                 className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-semibold
                            bg-violet-500 hover:bg-violet-600 text-white rounded-xl disabled:opacity-50 transition-colors">
                 {status === "scanning"
-                  ? <><Loader2 size={14} className="animate-spin"/> Scanning…</>
-                  : <><Sparkles size={14}/> Scan with AI</>}
+                  ? <><Loader2 size={14} className="animate-spin" /> Scanning…</>
+                  : <><Sparkles size={14} /> Scan with AI</>}
               </button>
             </>
           ) : (
@@ -290,7 +301,7 @@ export function AIScanModal({ onClose, onApply }) {
               <button onClick={apply}
                 className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-semibold
                            bg-violet-500 hover:bg-violet-600 text-white rounded-xl transition-colors">
-                <Check size={14}/> Apply
+                <Check size={14} /> Apply
               </button>
             </>
           )}

@@ -1,9 +1,11 @@
 import { Navbar, UserSidebar } from "@/components"
 import { useAuth } from "@/context/AuthContext"
 import { useSidebar } from "@/context/SidebarContext"
+import { useTrackActivity } from "@/hooks/useTrackActivity"
 import { Outlet } from "react-router-dom"
 
 const UserLayout = () => {
+  useTrackActivity()
   const { user } = useAuth()
   const { handleEdgeHover } = useSidebar()
 
