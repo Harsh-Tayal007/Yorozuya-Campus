@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <!-- Concept: An open book whose spine curves into an orbital arc — knowledge in motion.
+       The arc suggests a satellite/orbit (academic world, connected), 
+       the pages form a stylized U, the dot above is a "north star" / beacon. -->
+
+  <!-- Outer orbital ring — broken arc suggesting motion/orbit -->
+  <circle cx="60" cy="62" r="46" stroke="#4A9EFF" stroke-width="3.5" stroke-linecap="round"
+    stroke-dasharray="230 60" stroke-dashoffset="-15" opacity="0.35"/>
+
+  <!-- Inner orbital ring — tighter, offset -->
+  <circle cx="60" cy="62" r="34" stroke="#4A9EFF" stroke-width="2" stroke-linecap="round"
+    stroke-dasharray="140 74" stroke-dashoffset="30" opacity="0.2"/>
+
+  <!-- The mark: a stylized open book / U shape, geometric -->
+  <!-- Left page -->
+  <path d="M28 32 L28 78 Q28 90 42 90 L58 90 L58 32 Z"
+    fill="#4A9EFF" opacity="0.15"/>
+  <path d="M28 32 L28 78 Q28 90 42 90 L58 90 L58 32 Z"
+    stroke="#4A9EFF" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+
+  <!-- Right page -->
+  <path d="M92 32 L92 78 Q92 90 78 90 L62 90 L62 32 Z"
+    fill="#4A9EFF" opacity="0.15"/>
+  <path d="M92 32 L92 78 Q92 90 78 90 L62 90 L62 32 Z"
+    stroke="#4A9EFF" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+
+  <!-- Spine connector top -->
+  <line x1="28" y1="32" x2="92" y2="32" stroke="#4A9EFF" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Center spine line -->
+  <line x1="60" y1="32" x2="60" y2="90" stroke="#4A9EFF" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Beacon dot — the "north star" above the book -->
+  <circle cx="60" cy="18" r="5.5" fill="#4A9EFF"/>
+  <circle cx="60" cy="18" r="9" stroke="#4A9EFF" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Connector from beacon to book spine -->
+  <line x1="60" y1="23.5" x2="60" y2="32" stroke="#4A9EFF" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Subtle page lines on left -->
+  <line x1="35" y1="48" x2="55" y2="48" stroke="#4A9EFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+  <line x1="35" y1="56" x2="55" y2="56" stroke="#4A9EFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+  <line x1="35" y1="64" x2="55" y2="64" stroke="#4A9EFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+
+  <!-- Subtle page lines on right -->
+  <line x1="65" y1="48" x2="85" y2="48" stroke="#4A9EFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+  <line x1="65" y1="56" x2="85" y2="56" stroke="#4A9EFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+  <line x1="65" y1="64" x2="85" y2="64" stroke="#4A9EFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+</svg>

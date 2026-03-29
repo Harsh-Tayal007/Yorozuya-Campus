@@ -1,3 +1,4 @@
+// src/components/common/layout/Navbar.jsx
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import {
@@ -11,6 +12,87 @@ import NotificationBell from "../navigation/NotificationBell"
 import SwitchAccountModal from "../navigation/SwitchAccountModal"
 
 const NAVBAR_H = 68
+
+// ── Unizuya logo mark — bounces once on hover ─────────────────────────────────
+const NavLogoMark = () => {
+  const [bouncing, setBouncing] = useState(false)
+
+  const handleHover = () => {
+    if (bouncing) return
+    setBouncing(true)
+    // Reset after animation completes so it can trigger again
+    setTimeout(() => setBouncing(false), 900)
+  }
+
+  return (
+    <>
+      <style>{`
+        @keyframes nav-bounce {
+          0%   { transform: translateY(0)    scale(1, 1); }
+          18%  { transform: translateY(-7px) scale(0.94, 1.06); }
+          36%  { transform: translateY(0px)  scale(1.12, 0.88); }
+          50%  { transform: translateY(-4px) scale(0.97, 1.03); }
+          64%  { transform: translateY(0px)  scale(1.05, 0.96); }
+          78%  { transform: translateY(-2px) scale(0.99, 1.01); }
+          100% { transform: translateY(0)    scale(1, 1); }
+        }
+        .nav-logo-bounce {
+          animation: nav-bounce 0.85s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        /* Beacon dot pulses gently at rest */
+        @keyframes nav-beacon-idle {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.55; }
+        }
+        .nav-beacon-dot {
+          animation: nav-beacon-idle 2.4s ease-in-out infinite;
+        }
+        .nav-logo-bounce .nav-beacon-dot {
+          animation: none;
+          opacity: 1;
+        }
+      `}</style>
+
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 120 120"
+        width="26"
+        height="26"
+        fill="none"
+        aria-hidden="true"
+        onMouseEnter={handleHover}
+        className={`shrink-0 cursor-pointer select-none ${bouncing ? "nav-logo-bounce" : ""}`}
+      >
+        {/* Left page */}
+        <path d="M28 32 L28 78 Q28 90 42 90 L58 90 L58 32 Z"
+          fill="#4A9EFF" fillOpacity="0.14"/>
+        <path d="M28 32 L28 78 Q28 90 42 90 L58 90 L58 32 Z"
+          stroke="#4A9EFF" strokeWidth="5" strokeLinejoin="round" fill="none"/>
+
+        {/* Right page */}
+        <path d="M92 32 L92 78 Q92 90 78 90 L62 90 L62 32 Z"
+          fill="#4A9EFF" fillOpacity="0.14"/>
+        <path d="M92 32 L92 78 Q92 90 78 90 L62 90 L62 32 Z"
+          stroke="#4A9EFF" strokeWidth="5" strokeLinejoin="round" fill="none"/>
+
+        {/* Top crossbar */}
+        <line x1="28" y1="32" x2="92" y2="32"
+          stroke="#4A9EFF" strokeWidth="5" strokeLinecap="round"/>
+
+        {/* Center spine */}
+        <line x1="60" y1="32" x2="60" y2="90"
+          stroke="#4A9EFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.4"/>
+
+        {/* Beacon connector */}
+        <line x1="60" y1="22" x2="60" y2="32"
+          stroke="#4A9EFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
+
+        {/* Beacon dot */}
+        <circle cx="60" cy="15" r="6.5" fill="#4A9EFF" className="nav-beacon-dot"/>
+      </svg>
+    </>
+  )
+}
 
 const Navbar = () => {
   const navigate   = useNavigate()
@@ -103,11 +185,13 @@ const Navbar = () => {
           <Menu size={18} />
         </button>
 
-        {/* Logo */}
-        <Link to="/"
-          className="text-lg font-semibold tracking-tight text-foreground
-                     hover:text-indigo-500 transition-colors duration-150">
-          Unizuya
+        {/* Logo mark + wordmark */}
+        <Link to="/" className="flex items-center gap-2 group">
+          <NavLogoMark />
+          <span className="text-lg font-semibold tracking-tight text-foreground
+                           group-hover:text-indigo-500 transition-colors duration-150">
+            Unizuya
+          </span>
         </Link>
 
         <div className="flex-1" />
@@ -132,7 +216,8 @@ const Navbar = () => {
                 {currentUser?.name || currentUser?.email}
               </span>
               <ChevronDown size={13}
-                className={`hidden sm:block text-muted-foreground transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+                className={`hidden sm:block text-muted-foreground transition-transform duration-200
+                            ${dropdownOpen ? "rotate-180" : ""}`} />
             </button>
           </div>
         ) : (
@@ -158,7 +243,6 @@ const Navbar = () => {
                      shadow-[0_20px_60px_rgba(0,0,0,0.2)] overflow-hidden p-1.5
                      animate-in fade-in-0 zoom-in-95 duration-150 origin-top-right"
         >
-          {/* User info */}
           <div className="flex items-center gap-2.5 px-3 py-2.5">
             <Avatar size="w-9 h-9" />
             <div className="min-w-0">
@@ -180,7 +264,6 @@ const Navbar = () => {
           <DropItem to="/dashboard/settings"
             icon={Settings} label="Settings" onClose={() => setDropdownOpen(false)} />
 
-          {/* Switch Account */}
           <div className="h-px bg-border mx-1 my-1" />
           <button
             onClick={() => { setDropdownOpen(false); setSwitchModalOpen(true) }}
@@ -191,7 +274,6 @@ const Navbar = () => {
             Switch Account
           </button>
 
-          {/* Admin */}
           {hasAnyPermission(["view:admin-dashboard"]) && (
             <>
               <div className="h-px bg-border mx-1 my-1" />
@@ -217,7 +299,6 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* Switch Account Modal */}
       <SwitchAccountModal
         open={switchModalOpen}
         onClose={() => setSwitchModalOpen(false)}

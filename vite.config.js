@@ -13,24 +13,17 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: "autoUpdate",
-        devOptions: {
-          enabled: true,
-          type: "module",
-        },
+        devOptions: { enabled: true, type: "module" },
         workbox: {
-          // Exclude push-sw.js — it must register itself independently
-          // so the PushManager scope is correct and it isn't versioned/cached
-          // by Workbox (which would break push subscription renewal)
           globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
           globIgnores: ["push-sw.js"],
-          // Don't let the PWA SW claim push-sw.js routes
           navigateFallbackDenylist: [/^\/push-sw\.js/],
         },
         manifest: {
           id: "/",
-          name: "UniZuya",
-          short_name: "UniZuya",
-          description: "University resources and PYQs platform",
+          name: "Unizuya",
+          short_name: "Unizuya",
+          description: "A unified academic platform - PYQs, syllabus, resources and a student forum, all in one place.",
           theme_color: "#0b0f19",
           background_color: "#0b0f19",
           display: "standalone",
@@ -38,14 +31,30 @@ export default defineConfig(({ mode }) => {
           start_url: "/",
           scope: "/",
           icons: [
-            { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
-            { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
-            { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+            { src: "pwa-192.png",          sizes: "192x192", type: "image/png", purpose: "any"      },
+            { src: "pwa-512.png",          sizes: "512x512", type: "image/png", purpose: "any"      },
+            { src: "pwa-192-maskable.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+            { src: "pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          ],
+          screenshots: [
+            {
+              src: "screenshots/desktop.png",
+              sizes: "1280x720",
+              type: "image/png",
+              form_factor: "wide",
+              label: "Unizuya — Home",
+            },
+            {
+              src: "screenshots/mobile.png",
+              sizes: "390x844",
+              type: "image/png",
+              form_factor: "narrow",
+              label: "Unizuya — Dashboard",
+            },
           ],
         },
       }),
     ],
-
     server: {
       proxy: {
         "/anthropic": {
@@ -60,15 +69,11 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-
     define: {
       "import.meta.env.VITE_BUILD_TIME": JSON.stringify(Date.now().toString()),
     },
-
     resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
+      alias: { "@": path.resolve(__dirname, "./src") },
     },
   };
 });

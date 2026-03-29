@@ -17,6 +17,28 @@ const SIDEBAR_W = 256
 
 export { SIDEBAR_W, NAVBAR_H }
 
+// ── Derive active section label from current path ─────────────────────────────
+function useActiveSectionLabel(location) {
+  const allLinks = [homeRootLink, forumRootLink, dashboardRootLink]
+
+  // Check top-level links first
+  for (const link of allLinks) {
+    const match = link.path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(link.path)
+    if (match) return link.label
+  }
+
+  // Check section children
+  for (const section of dashboardSidebarSections) {
+    for (const child of section.children) {
+      if (location.pathname.startsWith(child.path)) return section.label
+    }
+  }
+
+  return "Unizuya"
+}
+
 export default function UserSidebar() {
   const {
     isOpen, setIsOpen,
@@ -29,9 +51,8 @@ export default function UserSidebar() {
   const isLoggedIn = !!user
 
   const [openSections, setOpenSections] = useState([])
-
-  // ── LoginGateSheet state ──────────────────────────────────────────────────
   const [gateSheet, setGateSheet] = useState({ open: false, feature: "", redirect: "" })
+
   const openGate = useCallback((featureName, redirectTo) => {
     setGateSheet({ open: true, feature: featureName, redirect: redirectTo })
   }, [])
@@ -39,12 +60,12 @@ export default function UserSidebar() {
     setGateSheet(s => ({ ...s, open: false }))
   }, [])
 
-  // On mobile: close sidebar on route change
+  const activeLabel = useActiveSectionLabel(location)
+
   useEffect(() => {
     if (isMobile) setIsOpen(false)
   }, [location.pathname, isMobile])
 
-  // Auto-open section that contains the active route
   useEffect(() => {
     const active = dashboardSidebarSections.find(s =>
       s.children.some(c => location.pathname.startsWith(c.path))
@@ -57,13 +78,10 @@ export default function UserSidebar() {
   }, [location.pathname])
 
   const visible = isOpen || isPinned
-
-  // Always-visible top links (no auth required)
   const topLinks = [homeRootLink, forumRootLink]
 
   return (
     <>
-      {/* Mobile backdrop */}
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
@@ -71,7 +89,6 @@ export default function UserSidebar() {
         />
       )}
 
-      {/* Sidebar panel */}
       <aside
         onMouseLeave={handleSidebarLeave}
         style={{
@@ -89,16 +106,13 @@ export default function UserSidebar() {
                    transition-transform duration-200 ease-in-out
                    overflow-hidden"
       >
-        {/* ── Header ── */}
+        {/* ── Header: active section + pin button ── */}
         <div className="flex items-center justify-between px-4 py-3
-                        border-b border-border/40 shrink-0">
-          <Link to="/" className="flex items-center gap-2.5 min-w-0">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500
-                            to-purple-500 shrink-0" />
-            <span className="text-sm font-semibold text-foreground truncate">
-              Unizuya
-            </span>
-          </Link>
+                        border-b border-border/40 shrink-0 min-h-[52px]">
+          <span className="text-xs font-semibold uppercase tracking-widest
+                           text-muted-foreground/60 truncate select-none">
+            {activeLabel}
+          </span>
 
           <button
             onClick={togglePin}
@@ -119,7 +133,6 @@ export default function UserSidebar() {
         {/* ── Nav ── */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5">
 
-          {/* Home + Forum (always accessible) */}
           {topLinks.map(item => {
             const isActive = item.path === "/"
               ? location.pathname === "/"
@@ -135,7 +148,6 @@ export default function UserSidebar() {
             )
           })}
 
-          {/* Dashboard link — locked for public users */}
           {isLoggedIn ? (
             <SidebarLink
               to={dashboardRootLink.path}
@@ -151,10 +163,8 @@ export default function UserSidebar() {
             />
           )}
 
-          {/* Divider */}
           <div className="h-px bg-border/40 mx-1 my-2" />
 
-          {/* Collapsible sections — always visible, locked per section when logged out */}
           {dashboardSidebarSections.map(section => {
             const sectionLocked = !isLoggedIn && section.lockedForPublic
             const isExpanded    = openSections.includes(section.id)
@@ -162,7 +172,6 @@ export default function UserSidebar() {
 
             return (
               <div key={section.id}>
-                {/* Section header */}
                 <button
                   onClick={() => {
                     if (sectionLocked) {
@@ -205,7 +214,6 @@ export default function UserSidebar() {
                   }
                 </button>
 
-                {/* Section children — only when expanded AND unlocked */}
                 {isExpanded && !sectionLocked && (
                   <div className="ml-4 border-l border-border/40 pl-2
                                   mt-0.5 space-y-0.5">
@@ -238,7 +246,6 @@ export default function UserSidebar() {
           })}
         </nav>
 
-        {/* Login gate sheet — mounted once, controlled by state */}
         <LoginGateSheet
           isOpen={gateSheet.open}
           onClose={closeGate}
@@ -250,7 +257,6 @@ export default function UserSidebar() {
   )
 }
 
-// ─── Normal link ──────────────────────────────────────────────────────────────
 function SidebarLink({ to, icon: Icon, label, isActive, small }) {
   return (
     <Link
@@ -273,7 +279,6 @@ function SidebarLink({ to, icon: Icon, label, isActive, small }) {
   )
 }
 
-// ─── Locked link (public users) ───────────────────────────────────────────────
 function SidebarLinkLocked({ icon: Icon, label, onLockClick }) {
   return (
     <button
@@ -293,7 +298,6 @@ function SidebarLinkLocked({ icon: Icon, label, onLockClick }) {
   )
 }
 
-// ─── "Coming soon" link ───────────────────────────────────────────────────────
 function SidebarLinkSoon({ icon: Icon, label }) {
   return (
     <div

@@ -13,7 +13,7 @@ self.addEventListener("push", (event) => {
 
   const {
     title = "Unizuya", body = "", url = "/dashboard",
-    icon  = "/favicon.ico", badge = "/favicon.ico", tag = "unizuya-notif",
+    icon  = "/pwa-192.png", badge = "/favicon-96x96.png", tag = "unizuya-notif",
   } = data;
 
   event.waitUntil(
@@ -44,19 +44,16 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(async (clients) => {
-        // Find a client on the same origin
         const existing = clients.find(c =>
           new URL(c.url).origin === self.location.origin
         );
 
         if (existing) {
           await existing.focus();
-          // Send navigate message — the app handles actual routing
           existing.postMessage({ type: "SW_NAVIGATE", url: targetUrl });
           return;
         }
 
-        // No tab open — open a new one directly at the target URL
         return self.clients.openWindow(targetUrl);
       })
   );

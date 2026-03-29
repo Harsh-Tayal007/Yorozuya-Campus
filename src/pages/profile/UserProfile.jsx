@@ -20,6 +20,7 @@ import { Query } from "appwrite"
 import { useAuth } from "@/context/AuthContext"
 import ThreadCard from "@/components/forum/ThreadCard"
 import useFollowStatus from "@/hooks/useFollowStatus"
+import ProfileSkeleton from "@/components/profile/ProfileSkeleton"
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const REPLIES_COL = import.meta.env.VITE_APPWRITE_REPLIES_COLLECTION_ID
@@ -395,16 +396,7 @@ const UserProfile = () => {
   const cachedProfile = queryClient.getQueryData(["profile-by-userid", profile?.userId])
   const displayProfile = { ...profile, ...cachedProfile }
 
-  if (isLoading) {
-    return (
-      <PageWrapper>
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin mr-2" />
-          Loading profile...
-        </div>
-      </PageWrapper>
-    )
-  }
+  if (isLoading) return <PageWrapper><ProfileSkeleton /></PageWrapper>
 
   if (isError || !profile) {
     return (
