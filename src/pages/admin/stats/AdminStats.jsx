@@ -11,7 +11,7 @@ import {
 const WORKER = "https://unizuya-stats.harshtayal710.workers.dev"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const fmt     = (n) => (n ?? 0).toLocaleString()
+const fmt = (n) => (n ?? 0).toLocaleString()
 const shortDate = (d) => {
   if (!d) return ""
   const [, m, day] = d.split("-")
@@ -23,7 +23,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = "#3b82f6", loading }
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-4 flex items-center gap-3 min-w-0">
       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-           style={{ background: `${accent}18`, color: accent }}>
+        style={{ background: `${accent}18`, color: accent }}>
         <Icon size={17} />
       </div>
       <div className="min-w-0 flex-1">
@@ -66,7 +66,7 @@ function ChartTooltip({ active, payload, label }) {
 function ScrollChart({ data, minWidth = 600, height = 240, children }) {
   const scrollRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [startX, setStartX]         = useState(0)
+  const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
 
   // Mouse drag to scroll on desktop too
@@ -78,7 +78,7 @@ function ScrollChart({ data, minWidth = 600, height = 240, children }) {
   const onMouseMove = (e) => {
     if (!isDragging) return
     e.preventDefault()
-    const x    = e.pageX - scrollRef.current.offsetLeft
+    const x = e.pageX - scrollRef.current.offsetLeft
     const walk = (x - startX) * 1.2
     scrollRef.current.scrollLeft = scrollLeft - walk
   }
@@ -115,9 +115,9 @@ function ScrollChart({ data, minWidth = 600, height = 240, children }) {
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 function QuotaBar({ label, used, limit, color, note }) {
-  const pct    = Math.min((used / limit) * 100, 100)
+  const pct = Math.min((used / limit) * 100, 100)
   const danger = pct > 80
-  const warn   = pct > 60
+  const warn = pct > 60
   const barColor = danger ? "#ef4444" : warn ? "#f59e0b" : color
   return (
     <div>
@@ -136,7 +136,7 @@ function QuotaBar({ label, used, limit, color, note }) {
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div className="h-full rounded-full transition-all duration-700"
-             style={{ width: `${pct}%`, background: barColor }} />
+          style={{ width: `${pct}%`, background: barColor }} />
       </div>
     </div>
   )
@@ -181,12 +181,12 @@ function EmptyChart({ message }) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminStats() {
-  const [today,   setToday]   = useState(null)
+  const [today, setToday] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(null)
-  const [lastSync,setLastSync] = useState(null)
-  const [selected,setSelected] = useState(null) // clicked bar data
+  const [error, setError] = useState(null)
+  const [lastSync, setLastSync] = useState(null)
+  const [selected, setSelected] = useState(null) // clicked bar data
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
@@ -199,13 +199,13 @@ export default function AdminStats() {
       const tData = await tRes.json()
       const hData = await hRes.json()
       setToday(tData)
-      const docs   = hData.documents ?? []
+      const docs = hData.documents ?? []
       const sorted = [...docs].sort((a, b) => a.date.localeCompare(b.date))
       setHistory(sorted)
       setLastSync(new Date())
       setSelected(null)
     } catch (e) { setError(e.message) }
-    finally     { setLoading(false) }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -213,67 +213,78 @@ export default function AdminStats() {
   // ── Build chart data: history (sorted asc) + today appended ──────────────
   // We always include today even if history is empty so chart isn't blank
   const buildActivityData = () => {
-    const rows = history.slice(-14).map(d => ({
-      date:          shortDate(d.date),
-      fullDate:      d.date,
-      isToday:       false,
-      "Active users": d.active_users  ?? 0,
-      "Page views":   d.page_views    ?? 0,
-      "New signups":  d.new_signups   ?? 0,
-    }))
-    if (today) rows.push({
-      date:          shortDate(today.date) + " ★",
-      fullDate:      today.date,
-      isToday:       true,
-      "Active users": today.active_users  ?? 0,
-      "Page views":   today.page_views    ?? 0,
-      "New signups":  today.new_signups   ?? 0,
+    // Exclude today's date from history to avoid duplicate bar
+    const todayDate = today?.date
+    const hist = history
+      .filter(d => d.date !== todayDate)
+      .slice(-14)
+      .map(d => ({
+        date: shortDate(d.date),
+        fullDate: d.date,
+        isToday: false,
+        "Active users": d.active_users ?? 0,
+        "Page views": d.page_views ?? 0,
+        "New signups": d.new_signups ?? 0,
+      }))
+
+    if (today) hist.push({
+      date: shortDate(today.date) + " ★",
+      fullDate: today.date,
+      isToday: true,
+      "Active users": today.active_users ?? 0,
+      "Page views": today.page_views ?? 0,
+      "New signups": today.new_signups ?? 0,
     })
-    return rows
+
+    return hist
   }
 
-  const buildGeminiData = () => {
-    const rows = history.slice(-14).map(d => ({
+ const buildGeminiData = () => {
+  const todayDate = today?.date  // ← add this
+  const rows = history
+    .filter(d => d.date !== todayDate)  // ← add this filter
+    .slice(-14)
+    .map(d => ({
       date:        shortDate(d.date),
       isToday:     false,
       "Total":     d.gemini_tokens_total     ?? 0,
       "CGPA":      d.gemini_tokens_cgpa      ?? 0,
       "Timetable": d.gemini_tokens_timetable ?? 0,
     }))
-    if (today) rows.push({
-      date:        shortDate(today.date) + " ★",
-      isToday:     true,
-      "Total":     today.gemini_tokens_total     ?? 0,
-      "CGPA":      today.gemini_tokens_cgpa      ?? 0,
-      "Timetable": today.gemini_tokens_timetable ?? 0,
-    })
-    return rows
-  }
+  if (today) rows.push({
+    date:        shortDate(today.date) + " ★",
+    isToday:     true,
+    "Total":     today.gemini_tokens_total     ?? 0,
+    "CGPA":      today.gemini_tokens_cgpa      ?? 0,
+    "Timetable": today.gemini_tokens_timetable ?? 0,
+  })
+  return rows
+}
 
   const activityData = buildActivityData()
-  const geminiData   = buildGeminiData()
+  const geminiData = buildGeminiData()
 
   // ── Summary totals ────────────────────────────────────────────────────────
   // Include today's live data in totals so numbers aren't 0 before first flush
-  const todayActive  = today?.active_users  ?? 0
-  const todayViews   = today?.page_views    ?? 0
-  const todaySignups = today?.new_signups   ?? 0
-  const todayTokens  = today?.gemini_tokens_total ?? 0
-  const todayEmails  = today?.resend_emails_sent  ?? 0
+  const todayActive = today?.active_users ?? 0
+  const todayViews = today?.page_views ?? 0
+  const todaySignups = today?.new_signups ?? 0
+  const todayTokens = today?.gemini_tokens_total ?? 0
+  const todayEmails = today?.resend_emails_sent ?? 0
 
-  const histMAU    = history.slice(-30).reduce((s,d) => s + (d.active_users ?? 0), 0)
-  const histWAU    = history.slice(-7).reduce((s,d)  => s + (d.active_users ?? 0), 0)
-  const histTokens = history.slice(-30).reduce((s,d) => s + (d.gemini_tokens_total ?? 0), 0)
-  const histEmails = history.slice(-30).reduce((s,d) => s + (d.resend_emails_sent ?? 0), 0)
+  const histMAU = history.slice(-30).reduce((s, d) => s + (d.active_users ?? 0), 0)
+  const histWAU = history.slice(-7).reduce((s, d) => s + (d.active_users ?? 0), 0)
+  const histTokens = history.slice(-30).reduce((s, d) => s + (d.gemini_tokens_total ?? 0), 0)
+  const histEmails = history.slice(-30).reduce((s, d) => s + (d.resend_emails_sent ?? 0), 0)
 
   // Add today to these so they're non-zero from day 1
-  const totalMAU    = histMAU + todayActive
-  const totalWAU    = histWAU + todayActive
+  const totalMAU = histMAU + todayActive
+  const totalWAU = histWAU + todayActive
   const totalTokens = histTokens + todayTokens
   const totalEmails = histEmails + todayEmails
 
   // Quota: use page_views as proxy for worker requests
-  const totalWorkerReqs = history.reduce((s,d) => s + (d.page_views ?? 0), 0) + todayViews
+  const totalWorkerReqs = history.reduce((s, d) => s + (d.page_views ?? 0), 0) + todayViews
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -315,15 +326,15 @@ export default function AdminStats() {
         hint="Counts are live from Cloudflare KV — updated instantly on every visit. Flushed to Appwrite database at midnight UTC."
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard icon={Users}    label="Active users"   value={fmt(todayActive)}
-                    accent="#3b82f6" loading={loading} />
-          <StatCard icon={Eye}      label="Page views"     value={fmt(todayViews)}
-                    accent="#8b5cf6" loading={loading}
-                    sub="across all layouts combined" />
-          <StatCard icon={UserPlus} label="New signups"    value={fmt(todaySignups)}
-                    accent="#10b981" loading={loading} />
-          <StatCard icon={Mail}     label="Emails sent"    value={fmt(todayEmails)}
-                    accent="#f59e0b" loading={loading} />
+          <StatCard icon={Users} label="Active users" value={fmt(todayActive)}
+            accent="#3b82f6" loading={loading} />
+          <StatCard icon={Eye} label="Page views" value={fmt(todayViews)}
+            accent="#8b5cf6" loading={loading}
+            sub="across all layouts combined" />
+          <StatCard icon={UserPlus} label="New signups" value={fmt(todaySignups)}
+            accent="#10b981" loading={loading} />
+          <StatCard icon={Mail} label="Emails sent" value={fmt(todayEmails)}
+            accent="#f59e0b" loading={loading} />
         </div>
       </Section>
 
@@ -333,14 +344,14 @@ export default function AdminStats() {
         hint="Includes today's live data so these numbers are never 0 on day 1. History accumulates after each midnight flush."
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard icon={Users}      label="MAU (30 days)"  value={fmt(totalMAU)}
-                    accent="#3b82f6"  sub="sum of daily actives" loading={loading} />
-          <StatCard icon={TrendingUp} label="WAU (7 days)"   value={fmt(totalWAU)}
-                    accent="#8b5cf6"  sub="last 7 days" loading={loading} />
-          <StatCard icon={Sparkles}   label="Gemini tokens"  value={fmt(totalTokens)}
-                    accent="#ec4899"  sub="this month" loading={loading} />
-          <StatCard icon={Mail}       label="Emails sent"    value={fmt(totalEmails)}
-                    accent="#f59e0b"  sub="this month" loading={loading} />
+          <StatCard icon={Users} label="MAU (30 days)" value={fmt(totalMAU)}
+            accent="#3b82f6" sub="sum of daily actives" loading={loading} />
+          <StatCard icon={TrendingUp} label="WAU (7 days)" value={fmt(totalWAU)}
+            accent="#8b5cf6" sub="last 7 days" loading={loading} />
+          <StatCard icon={Sparkles} label="Gemini tokens" value={fmt(totalTokens)}
+            accent="#ec4899" sub="this month" loading={loading} />
+          <StatCard icon={Mail} label="Emails sent" value={fmt(totalEmails)}
+            accent="#f59e0b" sub="this month" loading={loading} />
         </div>
       </Section>
 
@@ -378,11 +389,11 @@ export default function AdminStats() {
           {activityData.length === 0 ? (
             <EmptyChart message="No data yet. Visit a few pages then click Refresh — or wait for midnight flush." />
           ) : (
-            <ScrollChart data={activityData} minWidth={Math.max(500, activityData.length * 56)} height={240}>
+            <ScrollChart data={activityData} minWidth={Math.max(500, activityData.length * 80)} height={240}>
               <BarChart
                 data={activityData}
-                barGap={3}
-                barCategoryGap="30%"
+                barGap={2}
+                barCategoryGap="35%"
                 onClick={(d) => d?.activePayload && setSelected(d.activePayload[0]?.payload)}
               >
                 <CartesianGrid
@@ -393,8 +404,10 @@ export default function AdminStats() {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }}
-                  axisLine={false} tickLine={false}
+                  axisLine={false}
+                  tickLine={false}
                   interval={0}
+                  tickMargin={8}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }}
@@ -410,22 +423,22 @@ export default function AdminStats() {
                   wrapperStyle={{ fontSize: 11, paddingTop: 16 }}
                   iconType="circle" iconSize={8}
                 />
-                <Bar dataKey="Active users" fill="#3b82f6" radius={[4,4,0,0]} maxBarSize={24} cursor="pointer">
+                <Bar dataKey="Active users" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={16} cursor="pointer">
                   {activityData.map((entry, i) => (
                     <Cell key={i} fill={entry.isToday ? "#2563eb" : "#3b82f6"}
-                          fillOpacity={entry.isToday ? 1 : 0.75} />
+                      fillOpacity={entry.isToday ? 1 : 0.75} />
                   ))}
                 </Bar>
-                <Bar dataKey="Page views" fill="#8b5cf6" radius={[4,4,0,0]} maxBarSize={24} cursor="pointer">
+                <Bar dataKey="Page views" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={16} cursor="pointer">
                   {activityData.map((entry, i) => (
                     <Cell key={i} fill={entry.isToday ? "#7c3aed" : "#8b5cf6"}
-                          fillOpacity={entry.isToday ? 1 : 0.75} />
+                      fillOpacity={entry.isToday ? 1 : 0.75} />
                   ))}
                 </Bar>
-                <Bar dataKey="New signups" fill="#10b981" radius={[4,4,0,0]} maxBarSize={24} cursor="pointer">
+                <Bar dataKey="New signups" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={16} cursor="pointer">
                   {activityData.map((entry, i) => (
                     <Cell key={i} fill={entry.isToday ? "#059669" : "#10b981"}
-                          fillOpacity={entry.isToday ? 1 : 0.75} />
+                      fillOpacity={entry.isToday ? 1 : 0.75} />
                   ))}
                 </Bar>
               </BarChart>
@@ -443,7 +456,7 @@ export default function AdminStats() {
           {geminiData.every(d => d["Total"] === 0) ? (
             <EmptyChart message="No Gemini calls tracked yet. Use the CGPA AI Scan or Timetable AI Scan to generate data." />
           ) : (
-            <ScrollChart data={geminiData} minWidth={Math.max(500, geminiData.length * 56)} height={220}>
+            <ScrollChart data={geminiData} minWidth={Math.max(500, geminiData.length * 80)} height={220}>
               <LineChart data={geminiData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -467,12 +480,12 @@ export default function AdminStats() {
                   cursor={{ stroke: "rgba(128,128,128,0.15)", strokeWidth: 1 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 16 }} iconType="circle" iconSize={8} />
-                <Line dataKey="Total"     stroke="#ec4899" strokeWidth={2.5}
-                      dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
-                <Line dataKey="CGPA"      stroke="#f97316" strokeWidth={1.5}
-                      dot={{ r: 2, fill: "#f97316" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
+                <Line dataKey="Total" stroke="#ec4899" strokeWidth={2.5}
+                  dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
+                <Line dataKey="CGPA" stroke="#f97316" strokeWidth={1.5}
+                  dot={{ r: 2, fill: "#f97316" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
                 <Line dataKey="Timetable" stroke="#a855f7" strokeWidth={1.5}
-                      dot={{ r: 2, fill: "#a855f7" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
+                  dot={{ r: 2, fill: "#a855f7" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
               </LineChart>
             </ScrollChart>
           )}
