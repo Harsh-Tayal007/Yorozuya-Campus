@@ -1,13 +1,54 @@
-import { useState } from "react"
-import { Eye, EyeOff } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Eye, EyeOff, RefreshCw, Check, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { generateUsernameCandidate, isUsernameAvailable } from "@/services/admin/authService"
 
 const AccountStep = ({ data, setData, onNext }) => {
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
 
+  // ── Username state ─────────────────────────────────────────────────────────
+  const [usernameStatus, setUsernameStatus] = useState("idle") // idle | checking | available | taken
+  const checkTimer = useRef(null)
+
+  // Generate a suggestion on first mount
+  useEffect(() => {
+    if (!data.username) generateSuggestion()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const generateSuggestion = async () => {
+    const candidate = generateUsernameCandidate()
+    setData(prev => ({ ...prev, username: candidate }))
+    checkAvailability(candidate)
+  }
+
+  const checkAvailability = (val) => {
+    if (!val || val.length < 3) {
+      setUsernameStatus("idle")
+      return
+    }
+    clearTimeout(checkTimer.current)
+    setUsernameStatus("checking")
+    checkTimer.current = setTimeout(async () => {
+      try {
+        const available = await isUsernameAvailable(val)
+        setUsernameStatus(available ? "available" : "taken")
+      } catch {
+        setUsernameStatus("idle")
+      }
+    }, 500)
+  }
+
+  const handleUsernameChange = (e) => {
+    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "")
+    setData(prev => ({ ...prev, username: val }))
+    setErrors(prev => ({ ...prev, username: "" }))
+    checkAvailability(val)
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────────────
   const validate = () => {
     const newErrors = {}
 
@@ -27,6 +68,16 @@ const AccountStep = ({ data, setData, onNext }) => {
       newErrors.password = "Password is required"
     } else if (data.password.length < 8) {
       newErrors.password = "Minimum 8 characters"
+    }
+
+    if (!data.username || data.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters"
+    } else if (usernameStatus === "taken") {
+      newErrors.username = "This username is taken. Pick another or re-roll ↻"
+    } else if (usernameStatus === "checking") {
+      newErrors.username = "Still checking availability…"
+    } else if (usernameStatus === "idle") {
+      newErrors.username = "Enter a valid username"
     }
 
     setErrors(newErrors)
@@ -128,7 +179,7 @@ const AccountStep = ({ data, setData, onNext }) => {
             </button>
           </div>
           {errors.password && <p className="text-xs text-red-500 dark:text-red-400">{errors.password}</p>}
-          {/* Password strength hint */}
+          {/* Password strength bar */}
           {data.password && !errors.password && (
             <div className="flex gap-1 mt-1.5">
               {[...Array(4)].map((_, i) => (
@@ -146,6 +197,83 @@ const AccountStep = ({ data, setData, onNext }) => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Username ─────────────────────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Username
+            </Label>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none
+              bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400
+              border border-amber-200 dark:border-amber-500/25">
+              permanent
+            </span>
+          </div>
+
+          <div className="relative">
+            <Input
+              value={data.username || ""}
+              onChange={handleUsernameChange}
+              placeholder="your_username"
+              spellCheck={false}
+              className="
+                h-10 pr-16 font-mono text-sm
+                bg-slate-50 dark:bg-white/5
+                border-slate-200 dark:border-white/10
+                text-slate-900 dark:text-white
+                placeholder:text-slate-400 dark:placeholder:text-slate-600
+                focus:border-blue-500 focus:ring-blue-500/20
+                transition
+              "
+            />
+
+            {/* Status icon */}
+            <div className="absolute right-9 top-1/2 -translate-y-1/2 flex items-center">
+              {usernameStatus === "checking" && (
+                <Loader2 size={13} className="animate-spin text-slate-400" />
+              )}
+              {usernameStatus === "available" && (
+                <Check size={13} className="text-green-500" />
+              )}
+              {usernameStatus === "taken" && (
+                <X size={13} className="text-red-500" />
+              )}
+            </div>
+
+            {/* Re-roll button */}
+            <button
+              type="button"
+              onClick={generateSuggestion}
+              title="Generate new username"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2
+                text-slate-400 hover:text-blue-500 dark:hover:text-blue-400
+                transition-colors duration-150"
+            >
+              <RefreshCw size={13} />
+            </button>
+          </div>
+
+          {/* Inline status text */}
+          {usernameStatus === "available" && !errors.username && (
+            <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+              <Check size={11} /> Username available
+            </p>
+          )}
+          {usernameStatus === "taken" && (
+            <p className="text-xs text-red-500 dark:text-red-400">
+              Username taken — try another or hit ↻ to re-roll
+            </p>
+          )}
+          {errors.username && usernameStatus !== "taken" && (
+            <p className="text-xs text-red-500 dark:text-red-400">{errors.username}</p>
+          )}
+
+          <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+            Lowercase letters, numbers and underscores only.{" "}
+            <span className="text-amber-500 dark:text-amber-400 font-medium">This cannot be changed later.</span>
+          </p>
         </div>
 
         <Button

@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { account } from "@/lib/appwrite"
+import { resolveLoginEmail } from "@/services/admin/authService"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,9 @@ const SwitchBanner = ({ target }) => {
   )
 }
 
+// ── Helper: detect if input looks like an email ───────────────────────────────
+const looksLikeEmail = (val) => val.includes("@")
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const Login = () => {
   const { login } = useAuth()
@@ -101,7 +105,7 @@ const Login = () => {
   })()
 
   const [form, setForm] = useState({
-    email: switchTarget?.email || "",
+    identifier: switchTarget?.email || "", // email or username
     password: "",
   })
   const [errors, setErrors] = useState({})
@@ -112,26 +116,24 @@ const Login = () => {
   // Auto-submit via PasswordCredential API when switching
   useEffect(() => {
     if (!isSwitch || !switchTarget) return
-    if (!window.PasswordCredential) return // not supported, stay on form
+    if (!window.PasswordCredential) return
 
     const trySeamlessSwitch = async () => {
       try {
         const cred = await navigator.credentials.get({
           password: true,
-          mediation: "silent", // never show UI — fail silently if not saved
+          mediation: "silent",
         })
 
-        // Make sure retrieved credential matches the account we're switching to
         if (!cred || cred.id !== switchTarget.email) return
 
         setLoading(true)
-        setForm({ email: cred.id, password: cred.password })
+        setForm({ identifier: cred.id, password: cred.password })
 
         await login({ email: cred.id, password: cred.password })
         sessionStorage.removeItem("unizuya_switch_to")
         window.location.href = "/dashboard"
       } catch {
-        // Credential not saved or login failed — stay on form for manual entry
         setLoading(false)
       }
     }
@@ -141,9 +143,18 @@ const Login = () => {
 
   const validate = () => {
     const newErrors = {}
-    if (!form.email.trim()) newErrors.email = "Email is required"
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = "Enter a valid email"
+    const id = form.identifier.trim()
+
+    if (!id) {
+      newErrors.identifier = "Email or username is required"
+    } else if (looksLikeEmail(id) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
+      newErrors.identifier = "Enter a valid email address"
+    } else if (!looksLikeEmail(id) && id.length < 3) {
+      newErrors.identifier = "Username must be at least 3 characters"
+    }
+
     if (!form.password) newErrors.password = "Password is required"
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -160,15 +171,18 @@ const Login = () => {
     setLoading(true)
     setError(null)
     try {
-      await login({ email: form.email, password: form.password })
+      // Resolve username → email if needed
+      const resolvedEmail = await resolveLoginEmail(form.identifier.trim())
+
+      await login({ email: resolvedEmail, password: form.password })
 
       // Store in browser's password manager for future seamless switches
       if (window.PasswordCredential) {
         try {
           const cred = new PasswordCredential({
-            id: form.email,
+            id: resolvedEmail,
             password: form.password,
-            name: switchTarget?.username || form.email,
+            name: switchTarget?.username || resolvedEmail,
           })
           await navigator.credentials.store(cred)
         } catch { /* user declined or not supported */ }
@@ -182,6 +196,9 @@ const Login = () => {
       setLoading(false)
     }
   }
+
+  // Detect whether user is typing username (no @) to show hint
+  const isUsernameMode = form.identifier && !looksLikeEmail(form.identifier)
 
   return (
     <div className="
@@ -203,8 +220,8 @@ const Login = () => {
         className="relative z-10 w-full max-w-md"
       >
         <Card className="
-        relative
-         bg-white/90 dark:bg-[#0f1b2e]/80
+          relative
+          bg-white/90 dark:bg-[#0f1b2e]/80
           backdrop-blur-2xl
           border border-slate-200/80 dark:border-white/[0.07]
           shadow-2xl shadow-slate-200/60 dark:shadow-black/60
@@ -218,7 +235,7 @@ const Login = () => {
               </svg>
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {isSwitch && switchTarget ? `Welcome back` : "Welcome back"}
+              Welcome back
             </CardTitle>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {isSwitch && switchTarget
@@ -235,14 +252,14 @@ const Login = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-2xl
-               bg-white/90 dark:bg-[#0f1b2e]/90 backdrop-blur-sm"
+                  bg-white/90 dark:bg-[#0f1b2e]/90 backdrop-blur-sm"
               >
                 {switchTarget?.avatarUrl ? (
                   <img src={switchTarget.avatarUrl}
                     className="w-14 h-14 rounded-full object-cover border-2 border-white/20 shadow-xl" />
                 ) : (
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
-                      flex items-center justify-center text-white text-xl font-bold shadow-xl">
+                    flex items-center justify-center text-white text-xl font-bold shadow-xl">
                     {switchTarget?.name?.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -259,10 +276,10 @@ const Login = () => {
               </motion.div>
             )}
 
-            {/* Switch banner — shown when switching accounts */}
+            {/* Switch banner */}
             <SwitchBanner target={switchTarget} />
 
-            {/* OAuth — hide when switching (we know which account) */}
+            {/* OAuth — hide when switching */}
             {!switchTarget && (
               <>
                 <OAuthButton onClick={loginWithGoogle} icon={<GoogleIcon />} label="Continue with Google" />
@@ -272,31 +289,43 @@ const Login = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              {/* Email */}
+              {/* Email or Username */}
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Email
+                <Label htmlFor="identifier" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Email or Username
                 </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  disabled={loading || !!switchTarget}
-                  className="
-                    h-10
-                    bg-slate-50 dark:bg-white/5
-                    border-slate-200 dark:border-white/10
-                    text-slate-900 dark:text-white
-                    placeholder:text-slate-400 dark:placeholder:text-slate-600
-                    focus:border-blue-500 focus:ring-blue-500/20
-                    transition
-                    disabled:opacity-70
-                  "
-                />
-                {errors.email && <p className="text-xs text-red-500 dark:text-red-400">{errors.email}</p>}
+                <div className="relative">
+                  <Input
+                    id="identifier"
+                    name="identifier"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="you@example.com or brave_fox_4821"
+                    value={form.identifier}
+                    onChange={handleChange}
+                    disabled={loading || !!switchTarget}
+                    className="
+                      h-10
+                      bg-slate-50 dark:bg-white/5
+                      border-slate-200 dark:border-white/10
+                      text-slate-900 dark:text-white
+                      placeholder:text-slate-400 dark:placeholder:text-slate-600
+                      focus:border-blue-500 focus:ring-blue-500/20
+                      transition
+                      disabled:opacity-70
+                    "
+                  />
+                  {/* Username mode indicator */}
+                  {isUsernameMode && !errors.identifier && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <span className="text-[10px] font-mono text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10
+                        px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-500/20">
+                        @username
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {errors.identifier && <p className="text-xs text-red-500 dark:text-red-400">{errors.identifier}</p>}
               </div>
 
               {/* Password */}
@@ -385,7 +414,7 @@ const Login = () => {
                   type="button"
                   onClick={() => {
                     sessionStorage.removeItem("unizuya_switch_to")
-                    window.location.href = "/dashboard"  // ← user still has session, this works!
+                    window.location.href = "/dashboard"
                   }}
                   className="w-full h-10 rounded-lg border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition"
                 >

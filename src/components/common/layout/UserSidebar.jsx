@@ -1,7 +1,7 @@
 // src/components/common/navigation/UserSidebar.jsx
 import { useLocation, Link } from "react-router-dom"
 import { useEffect, useState, useCallback } from "react"
-import { Pin, PinOff, X, ChevronDown, Lock } from "lucide-react"
+import { Pin, PinOff, X, ChevronDown, Lock, Search } from "lucide-react"
 import { useSidebar } from "@/context/SidebarContext"
 import { useAuth } from "@/context/AuthContext"
 import {
@@ -11,6 +11,7 @@ import {
   homeRootLink,
 } from "@/config/dashboardSidebarConfig"
 import LoginGateSheet from "@/components/common/auth/LoginGateSheet"
+import UserSearchModal from "@/components/profile/UserSearchModal"
 
 const NAVBAR_H  = 68
 const SIDEBAR_W = 256
@@ -21,7 +22,6 @@ export { SIDEBAR_W, NAVBAR_H }
 function useActiveSectionLabel(location) {
   const allLinks = [homeRootLink, forumRootLink, dashboardRootLink]
 
-  // Check top-level links first
   for (const link of allLinks) {
     const match = link.path === "/"
       ? location.pathname === "/"
@@ -29,7 +29,6 @@ function useActiveSectionLabel(location) {
     if (match) return link.label
   }
 
-  // Check section children
   for (const section of dashboardSidebarSections) {
     for (const child of section.children) {
       if (location.pathname.startsWith(child.path)) return section.label
@@ -50,8 +49,9 @@ export default function UserSidebar() {
   const { user }   = useAuth()
   const isLoggedIn = !!user
 
-  const [openSections, setOpenSections] = useState([])
-  const [gateSheet, setGateSheet] = useState({ open: false, feature: "", redirect: "" })
+  const [openSections, setOpenSections]   = useState([])
+  const [gateSheet, setGateSheet]         = useState({ open: false, feature: "", redirect: "" })
+  const [searchOpen, setSearchOpen]       = useState(false)
 
   const openGate = useCallback((featureName, redirectTo) => {
     setGateSheet({ open: true, feature: featureName, redirect: redirectTo })
@@ -62,10 +62,12 @@ export default function UserSidebar() {
 
   const activeLabel = useActiveSectionLabel(location)
 
+  // Close sidebar on mobile navigation
   useEffect(() => {
     if (isMobile) setIsOpen(false)
   }, [location.pathname, isMobile])
 
+  // Auto-open the active section
   useEffect(() => {
     const active = dashboardSidebarSections.find(s =>
       s.children.some(c => location.pathname.startsWith(c.path))
@@ -77,7 +79,19 @@ export default function UserSidebar() {
     }
   }, [location.pathname])
 
-  const visible = isOpen || isPinned
+  // Global "/" shortcut to open search
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "/" && !e.target.matches("input,textarea,[contenteditable]")) {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [])
+
+  const visible  = isOpen || isPinned
   const topLinks = [homeRootLink, forumRootLink]
 
   return (
@@ -130,8 +144,30 @@ export default function UserSidebar() {
           </button>
         </div>
 
+        {/* ── Search users button ── */}
+        <div className="px-2 pt-3 pb-1 shrink-0">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
+                       text-sm text-muted-foreground
+                       hover:text-foreground hover:bg-muted
+                       border border-border/50
+                       transition-colors duration-150 group"
+          >
+            <Search size={13} className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
+            <span className="flex-1 text-left text-xs opacity-60 group-hover:opacity-100 transition-opacity">
+              Search users…
+            </span>
+            <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono
+                            text-muted-foreground/60 border border-border/60
+                            group-hover:border-border transition-colors">
+              /
+            </kbd>
+          </button>
+        </div>
+
         {/* ── Nav ── */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5">
 
           {topLinks.map(item => {
             const isActive = item.path === "/"
@@ -253,6 +289,9 @@ export default function UserSidebar() {
           redirectTo={gateSheet.redirect}
         />
       </aside>
+
+      {/* ── User Search Modal (portal-level, outside aside) ── */}
+      <UserSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   )
 }
