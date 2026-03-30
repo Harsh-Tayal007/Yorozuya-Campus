@@ -5,7 +5,6 @@ import { Sparkles, Image as ImageIcon, AlertCircle, Loader2, Check } from "lucid
 import { fileToBase64 } from "@/utils/timetableHelpers"
 
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY
-// Use the stable flash model; thinking disabled to maximise output token budget
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`
 
 function buildPrompt(mode) {
@@ -76,13 +75,19 @@ When uncertain between two counts, prefer the higher number.
 - colors: cycle through #6366f1 #8b5cf6 #ec4899 #ef4444 #f97316 #f59e0b #10b981 #06b6d4 #3b82f6 #84cc16 #a855f7 #14b8a6`
 }
 
-export function AIScanModal({ onClose, onApply }) {
-  const [mode, setMode] = useState("full")
-  const [file, setFile] = useState(null)
+// ── Props ─────────────────────────────────────────────────────────────────────
+// onClose    : () => void
+// onApply    : (result, mode) => void
+// onIncrement: () => Promise<boolean>  — returns false if quota exceeded
+// quota      : { used, limit, allowed } | null
+// userId     : string | null
+export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
+  const [mode, setMode]     = useState("full")
+  const [file, setFile]     = useState(null)
   const [preview, setPreview] = useState(null)
   const [status, setStatus] = useState("idle")   // idle | scanning | review | error
   const [result, setResult] = useState(null)
-  const [error, setError] = useState("")
+  const [error, setError]   = useState("")
   const fileRef = useRef()
 
   const handleFile = (f) => {
@@ -103,10 +108,26 @@ export function AIScanModal({ onClose, onApply }) {
 
   const scan = async () => {
     if (!file) return
+
+    // ── Quota gate — increment BEFORE calling Gemini ──────────────────────
+    // This prevents abuse: failed/retried scans still count against the limit.
+    if (onIncrement) {
+      const allowed = await onIncrement()
+      if (allowed === false) {
+        setError(
+          `Daily limit reached (${quota?.limit ?? 0} scan${quota?.limit === 1 ? "" : "s"}/day). Resets at midnight UTC.`
+        )
+        setStatus("error")
+        return
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     setStatus("scanning")
     setError("")
+
     try {
-      const base64 = await fileToBase64(file)
+      const base64    = await fileToBase64(file)
       const mediaType = file.type.startsWith("image/") ? file.type : "application/pdf"
 
       const body = {
@@ -114,7 +135,7 @@ export function AIScanModal({ onClose, onApply }) {
           parts: [
             { inline_data: { mime_type: mediaType, data: base64 } },
             { text: buildPrompt(mode) },
-          ]
+          ],
         }],
         generationConfig: {
           temperature: 0,
@@ -131,22 +152,21 @@ export function AIScanModal({ onClose, onApply }) {
 
       const data = await res.json()
 
-      // ── for admin dashboard stats ──────────────────────────────────────────────────
+      // ── Track tokens for admin dashboard stats ────────────────────────────
       const tokens = data.usageMetadata?.totalTokenCount || 0
       navigator.sendBeacon(
         "https://unizuya-stats.harshtayal710.workers.dev/track/gemini",
-        JSON.stringify({ tool: "timetable", tokens })
+        JSON.stringify({ tool: "timetable", tokens, userId: userId ?? null })
       )
-      // ─────────────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────────────
 
-      const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? ""
+      const text  = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? ""
       const clean = text.replace(/```json|```/g, "").trim()
       if (!clean) throw new Error("Gemini returned an empty response. Try again.")
 
       let parsed
       try { parsed = JSON.parse(clean) }
       catch {
-        // Truncation detection: if the text ends mid-structure, it was cut off
         const lookscut = !clean.endsWith("}") && !clean.endsWith("]")
         throw new Error(
           lookscut
@@ -174,14 +194,20 @@ export function AIScanModal({ onClose, onApply }) {
     setResult(null)
     setFile(null)
     setPreview(null)
+    setError("")
   }
 
+  // Remaining scans badge (null while quota is still loading)
+  const scansLeft = quota ? quota.limit - quota.used : null
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+    >
       <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-700 shadow-2xl flex flex-col max-h-[88vh]">
 
-        {/* Header */}
+        {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-zinc-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
@@ -192,17 +218,36 @@ export function AIScanModal({ onClose, onApply }) {
               <p className="text-[11px] text-muted-foreground">Upload photo or PDF of your timetable</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none">✕</button>
+          <div className="flex items-center gap-2">
+            {/* Remaining scans badge */}
+            {scansLeft !== null && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full
+                ${quota?.allowed === false
+                  ? "bg-red-500/10 text-red-400"
+                  : "bg-violet-500/10 text-violet-500"}`}>
+                {scansLeft} scan{scansLeft === 1 ? "" : "s"} left today
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none">
+              ✕
+            </button>
+          </div>
         </div>
 
+        {/* ── Body ──────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
           {/* Mode selector */}
           <div className="flex gap-2">
             {[
-              { value: "full", title: "Full scan", desc: "Extracts periods, subjects, and places all classes" },
-              { value: "subjects", title: "Subjects only", desc: "Extracts subject list — you place them manually" },
+              { value: "full",     title: "Full scan",      desc: "Extracts periods, subjects, and places all classes" },
+              { value: "subjects", title: "Subjects only",  desc: "Extracts subject list — you place them manually" },
             ].map(opt => (
-              <button key={opt.value} type="button"
+              <button
+                key={opt.value}
+                type="button"
                 onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
                 onClick={() => handleModeChange(opt.value)}
                 className={`flex-1 p-3 rounded-xl border text-left transition-all cursor-pointer
@@ -217,23 +262,35 @@ export function AIScanModal({ onClose, onApply }) {
 
           {/* Upload area */}
           {status !== "review" && (
-            <div onClick={() => fileRef.current?.click()}
+            <div
+              onClick={() => fileRef.current?.click()}
               className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl
                           border-2 border-dashed cursor-pointer transition-colors
                           ${file
-                  ? "border-violet-400/60 bg-violet-50/50 dark:bg-violet-950/20"
-                  : "border-gray-200 dark:border-zinc-700 hover:border-violet-300 hover:bg-muted/30"}`}>
-              <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden"
-                onChange={e => handleFile(e.target.files?.[0])} />
+                            ? "border-violet-400/60 bg-violet-50/50 dark:bg-violet-950/20"
+                            : "border-gray-200 dark:border-zinc-700 hover:border-violet-300 hover:bg-muted/30"}`}>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={e => handleFile(e.target.files?.[0])}
+              />
               {preview
                 ? <img src={preview} alt="preview" className="max-h-28 rounded-lg object-contain border border-gray-200" />
-                : <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                  <ImageIcon size={18} className="text-muted-foreground" />
-                </div>
+                : (
+                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                    <ImageIcon size={18} className="text-muted-foreground" />
+                  </div>
+                )
               }
               <div className="text-center">
-                <p className="text-sm font-medium text-foreground">{file ? file.name : "Click to upload timetable"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG or PDF · Crop tightly for better results</p>
+                <p className="text-sm font-medium text-foreground">
+                  {file ? file.name : "Click to upload timetable"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  PNG, JPG or PDF · Crop tightly for better results
+                </p>
               </div>
             </div>
           )}
@@ -250,7 +307,9 @@ export function AIScanModal({ onClose, onApply }) {
           {status === "review" && result && (
             <div className="space-y-3">
               <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">Scan complete ✓</p>
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                  Scan complete ✓
+                </p>
                 {mode === "full" ? (
                   <div className="text-xs text-emerald-600 dark:text-emerald-500 space-y-0.5">
                     <p>{result.periods?.length || 0} periods found</p>
@@ -276,29 +335,39 @@ export function AIScanModal({ onClose, onApply }) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ────────────────────────────────────────────────────── */}
         <div className="shrink-0 px-5 py-4 border-t border-gray-100 dark:border-zinc-800 flex gap-2.5">
           {status !== "review" ? (
             <>
-              <button onClick={onClose}
-                className="flex-1 h-10 text-sm text-muted-foreground border border-gray-200 dark:border-zinc-700 rounded-xl hover:bg-muted transition-colors">
+              <button
+                onClick={onClose}
+                className="flex-1 h-10 text-sm text-muted-foreground border border-gray-200
+                           dark:border-zinc-700 rounded-xl hover:bg-muted transition-colors">
                 Cancel
               </button>
-              <button onClick={scan} disabled={!file || status === "scanning"}
+              <button
+                onClick={scan}
+                disabled={!file || status === "scanning" || quota?.allowed === false}
                 className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-semibold
-                           bg-violet-500 hover:bg-violet-600 text-white rounded-xl disabled:opacity-50 transition-colors">
+                           bg-violet-500 hover:bg-violet-600 text-white rounded-xl
+                           disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {status === "scanning"
                   ? <><Loader2 size={14} className="animate-spin" /> Scanning…</>
-                  : <><Sparkles size={14} /> Scan with AI</>}
+                  : quota?.allowed === false
+                    ? <>Limit reached</>
+                    : <><Sparkles size={14} /> Scan with AI</>}
               </button>
             </>
           ) : (
             <>
-              <button onClick={reset}
-                className="flex-1 h-10 text-sm text-muted-foreground border border-gray-200 dark:border-zinc-700 rounded-xl hover:bg-muted transition-colors">
+              <button
+                onClick={reset}
+                className="flex-1 h-10 text-sm text-muted-foreground border border-gray-200
+                           dark:border-zinc-700 rounded-xl hover:bg-muted transition-colors">
                 Re-scan
               </button>
-              <button onClick={apply}
+              <button
+                onClick={apply}
                 className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-semibold
                            bg-violet-500 hover:bg-violet-600 text-white rounded-xl transition-colors">
                 <Check size={14} /> Apply
@@ -306,6 +375,7 @@ export function AIScanModal({ onClose, onApply }) {
             </>
           )}
         </div>
+
       </div>
     </div>,
     document.body

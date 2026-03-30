@@ -5,8 +5,10 @@ import {
 } from "recharts"
 import {
   Users, Eye, UserPlus, Sparkles,
-  Mail, RefreshCw, TrendingUp, Loader2, Info,
+  Mail, RefreshCw, TrendingUp, Loader2, Info, ChevronDown, ChevronUp
 } from "lucide-react"
+import { databases, account } from "@/lib/appwrite"
+import { Query } from "appwrite"
 
 const WORKER = "https://unizuya-stats.harshtayal710.workers.dev"
 
@@ -188,6 +190,35 @@ export default function AdminStats() {
   const [lastSync, setLastSync] = useState(null)
   const [selected, setSelected] = useState(null) // clicked bar data
 
+  const [limits, setLimits] = useState({ cgpa: 10, timetable: 1 })
+  const [limitsLoading, setLimitsLoading] = useState(true)
+  const [limitsSaving, setLimitsSaving] = useState(false)
+  const [limitsSaved, setLimitsSaved] = useState(false)
+
+  const [usersExpanded, setUsersExpanded] = useState(false)
+
+  const [usernameMap, setUsernameMap] = useState({})
+
+
+  const resolveUsernames = async (userIds) => {
+    if (!userIds.length) return {}
+    try {
+      const res = await databases.listDocuments(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
+        [Query.equal("userId", userIds)]
+      )
+      const map = {}
+      for (const doc of res.documents) {
+        map[doc.userId] = doc.username ?? doc.name ?? doc.userId.slice(0, 8)
+      }
+      return map
+    } catch (e) {
+      console.error("resolveUsernames failed:", e)
+      return {}
+    }
+  }
+
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
@@ -199,6 +230,12 @@ export default function AdminStats() {
       const tData = await tRes.json()
       const hData = await hRes.json()
       setToday(tData)
+      // Resolve usernames for top token users
+      const topUsers = tData.top_token_users ?? []
+      if (topUsers.length) {
+        const map = await resolveUsernames(topUsers.map(u => u.userId))
+        setUsernameMap(map)
+      }
       const docs = hData.documents ?? []
       const sorted = [...docs].sort((a, b) => a.date.localeCompare(b.date))
       setHistory(sorted)
@@ -207,6 +244,33 @@ export default function AdminStats() {
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }, [])
+
+  // ADD after the load useCallback, before useEffect(() => { load() }, [load])
+
+  const loadLimits = useCallback(async () => {
+    setLimitsLoading(true)
+    try {
+      const res = await fetch(`${WORKER}/ai-limits`)
+      if (res.ok) setLimits(await res.json())
+    } catch { }
+    finally { setLimitsLoading(false) }
+  }, [])
+
+  useEffect(() => { loadLimits() }, [loadLimits])
+
+  const saveLimits = async () => {
+    setLimitsSaving(true)
+    try {
+      await fetch(`${WORKER}/ai-limits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(limits),
+      })
+      setLimitsSaved(true)
+      setTimeout(() => setLimitsSaved(false), 2000)
+    } catch (e) { console.error(e) }
+    finally { setLimitsSaving(false) }
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -239,27 +303,27 @@ export default function AdminStats() {
     return hist
   }
 
- const buildGeminiData = () => {
-  const todayDate = today?.date  // ← add this
-  const rows = history
-    .filter(d => d.date !== todayDate)  // ← add this filter
-    .slice(-14)
-    .map(d => ({
-      date:        shortDate(d.date),
-      isToday:     false,
-      "Total":     d.gemini_tokens_total     ?? 0,
-      "CGPA":      d.gemini_tokens_cgpa      ?? 0,
-      "Timetable": d.gemini_tokens_timetable ?? 0,
-    }))
-  if (today) rows.push({
-    date:        shortDate(today.date) + " ★",
-    isToday:     true,
-    "Total":     today.gemini_tokens_total     ?? 0,
-    "CGPA":      today.gemini_tokens_cgpa      ?? 0,
-    "Timetable": today.gemini_tokens_timetable ?? 0,
-  })
-  return rows
-}
+  const buildGeminiData = () => {
+    const todayDate = today?.date  // ← add this
+    const rows = history
+      .filter(d => d.date !== todayDate)  // ← add this filter
+      .slice(-14)
+      .map(d => ({
+        date: shortDate(d.date),
+        isToday: false,
+        "Total": d.gemini_tokens_total ?? 0,
+        "CGPA": d.gemini_tokens_cgpa ?? 0,
+        "Timetable": d.gemini_tokens_timetable ?? 0,
+      }))
+    if (today) rows.push({
+      date: shortDate(today.date) + " ★",
+      isToday: true,
+      "Total": today.gemini_tokens_total ?? 0,
+      "CGPA": today.gemini_tokens_cgpa ?? 0,
+      "Timetable": today.gemini_tokens_timetable ?? 0,
+    })
+    return rows
+  }
 
   const activityData = buildActivityData()
   const geminiData = buildGeminiData()
@@ -488,6 +552,188 @@ export default function AdminStats() {
                   dot={{ r: 2, fill: "#a855f7" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
               </LineChart>
             </ScrollChart>
+          )}
+
+          {/* ── Top token users today ──────────────────────────────────── */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <button
+              onClick={() => setUsersExpanded(v => !v)}
+              className="w-full flex items-center justify-between text-left group">
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                  Top token users today
+                </p>
+                {(today?.top_token_users?.length ?? 0) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold
+                                   bg-pink-500/10 text-pink-500">
+                    {today.top_token_users.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground/50
+                              group-hover:text-muted-foreground transition-colors">
+                <span className="text-[10px]">{usersExpanded ? "collapse" : "expand"}</span>
+                {usersExpanded
+                  ? <ChevronUp size={13} />
+                  : <ChevronDown size={13} />}
+              </div>
+            </button>
+
+            {usersExpanded && (
+              <div className="mt-3 space-y-1.5">
+                {loading ? (
+                  <div className="flex items-center gap-2 py-3">
+                    <Loader2 size={13} className="animate-spin text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Loading…</span>
+                  </div>
+                ) : !today?.top_token_users?.length ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">
+                    No AI scans recorded today yet.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid text-[10px] font-semibold uppercase tracking-widest
+                                    text-muted-foreground/50 px-2 mb-2"
+                      style={{ gridTemplateColumns: "1fr 80px 60px 60px 44px" }}>
+                      <span>User ID</span>
+                      <span className="text-right">Tokens</span>
+                      <span className="text-right">CGPA</span>
+                      <span className="text-right">TT</span>
+                      <span className="text-right">Scans</span>
+                    </div>
+
+                    {today.top_token_users.map((u, i) => {
+                      const isHeavy = u.tokens > 20000
+                      const isMid = u.tokens > 8000
+                      const tokenColor = isHeavy ? "text-red-500"
+                        : isMid ? "text-amber-500"
+                          : "text-emerald-500"
+                      return (
+                        <div key={u.userId}
+                          className={`grid items-center px-2 py-2 rounded-lg text-xs
+                                      transition-colors hover:bg-muted/40
+                                      ${i === 0
+                              ? "bg-pink-500/5 border border-pink-500/10"
+                              : "border border-transparent"}`}
+                          style={{ gridTemplateColumns: "1fr 80px 60px 60px 44px" }}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`shrink-0 w-4 h-4 rounded text-[10px] font-bold
+                                             flex items-center justify-center
+                                             ${i === 0
+                                ? "bg-pink-500 text-white"
+                                : "bg-muted text-muted-foreground"}`}>
+                              {i + 1}
+                            </span>
+
+                            <a href={`/profile/${usernameMap[u.userId] ?? u.userId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={u.userId}
+                              className="text-[11px] text-primary hover:underline truncate font-medium">
+                              {usernameMap[u.userId] ?? `${u.userId.slice(0, 8)}…`}
+                            </a>
+                          </div>
+                          <span className={`text-right font-bold tabular-nums ${tokenColor}`}>
+                            {fmt(u.tokens)}
+                          </span>
+                          <span className="text-right tabular-nums text-muted-foreground">
+                            {fmt(u.cgpa)}
+                          </span>
+                          <span className="text-right tabular-nums text-muted-foreground">
+                            {fmt(u.timetable)}
+                          </span>
+                          <span className="text-right tabular-nums font-semibold text-foreground">
+                            {u.scans}
+                          </span>
+                        </div>
+                      )
+                    })}
+
+                    <p className="text-[10px] text-muted-foreground/40 text-right pt-1">
+                      User IDs truncated · resets at midnight UTC
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>   {/* closes the card div */}
+      </Section> {/* closes the Gemini Section */}
+
+      {/* ── AI SCAN LIMITS ── */}
+      <Section
+        title="AI scan limits — per user per day"
+        hint="Controls how many Gemini AI Scans each user can trigger per day. Resets at midnight UTC. Stored in Cloudflare KV — takes effect immediately."
+      >
+        <div className="rounded-xl border border-border bg-card px-5 py-5">
+          {limitsLoading ? (
+            <div className="flex items-center gap-2 py-4">
+              <Loader2 size={14} className="animate-spin text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Loading limits…</span>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-5">
+                {[
+                  { key: "cgpa", label: "CGPA Calculator", sub: "~500–2k tokens/scan", color: "#f97316", maxForBar: 20 },
+                  { key: "timetable", label: "Timetable Builder", sub: "~9.5k tokens/scan", color: "#a855f7", maxForBar: 5 },
+                ].map(({ key, label, sub, color, maxForBar }) => (
+                  <div key={key} className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground">{label}</p>
+                        <p className="text-[11px] text-muted-foreground">{sub}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => setLimits(l => ({ ...l, [key]: Math.max(0, (l[key] ?? 1) - 1) }))}
+                          className="w-7 h-7 rounded-lg border border-border flex items-center justify-center
+                               text-muted-foreground hover:text-foreground hover:bg-muted transition-colors font-bold text-sm">
+                          −
+                        </button>
+                        <input
+                          type="number" min="0" max="99"
+                          value={limits[key] ?? ""}
+                          onChange={e => setLimits(l => ({ ...l, [key]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          className="w-12 h-7 text-center text-sm font-bold rounded-lg border border-border
+                               bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary
+                               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          onClick={() => setLimits(l => ({ ...l, [key]: (l[key] ?? 0) + 1 }))}
+                          className="w-7 h-7 rounded-lg border border-border flex items-center justify-center
+                               text-muted-foreground hover:text-foreground hover:bg-muted transition-colors font-bold text-sm">
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(((limits[key] ?? 0) / maxForBar) * 100, 100)}%`, background: color }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60">
+                      Est. max tokens/user/day: ~{((limits[key] ?? 0) * (key === "timetable" ? 9500 : 1500)).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-border gap-3 flex-wrap">
+                <p className="text-[11px] text-muted-foreground/60">
+                  Stored in Cloudflare KV · applies globally to all users instantly
+                </p>
+                <button
+                  onClick={saveLimits}
+                  disabled={limitsSaving}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition-colors
+              ${limitsSaved
+                      ? "border border-emerald-400/60 text-emerald-500 bg-emerald-500/5"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"}
+              ${limitsSaving ? "opacity-50 cursor-not-allowed" : ""}`}>
+                  {limitsSaved ? "✓ Saved!" : limitsSaving ? "Saving…" : "Save limits"}
+                </button>
+              </div>
+            </>
           )}
         </div>
       </Section>

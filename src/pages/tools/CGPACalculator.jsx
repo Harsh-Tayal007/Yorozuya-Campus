@@ -6,6 +6,7 @@ import {
   Upload, Sparkles, Save, CheckCircle2, RotateCcw,
   FileDown, ImageDown, Loader2, X,
 } from "lucide-react";
+import { useAIScanQuota } from "@/hooks/useAIScanQuota";
 
 // ─── Appwrite ─────────────────────────────────────────────────────────────────
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -408,7 +409,7 @@ function SavedRecord({ record, onLoad, onDelete }) {
 }
 
 // ─── AIScanModal ───────────────────────────────────────────────────────────────
-function AIScanModal({ onClose, onApply, semesterName }) {
+function AIScanModal({ onClose, onApply, semesterName, userId, onIncrement, quota }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [status, setStatus] = useState("idle"); // idle | scanning | review | error
@@ -428,6 +429,15 @@ function AIScanModal({ onClose, onApply, semesterName }) {
   };
 
   const handleScan = async () => {
+    // ── NEW: quota gate ──────────────────────────────────────────────────────
+    const allowed = await onIncrement()
+    if (allowed === false) {
+      setErrMsg(`Daily limit reached (${quota?.limit ?? 0} scans/day). Resets at midnight UTC.`)
+      setStatus("error")
+      return
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     if (!file) return;
     setStatus("scanning"); setErrMsg("");
     try {
@@ -481,7 +491,7 @@ Rules:
       const tokens = data.usageMetadata?.totalTokenCount || 0;
       navigator.sendBeacon(
         "https://unizuya-stats.harshtayal710.workers.dev/track/gemini",
-        JSON.stringify({ tool: "cgpa", tokens })
+        JSON.stringify({ tool: "cgpa", tokens, userId })
       );
       // ────────────────────────────────────────────────────────────
 
@@ -674,6 +684,11 @@ export default function CGPACalculator() {
   const [records, setRecords] = useState([]);
   const [loadingRec, setLoadingRec] = useState(true);
   const [userId, setUserId] = useState(null);
+
+  const { quota: cgpaQuota, increment: incrementCGPA } = useAIScanQuota(userId, "cgpa")
+  const cgpaScansLeft = cgpaQuota ? cgpaQuota.limit - cgpaQuota.used : null
+  const cgpaBlocked = cgpaQuota && !cgpaQuota.allowed
+
   const [exporting, setExporting] = useState(false);
 
   // AI scan modal — tracks which semester index triggered it
@@ -779,6 +794,9 @@ export default function CGPACalculator() {
           semesterName={semesters[scanModal]?.name ?? ""}
           onClose={() => setScanModal(null)}
           onApply={(subjects) => applyAIScan(scanModal, subjects)}
+          userId={userId}
+          onIncrement={incrementCGPA}
+          quota={cgpaQuota}
         />
       )}
 
@@ -912,11 +930,22 @@ export default function CGPACalculator() {
                       Semester {i + 1}
                     </span>
                     <button
-                      onClick={() => setScanModal(i)}
-                      className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1
-                                 rounded-lg border border-primary/30 text-primary
-                                 hover:bg-primary/10 transition-colors">
-                      <Sparkles size={11} /> AI Scan
+                      onClick={() => !cgpaBlocked && setScanModal(i)}
+                      disabled={cgpaBlocked}
+                      title={cgpaBlocked ? `Daily limit reached (${cgpaQuota.limit}/day). Resets at midnight UTC.` : undefined}
+                      className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1
+    rounded-lg border transition-colors
+    ${cgpaBlocked
+                          ? "border-border text-muted-foreground/40 cursor-not-allowed opacity-50"
+                          : "border-primary/30 text-primary hover:bg-primary/10"}`}>
+                      <Sparkles size={11} />
+                      AI Scan
+                      {cgpaScansLeft !== null && (
+                        <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold
+      ${cgpaBlocked ? "bg-red-500/10 text-red-400" : "bg-primary/10 text-primary"}`}>
+                          {cgpaScansLeft}
+                        </span>
+                      )}
                     </button>
                   </div>
                   <SemesterCard
