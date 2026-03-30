@@ -4,19 +4,19 @@
 //   2. Task reminder type added to TYPE_META
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Bell, CheckCheck, MessageSquare, AtSign, UserPlus, X, CheckSquare } from "lucide-react"
+import { Bell, CheckCheck, MessageSquare, AtSign, UserPlus, X, CheckSquare, ShieldX, ShieldCheck } from "lucide-react"
 import { motion, AnimatePresence, useAnimation, useDragControls, useMotionValue, useTransform } from "framer-motion"
 import useNotifications from "@/hooks/useNotifications"
 
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1)  return "just now"
+  if (m < 1) return "just now"
   if (m < 60) return `${m}m`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h`
   const d = Math.floor(h / 24)
-  if (d < 7)  return `${d}d`
+  if (d < 7) return `${d}d`
   return new Date(dateStr).toLocaleDateString()
 }
 
@@ -24,10 +24,12 @@ const stripHtml = (html = "") =>
   html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
 
 const TYPE_META = {
-  reply:   { Icon: MessageSquare, color: "text-white", iconBg: "bg-blue-500",   avatarBg: "bg-blue-500/15",   ring: "ring-blue-500/30"   },
-  mention: { Icon: AtSign,        color: "text-white", iconBg: "bg-purple-500", avatarBg: "bg-purple-500/15", ring: "ring-purple-500/30" },
-  follow:  { Icon: UserPlus,      color: "text-white", iconBg: "bg-green-500",  avatarBg: "bg-green-500/15",  ring: "ring-green-500/30"  },
-  task:    { Icon: CheckSquare,   color: "text-white", iconBg: "bg-violet-500", avatarBg: "bg-violet-500/15", ring: "ring-violet-500/30" },
+  reply:      { Icon: MessageSquare, color: "text-white", iconBg: "bg-blue-500",   avatarBg: "bg-blue-500/15",   ring: "ring-blue-500/30"   },
+  mention:    { Icon: AtSign,        color: "text-white", iconBg: "bg-purple-500", avatarBg: "bg-purple-500/15", ring: "ring-purple-500/30" },
+  follow:     { Icon: UserPlus,      color: "text-white", iconBg: "bg-green-500",  avatarBg: "bg-green-500/15",  ring: "ring-green-500/30"  },
+  task:       { Icon: CheckSquare,   color: "text-white", iconBg: "bg-violet-500", avatarBg: "bg-violet-500/15", ring: "ring-violet-500/30" },
+  ban:        { Icon: ShieldX,       color: "text-white", iconBg: "bg-red-500",    avatarBg: "bg-red-500/15",    ring: "ring-red-500/30"    },
+  ban_lifted: { Icon: ShieldCheck,   color: "text-white", iconBg: "bg-green-500",  avatarBg: "bg-green-500/15",  ring: "ring-green-500/30"  },
 }
 
 // ── Avatar with type badge ─────────────────────────────────────────────────────
@@ -51,7 +53,7 @@ const NotifAvatar = ({ notif }) => {
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${avatarBg} ring-1 ${ring} overflow-hidden`}>
         {notif.actorAvatar ? (
           <img src={notif.actorAvatar} alt={notif.actorName}
-               className="w-full h-full object-cover rounded-full" />
+            className="w-full h-full object-cover rounded-full" />
         ) : (
           <span className="text-sm font-bold text-foreground">
             {notif.actorName?.charAt(0).toUpperCase()}
@@ -78,24 +80,24 @@ const NotifItem = ({ notif, onRead, onDelete, onNavigate, large = false }) => {
   const rawPreview = (notif.type === "reply" || notif.type === "mention")
     ? stripHtml(notif.replyContent || "")
     : notif.type === "task"
-    ? notif.message ?? ""
-    : ""
+      ? notif.message ?? ""
+      : ""
   const preview = rawPreview.length > 100 ? rawPreview.slice(0, 100) + "…" : rawPreview
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1,  y: 0  }}
-      exit={{    opacity: 0,  x: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.15 }}
       onClick={handleClick}
       className={`relative flex items-start gap-3 cursor-pointer
                   transition-colors duration-150 group
                   ${large ? "px-5 py-4" : "px-4 py-3"}
                   ${notif.read
-                    ? "hover:bg-muted/50"
-                    : "bg-primary/5 hover:bg-primary/8 border-l-2 border-l-primary/50"}`}
+          ? "hover:bg-muted/50"
+          : "bg-primary/5 hover:bg-primary/8 border-l-2 border-l-primary/50"}`}
     >
       <NotifAvatar notif={notif} />
       <div className="flex-1 min-w-0 pt-0.5">
@@ -169,7 +171,7 @@ const LoadingSkeleton = ({ count = 3, large = false }) => (
 
 // ── Shared notification content ────────────────────────────────────────────────
 const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
-                        markAllRead, remove, onNavigate, large = false, onClose }) => (
+  markAllRead, remove, onNavigate, large = false, onClose }) => (
   <>
     <div className={`flex items-center justify-between border-b border-border shrink-0
                      ${large ? "px-5 py-3.5" : "px-4 py-3"}`}>
@@ -237,7 +239,7 @@ const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
 // ── Bell button ────────────────────────────────────────────────────────────────
 const BellButton = ({ bellRef, onClick, hasUnread, unreadCount }) => {
   const controls = useAnimation()
-  const prevRef  = useRef(unreadCount)
+  const prevRef = useRef(unreadCount)
 
   useEffect(() => {
     if (unreadCount > prevRef.current) {
@@ -273,7 +275,7 @@ const BellButton = ({ bellRef, onClick, hasUnread, unreadCount }) => {
             key="badge"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{    scale: 0, opacity: 0 }}
+            exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 25 }}
             className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1
                        rounded-full bg-primary text-primary-foreground
@@ -290,10 +292,10 @@ const BellButton = ({ bellRef, onClick, hasUnread, unreadCount }) => {
 
 // ── Mobile bottom sheet ────────────────────────────────────────────────────────
 const MobileSheet = ({ onClose, contentProps }) => {
-  const y            = useMotionValue(0)
+  const y = useMotionValue(0)
   const dragControls = useDragControls()
   const backdropOpacity = useTransform(y, [0, 300], [1, 0])
-  const borderRadius    = useTransform(y, [0, 100], [16, 28])
+  const borderRadius = useTransform(y, [0, 100], [16, 28])
 
   const handleDragEnd = (_, info) => {
     if (info.offset.y > 120 || info.velocity.y > 500) onClose()
@@ -327,7 +329,7 @@ const MobileSheet = ({ onClose, contentProps }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
-             onPointerDown={(e) => dragControls.start(e)}>
+          onPointerDown={(e) => dragControls.start(e)}>
           <motion.div
             style={{
               width: useTransform(y, [0, 80], [40, 56]),
@@ -350,11 +352,11 @@ const MobileSheet = ({ onClose, contentProps }) => {
 
 // ── Main export ────────────────────────────────────────────────────────────────
 export default function NotificationBell() {
-  const [open, setOpen]         = useState(false)
-  const [pos, setPos]           = useState(null)
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
-  const triggerRef              = useRef(null)
-  const dropdownRef             = useRef(null)
+  const triggerRef = useRef(null)
+  const dropdownRef = useRef(null)
 
   const { notifications, unreadCount, isLoading, markRead, markAllRead, remove } =
     useNotifications()
@@ -375,7 +377,7 @@ export default function NotificationBell() {
     if (!open || isMobile) return
     const handler = (e) => {
       if (!dropdownRef.current?.contains(e.target) &&
-          !triggerRef.current?.contains(e.target))
+        !triggerRef.current?.contains(e.target))
         setOpen(false)
     }
     document.addEventListener("pointerdown", handler)
@@ -395,15 +397,21 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (open && isMobile) document.body.style.overflow = "hidden"
-    else                  document.body.style.overflow = ""
+    else document.body.style.overflow = ""
     return () => { document.body.style.overflow = "" }
   }, [open, isMobile])
 
   const handleOpen = () => { updatePos(); setOpen(v => !v) }
-  const close      = () => setOpen(false)
+  const close = () => setOpen(false)
 
   const handleNavigate = (notif) => {
     close()
+
+    // ── Ban notifications → notifications page ──
+    if (notif.type === "ban" || notif.type === "ban_lifted") {
+      window.location.href = "/dashboard/notifications"
+      return
+    }
 
     // Task reminder → navigate to task tracker
     if (notif.type === "task") {
@@ -465,8 +473,8 @@ export default function NotificationBell() {
               key="desktop-dropdown"
               ref={dropdownRef}
               initial={{ opacity: 0, scale: 0.97, y: -4 }}
-              animate={{ opacity: 1, scale: 1,    y: 0   }}
-              exit={{    opacity: 0, scale: 0.97, y: -4  }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: -4 }}
               transition={{ duration: 0.13 }}
               style={{ position: "fixed", top: pos.top, right: pos.right, zIndex: 999999 }}
               className="w-[320px] rounded-2xl border border-border bg-background

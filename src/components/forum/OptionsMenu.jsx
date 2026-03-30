@@ -7,13 +7,13 @@
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import useResolvedColors from "@/hooks/useResolvedColors"
-import { ChevronsDownUp, Copy, Link2, Pencil, Trash2, Pin, PinOff } from "lucide-react"
+import { ChevronsDownUp, Copy, Link2, Pencil, Trash2, Pin, PinOff, Flag } from "lucide-react"
 import { copyShareLink } from "@/utils/share"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 
-export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse, onDelete, onEdit, onClose, threadId }) {
+export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse, onDelete, onEdit, onClose, onReport, threadId }) {
 
   const colors = useResolvedColors()
   const isMobile = useIsMobile()
@@ -51,7 +51,7 @@ export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse
       const r = anchorRef.current.getBoundingClientRect()
 
       const menuW = 220
-      const menuH = 200  // slightly taller now to account for pin button
+      const menuH = 200
       const padding = 8
 
       let left = r.right - menuW
@@ -104,7 +104,7 @@ export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse
 
     return (
       <button
-        onClick={() => { onClick?.(); onClose() }}
+        onClick={() => { onClick?.() }}
         style={rowStyle}
         onMouseEnter={!isMobile ? (e) => { e.currentTarget.style.background = colors.border } : undefined}
         onMouseLeave={!isMobile ? (e) => { e.currentTarget.style.background = "none" } : undefined}
@@ -117,118 +117,127 @@ export function OptionsMenu({ reply, isOwn, canPin, onPin, anchorRef, onCollapse
 
   // ── DESKTOP DROPDOWN ──────────────────────────────────────────────────────
   if (!isMobile) {
-    return createPortal(
-      <div
-        ref={menuRef}
-        style={{
-          position: "fixed",
-          top: pos.top,
-          left: pos.left,
-          zIndex: 10002,
-          width: 220,
-          background: colors.card || colors.bg,
-          border: `1px solid ${colors.border}`,
-          borderRadius: 10,
-          boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
-          padding: "4px",
-          overflow: "hidden",
-          transform: "scale(0.96)",
-          opacity: 0,
-          animation: "dropdown 120ms ease forwards"
-        }}
-      >
-        <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
-        <Row icon={Link2} label="Share comment" onClick={() => copyShareLink(`/forum/${threadId}?focus=${reply.$id}`)} />
-        <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
+    return (
+      <>
+        {createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              zIndex: 10002,
+              width: 220,
+              background: colors.card || colors.bg,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 10,
+              boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+              padding: "4px",
+              overflow: "hidden",
+              transform: "scale(0.96)",
+              opacity: 0,
+              animation: "dropdown 120ms ease forwards"
+            }}
+          >
+            <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
+            <Row icon={Link2} label="Share comment" onClick={() => copyShareLink(`/forum/${threadId}?focus=${reply.$id}`)} />
+            <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
 
-        {/* Pin / Unpin — visible to admin, moderator, OP */}
-        {canPin && !reply.deleted && (
-          <>
+            {canPin && !reply.deleted && (
+              <>
+                <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
+                <Row
+                  icon={reply.isPinned ? PinOff : Pin}
+                  label={reply.isPinned ? "Unpin comment" : "Pin comment"}
+                  onClick={onPin}
+                  highlight={!reply.isPinned}
+                />
+              </>
+            )}
+
             <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
-            <Row
-              icon={reply.isPinned ? PinOff : Pin}
-              label={reply.isPinned ? "Unpin comment" : "Pin comment"}
-              onClick={onPin}
-              highlight={!reply.isPinned}   // yellow tint when pinning
-            />
-          </>
+            {isOwn ? (
+              <>
+                <Row icon={Pencil} label="Edit comment" onClick={onEdit} />
+                <Row icon={Trash2} label="Delete comment" onClick={onDelete} danger />
+              </>
+            ) : (
+              <Row icon={Flag} label="Report" onClick={onReport} danger />
+            )}
+          </div>,
+          document.body
         )}
 
-        <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
-        {isOwn ? (
-          <>
-            <Row icon={Pencil} label="Edit comment" onClick={onEdit} />
-            <Row icon={Trash2} label="Delete comment" onClick={onDelete} danger />
-          </>
-        ) : (
-          <Row icon={Trash2} label="Report" onClick={() => { }} danger />
-        )}
-      </div>,
-      document.body
+        
+      </>
     )
   }
 
   // ── MOBILE BOTTOM SHEET ───────────────────────────────────────────────────
-  return createPortal(
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 10002,
-        background: "rgba(0,0,0,0.55)",
-        display: "flex", alignItems: "flex-end",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%", background: colors.bg,
-          borderRadius: "20px 20px 0 0",
-          paddingBottom: "max(24px, env(safe-area-inset-bottom))",
-          maxHeight: "80vh", overflowY: "auto",
-        }}
-      >
-        {/* Drag handle */}
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border, margin: "12px auto 8px" }} />
+  return (
+    <>
+      {createPortal(
+        <div
+          onClick={onClose}
+          style={{
+            position: "fixed", inset: 0, zIndex: 10002,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex", alignItems: "flex-end",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%", background: colors.bg,
+              borderRadius: "20px 20px 0 0",
+              paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+              maxHeight: "80vh", overflowY: "auto",
+            }}
+          >
+            {/* Drag handle */}
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border, margin: "12px auto 8px" }} />
 
-        {/* Author + content preview */}
-        <div style={{ padding: "8px 20px 12px", borderBottom: `1px solid ${colors.border}` }}>
-          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{reply.authorName}</p>
-          <p style={{
-            fontSize: 13, color: colors.muted, opacity: 0.75,
-            display: "-webkit-box", WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical", overflow: "hidden",
-          }}>{reply.content?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim()}</p>
-        </div>
+            {/* Author + content preview */}
+            <div style={{ padding: "8px 20px 12px", borderBottom: `1px solid ${colors.border}` }}>
+              <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{reply.authorName}</p>
+              <p style={{
+                fontSize: 13, color: colors.muted, opacity: 0.75,
+                display: "-webkit-box", WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical", overflow: "hidden",
+              }}>{reply.content?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim()}</p>
+            </div>
 
-        <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
-        <Row icon={Link2} label="Share comment" onClick={() => copyShareLink(`/forum/${threadId}?focus=${reply.$id}`)} />
-        <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
+            <Row icon={Copy} label="Copy text" onClick={handleCopyText} />
+            <Row icon={Link2} label="Share comment" onClick={() => copyShareLink(`/forum/${threadId}?focus=${reply.$id}`)} />
+            <Row icon={ChevronsDownUp} label="Collapse thread" onClick={onCollapse} />
 
-        {/* Pin / Unpin — visible to admin, moderator, OP */}
-        {canPin && !reply.deleted && (
-          <>
+            {canPin && !reply.deleted && (
+              <>
+                <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
+                <Row
+                  icon={reply.isPinned ? PinOff : Pin}
+                  label={reply.isPinned ? "Unpin" : "Pin comment"}
+                  onClick={onPin}
+                  highlight={!reply.isPinned}
+                />
+              </>
+            )}
+
             <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
-            <Row
-              icon={reply.isPinned ? PinOff : Pin}
-              label={reply.isPinned ? "Unpin" : "Pin comment"}
-              onClick={onPin}
-              highlight={!reply.isPinned}
-            />
-          </>
-        )}
+            {isOwn ? (
+              <>
+                <Row icon={Pencil} label="Edit" onClick={onEdit} />
+                <Row icon={Trash2} label="Delete" onClick={onDelete} danger />
+              </>
+            ) : (
+              <Row icon={Flag} label="Report" onClick={onReport} danger />
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
 
-        <div style={{ height: 1, background: colors.border, margin: "4px 0" }} />
-        {isOwn ? (
-          <>
-            <Row icon={Pencil} label="Edit" onClick={onEdit} />
-            <Row icon={Trash2} label="Delete" onClick={onDelete} danger />
-          </>
-        ) : (
-          <Row icon={Trash2} label="Report" onClick={() => { }} danger />
-        )}
-      </div>
-    </div>,
-    document.body
+    </>
   )
 }
 

@@ -12,6 +12,7 @@ import { account, databases } from "@/lib/appwrite"
 import { ROLE_PERMISSIONS } from "@/config/permissions"
 import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 import { upsertSavedAccount, vaultStore, vaultRefreshTTL } from "@/lib/savedAccounts"
+import { getActiveBan } from "@/services/moderation/banService"
 
 const AuthContext = createContext(null)
 
@@ -36,6 +37,8 @@ const buildCurrentUser = (accountUser, userDoc) => ({
   followerCount: userDoc.followerCount ?? 0,
   followingCount: userDoc.followingCount ?? 0,
 })
+
+// banStatus is populated separately after async check
 
 export const AuthProvider = ({ children }) => {
   const [authStatus, setAuthStatus] = useState(false)
@@ -82,7 +85,15 @@ export const AuthProvider = ({ children }) => {
 
         setRole(assertRoleFromDB(userDoc.role))
         setUserDocId(userDoc.$id)
-        setCurrentUser(buildCurrentUser(accountUser, userDoc))
+
+        // Check ban status
+        const activeBan = await getActiveBan(accountUser.$id).catch(() => null)
+
+        setCurrentUser({
+          ...buildCurrentUser(accountUser, userDoc),
+          activeBan: activeBan ?? null,
+          isBanned: !!activeBan,
+        })
         setAuthStatus(true)
 
         upsertSavedAccount({
@@ -142,7 +153,14 @@ export const AuthProvider = ({ children }) => {
 
     setRole(userDoc.role)
     setUserDocId(userDoc.$id)
-    setCurrentUser(buildCurrentUser(accountUser, userDoc))
+
+    const activeBan = await getActiveBan(accountUser.$id).catch(() => null)
+
+    setCurrentUser({
+      ...buildCurrentUser(accountUser, userDoc),
+      activeBan: activeBan ?? null,
+      isBanned: !!activeBan,
+    })
     setAuthStatus(true)
 
     // Store encrypted password for seamless switching

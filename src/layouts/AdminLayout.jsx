@@ -6,33 +6,34 @@ import { PERMISSIONS } from "@/config/permissions"
 import {
   LayoutDashboard, School, BookOpen, Layers, FileText,
   Activity, Menu, Users, GitBranch, Upload, ClipboardList,
-  ChevronDown, LogOut, User as UserIcon,BarChart2
+  ChevronDown, LogOut, User as UserIcon, BarChart2, ShieldX
 } from "lucide-react"
 import { useTrackActivity } from "@/hooks/useTrackActivity"
 
-const NAVBAR_H    = 58
-const SIDEBAR_W   = 224  // 14rem
+const NAVBAR_H = 58
+const SIDEBAR_W = 224  // 14rem
 const COLLAPSED_W = 56   // 3.5rem
 
 const adminNav = [
-  { label: "Dashboard",    to: "/admin/dashboard",        icon: LayoutDashboard, permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
-  { label: "Universities", to: "/admin/universities",     icon: School,          permission: PERMISSIONS.MANAGE_UNIVERSITIES },
-  { label: "Programs",     to: "/admin/programs",         icon: BookOpen,        permission: PERMISSIONS.MANAGE_PROGRAMS },
-  { label: "Branches",     to: "/admin/branches",         icon: GitBranch,       permission: PERMISSIONS.MANAGE_PROGRAMS },
-  { label: "Syllabus",     to: "/admin/syllabus",         icon: ClipboardList,   permission: PERMISSIONS.MANAGE_SYLLABUS },
-  { label: "Units",        to: "/admin/units",            icon: Layers,          permission: PERMISSIONS.MANAGE_UNITS },
-  { label: "Resources",    to: "/admin/resources/upload", icon: Upload,          permission: PERMISSIONS.MANAGE_RESOURCES },
-  { label: "PYQs",         to: "/admin/pyq/upload",       icon: FileText,        permission: PERMISSIONS.MANAGE_RESOURCES },
-  { label: "Activity",     to: "/admin/activity",         icon: Activity,        permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
-  { label: "Stats",        to: "/admin/stats",            icon: BarChart2, permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
-  { label: "User Roles",   to: "/admin/roles",            icon: Users,           permission: PERMISSIONS.MANAGE_USERS },
+  { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
+  { label: "Universities", to: "/admin/universities", icon: School, permission: PERMISSIONS.MANAGE_UNIVERSITIES },
+  { label: "Programs", to: "/admin/programs", icon: BookOpen, permission: PERMISSIONS.MANAGE_PROGRAMS },
+  { label: "Branches", to: "/admin/branches", icon: GitBranch, permission: PERMISSIONS.MANAGE_PROGRAMS },
+  { label: "Syllabus", to: "/admin/syllabus", icon: ClipboardList, permission: PERMISSIONS.MANAGE_SYLLABUS },
+  { label: "Units", to: "/admin/units", icon: Layers, permission: PERMISSIONS.MANAGE_UNITS },
+  { label: "Resources", to: "/admin/resources/upload", icon: Upload, permission: PERMISSIONS.MANAGE_RESOURCES },
+  { label: "PYQs", to: "/admin/pyq/upload", icon: FileText, permission: PERMISSIONS.MANAGE_RESOURCES },
+  { label: "Activity", to: "/admin/activity", icon: Activity, permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
+  { label: "Stats", to: "/admin/stats", icon: BarChart2, permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
+  { label: "User Roles", to: "/admin/roles", icon: Users, permission: PERMISSIONS.MANAGE_USERS },
+  { label: "Moderation", to: "/admin/moderation", icon: ShieldX, permission: PERMISSIONS.VIEW_REPORTS },
 ]
 
 function AdminTopBar({ sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate()
   const { currentUser, logout } = useAuth()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const triggerRef  = useRef(null)
+  const triggerRef = useRef(null)
   const dropdownRef = useRef(null)
   const [rect, setRect] = useState(null)
 
@@ -97,7 +98,7 @@ function AdminTopBar({ sidebarOpen, setSidebarOpen }) {
           >
             {currentUser.avatarUrl ? (
               <img src={currentUser.avatarUrl} alt={currentUser.name}
-                   className="w-7 h-7 rounded-full object-cover border border-border shrink-0" />
+                className="w-7 h-7 rounded-full object-cover border border-border shrink-0" />
             ) : (
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
                               flex items-center justify-center text-white text-xs font-semibold shrink-0">
@@ -125,7 +126,7 @@ function AdminTopBar({ sidebarOpen, setSidebarOpen }) {
           <div className="flex items-center gap-2.5 px-3 py-2.5 mb-0.5">
             {currentUser?.avatarUrl ? (
               <img src={currentUser.avatarUrl} alt={currentUser.name}
-                   className="w-9 h-9 rounded-full object-cover border border-border shrink-0" />
+                className="w-9 h-9 rounded-full object-cover border border-border shrink-0" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
                               flex items-center justify-center text-white text-xs font-semibold shrink-0">
@@ -172,7 +173,7 @@ export default function AdminLayout() {
   useTrackActivity()
   const { hasPermission } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024)
-  const [isMobile, setIsMobile]       = useState(() => window.innerWidth < 1024)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
 
   useEffect(() => {
     const handler = () => {
@@ -202,7 +203,7 @@ export default function AdminLayout() {
       {/* Sidebar — no inner toggle, controlled only by top bar hamburger */}
       <aside
         style={{
-          top:   NAVBAR_H,
+          top: NAVBAR_H,
           width: sidebarOpen ? SIDEBAR_W : (isMobile ? 0 : COLLAPSED_W),
         }}
         className="fixed left-0 bottom-0 z-50
@@ -225,9 +226,9 @@ export default function AdminLayout() {
                   `group relative flex items-center gap-3 rounded-lg px-2.5 py-2
                    text-sm font-medium transition-colors whitespace-nowrap
                    ${isActive
-                     ? "bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-400"
-                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                   }`
+                    ? "bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-400"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`
                 }
               >
                 {({ isActive }) => (

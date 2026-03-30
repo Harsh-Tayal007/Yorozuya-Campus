@@ -25,6 +25,7 @@ import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 import ReplyContent from "./ReplyContent"
 import TiptapEditor from "./TiptapEditor"
 import useHashHighlight from "@/hooks/useHashHighlight"
+import ReportModal from "@/components/forum/ReportModal"
 
 // =============================================================================
 // CONSTANTS
@@ -136,6 +137,7 @@ const Reply = ({
   const [showOptions, setShowOptions] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(() => replies?.byId?.[replyId]?.content ?? "")
+  const [reportTarget, setReportTarget] = useState(null)
 
   const dotsRef = useRef(null)
 
@@ -196,6 +198,18 @@ const Reply = ({
     setGlow(on); notifyParent?.(on)
   }, [notifyParent])
 
+  const handleReport = useCallback(() => {
+    setShowOptions(false)   // ← add this line
+    setReportTarget({
+      targetType: "reply",
+      targetId: reply.$id,
+      targetAuthorId: reply.authorId,
+      targetAuthorUsername: reply.authorName,
+      contentPreview: reply.content?.replace(/<[^>]+>/g, " ").slice(0, 200),
+      threadId,
+    })
+  }, [reply, threadId])
+
   const handleSubmit = useCallback((text, gifUrl, imageUrl) => {
     if (!text.trim() && !gifUrl && !imageUrl) return
     createReply.mutate({
@@ -207,12 +221,12 @@ const Reply = ({
       threadAuthorId: threadAuthor,
       actorAvatar: user.avatarUrl ?? null,
       actorUsername: user.username ?? null,
-      
+
     })
     console.log("submit debug:", {
-  parentAuthorId: reply?.authorId ?? null,
-  threadAuthorId: threadAuthor,
-})
+      parentAuthorId: reply?.authorId ?? null,
+      threadAuthorId: threadAuthor,
+    })
   }, [createReply, threadId, user, reply, composeState, threadAuthor])
 
   const handleDelete = useCallback(async () => {
@@ -388,6 +402,7 @@ const Reply = ({
                     onDelete={handleDelete}
                     onEdit={() => { setEditing(true); setShowOptions(false) }}
                     onClose={() => setShowOptions(false)}
+                    onReport={handleReport}
                     threadId={threadId}
                   />
                 )}
@@ -492,6 +507,12 @@ const Reply = ({
         )}
 
       </div>
+
+      <ReportModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        target={reportTarget}
+      />
     </GlowCtx.Provider>
   )
 }

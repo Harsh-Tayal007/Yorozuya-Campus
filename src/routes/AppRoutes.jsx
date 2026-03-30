@@ -74,6 +74,8 @@ import CGPACalculator from "@/pages/tools/CGPACalculator"
 import TaskTracker from "@/pages/tools/TaskTracker"
 import TimetableBuilder from "@/pages/tools/TimetableBuilder"
 import PrivacyPolicy from "@/pages/auth/PrivacyPolicy"
+import NotificationsPage from "@/pages/dashboard/NotificationsPage"
+import AdminModeration from "@/pages/admin/moderation/AdminModeration"
 
 const AppRoutes = () => {
   return (
@@ -126,6 +128,7 @@ const AppRoutes = () => {
                 <Route path="cgpa" element={<CGPACalculator />} />
                 <Route path="tasks" element={<TaskTracker />} />
                 <Route path="timetable" element={<TimetableBuilder />} />
+                <Route path="notifications" element={<NotificationsPage />} />
 
                 <Route path="syllabus">
                   <Route index element={<DashboardSyllabus />} />
@@ -171,7 +174,12 @@ const AppRoutes = () => {
           <Route path="pyq/upload" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PYQS}><PyqUpload /></RequirePermissionRoute>} />
           <Route path="pyqs" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_PYQS}><AdminPyqsPage /></RequirePermissionRoute>} />
           <Route path="activity" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminActivity /></RequirePermissionRoute>} />
-        <Route path="stats" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminStats /></RequirePermissionRoute>} />
+          <Route path="stats" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminStats /></RequirePermissionRoute>} />
+          <Route path="moderation" element={
+            <RequirePermissionRoute permission={PERMISSIONS.VIEW_REPORTS}>
+              <AdminModeration />
+            </RequirePermissionRoute>
+          } />
         </Route>
 
         {/* ⚠️ System routes */}
