@@ -3,7 +3,8 @@ import { useMemo, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
-import { Users, Search, Shield, Star, Pencil as PencilIcon, User as UserIcon, X } from "lucide-react"
+import { Users, Search, Shield, Star, Pencil as PencilIcon, User as UserIcon, X, ExternalLink } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { getUsers, updateUserRole } from "@/services/user/userService"
 import { useAuth } from "@/context/AuthContext"
@@ -11,10 +12,10 @@ import { ROLES } from "@/config/roles"
 import { CustomSelect, GlassCard } from "@/components/admin/CustomSelect"
 
 const ROLE_CONFIG = {
-  admin:     { label: "Admin",     color: "#ef4444", bg: "bg-red-500/10",     text: "text-red-500",     icon: Shield },
-  moderator: { label: "Moderator", color: "#8b5cf6", bg: "bg-violet-500/10",  text: "text-violet-500",  icon: Star },
-  editor:    { label: "Editor",    color: "#3b82f6", bg: "bg-blue-500/10",    text: "text-blue-500",    icon: PencilIcon },
-  user:      { label: "User",      color: "#6b7280", bg: "bg-muted",          text: "text-muted-foreground", icon: UserIcon },
+  admin: { label: "Admin", color: "#ef4444", bg: "bg-red-500/10", text: "text-red-500", icon: Shield },
+  moderator: { label: "Moderator", color: "#8b5cf6", bg: "bg-violet-500/10", text: "text-violet-500", icon: Star },
+  editor: { label: "Editor", color: "#3b82f6", bg: "bg-blue-500/10", text: "text-blue-500", icon: PencilIcon },
+  user: { label: "User", color: "#6b7280", bg: "bg-muted", text: "text-muted-foreground", icon: UserIcon },
 }
 
 function RoleBadge({ role }) {
@@ -40,7 +41,7 @@ export default function UserRolesAdmin() {
 
   const filtered = useMemo(() =>
     users.filter(u => u.username?.toLowerCase().includes(search.toLowerCase()) ||
-                      u.email?.toLowerCase().includes(search.toLowerCase())),
+      u.email?.toLowerCase().includes(search.toLowerCase())),
     [users, search])
 
   const handleRoleChange = async (targetUser, newRole) => {
@@ -137,7 +138,7 @@ export default function UserRolesAdmin() {
             <AnimatePresence>
               {filtered.map((u, i) => {
                 const isSelf = u.$id === user.$id
-                const cfg    = ROLE_CONFIG[u.role] ?? ROLE_CONFIG.user
+                const cfg = ROLE_CONFIG[u.role] ?? ROLE_CONFIG.user
                 return (
                   <motion.div key={u.$id}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -150,21 +151,47 @@ export default function UserRolesAdmin() {
                   >
                     {/* User info */}
                     <div className="flex items-center gap-3 min-w-0">
-                      {/* Avatar initials */}
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${cfg.bg}`}
-                        style={{ color: cfg.color }}>
-                        {u.username?.charAt(0).toUpperCase()}
-                      </div>
+                      {/* Avatar — pfp if available, else initials */}
+                      <Link
+                        to={`/profile/${u.username}`}
+                        className="shrink-0 group relative">
+                        {u.avatarUrl ? (
+                          <img
+                            src={u.avatarUrl}
+                            alt={u.username}
+                            className="w-8 h-8 rounded-full object-cover ring-2 ring-transparent
+                                       group-hover:ring-primary/40 transition-all"
+                          />
+                        ) : (
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center
+                                        text-xs font-bold ${cfg.bg}
+                                        ring-2 ring-transparent group-hover:ring-primary/40 transition-all`}
+                            style={{ color: cfg.color }}>
+                            {u.username?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 rounded-full bg-black/20 opacity-0
+                                        group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ExternalLink size={9} className="text-white" />
+                        </div>
+                      </Link>
+
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-foreground truncate">{u.username}</span>
+                          <Link
+                            to={`/profile/${u.username}`}
+                            className="text-sm font-semibold text-foreground truncate
+                                       hover:text-primary hover:underline transition-colors">
+                            {u.username}
+                          </Link>
                           <RoleBadge role={u.role} />
                           {isSelf && <span className="text-[10px] text-muted-foreground">(you)</span>}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
                       </div>
                     </div>
-
                     {/* Role selector */}
                     <div className="w-36 shrink-0 ml-3">
                       <CustomSelect
