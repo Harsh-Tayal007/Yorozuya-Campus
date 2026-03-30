@@ -19,10 +19,10 @@ import {
 
 // Extract @username mentions from plain text or HTML content
 function extractMentions(content = "") {
-  if (!content) return []
-  const plain = content.replace(/<[^>]+>/g, " ")
-  const matches = plain.match(/@([\w]+)/g) ?? []
-  return [...new Set(matches.map(m => m.slice(1).toLowerCase()))]
+  if (!content) return [];
+  const plain = content.replace(/<[^>]+>/g, " ");
+  const matches = plain.match(/@([\w]+)/g) ?? [];
+  return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
 }
 
 export default function useReplyActions(threadId) {
@@ -40,7 +40,7 @@ export default function useReplyActions(threadId) {
         ...newReply,
         $id: tempId,
         $createdAt: new Date().toISOString(),
-        upvotes: 0,
+        upvotes: 1, // ← default +1
         isPinned: false,
       };
       queryClient.setQueryData(["replies", threadId], (old) => {
@@ -50,14 +50,18 @@ export default function useReplyActions(threadId) {
         if (!newChildren[parent]) newChildren[parent] = [];
         return {
           byId: { ...old.byId, [tempId]: optimisticReply },
-          children: { ...newChildren, [parent]: [tempId, ...newChildren[parent]] },
+          children: {
+            ...newChildren,
+            [parent]: [tempId, ...newChildren[parent]],
+          },
         };
       });
       queryClient.setQueryData(["threads"], (old = []) =>
-        old.map(t => t.$id === threadId
-          ? { ...t, repliesCount: (t.repliesCount ?? 0) + 1 }
-          : t
-        )
+        old.map((t) =>
+          t.$id === threadId
+            ? { ...t, repliesCount: (t.repliesCount ?? 0) + 1 }
+            : t,
+        ),
       );
       return { previousReplies, tempId };
     },
@@ -65,10 +69,11 @@ export default function useReplyActions(threadId) {
     onError: (err, newReply, context) => {
       queryClient.setQueryData(["replies", threadId], context.previousReplies);
       queryClient.setQueryData(["threads"], (old = []) =>
-        old.map(t => t.$id === threadId
-          ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
-          : t
-        )
+        old.map((t) =>
+          t.$id === threadId
+            ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
+            : t,
+        ),
       );
     },
 
@@ -82,20 +87,33 @@ export default function useReplyActions(threadId) {
         newById[serverReply.$id] = serverReply;
         const newChildren = { ...old.children };
         for (const parent in newChildren) {
-          newChildren[parent] = newChildren[parent].map(id =>
-            id === tempId ? serverReply.$id : id
+          newChildren[parent] = newChildren[parent].map((id) =>
+            id === tempId ? serverReply.$id : id,
           );
         }
         return { byId: newById, children: newChildren };
       });
 
-      incrementRepliesCount(threadId).then(() => {
-        queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
-        queryClient.invalidateQueries({ queryKey: ["threads"] });
-      }).catch(console.error);
+      // Seed votesMap so the author's upvote arrow renders red immediately
+      queryClient.setQueryData(["votes", threadId], (old = {}) => ({
+        ...old,
+        [serverReply.$id]: { vote: "up", voteDocId: null },
+      }));
+
+      // Refetch real voteDocId so undo-vote works correctly
+      queryClient.invalidateQueries({ queryKey: ["votes", threadId] });
+
+      incrementRepliesCount(threadId)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
+          queryClient.invalidateQueries({ queryKey: ["threads"] });
+        })
+        .catch(console.error);
 
       // Fire notifications — never block UI
-      fireReplyNotifications(serverReply, newReply, threadId).catch(console.error);
+      fireReplyNotifications(serverReply, newReply, threadId).catch(
+        console.error,
+      );
     },
   });
 
@@ -129,7 +147,9 @@ export default function useReplyActions(threadId) {
           delete newById[replyId];
           const newChildren = { ...old.children };
           for (const parent in newChildren) {
-            newChildren[parent] = newChildren[parent].filter(id => id !== replyId);
+            newChildren[parent] = newChildren[parent].filter(
+              (id) => id !== replyId,
+            );
           }
           delete newChildren[replyId];
           return { byId: newById, children: newChildren };
@@ -140,7 +160,10 @@ export default function useReplyActions(threadId) {
 
     onError: (err, variables, context) => {
       if (context?.previousReplies) {
-        queryClient.setQueryData(["replies", threadId], context.previousReplies);
+        queryClient.setQueryData(
+          ["replies", threadId],
+          context.previousReplies,
+        );
       }
     },
 
@@ -148,15 +171,18 @@ export default function useReplyActions(threadId) {
       queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
       if (!hasChildren) {
         queryClient.setQueryData(["threads"], (old = []) =>
-          old.map(t => t.$id === threadId
-            ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
-            : t
-          )
+          old.map((t) =>
+            t.$id === threadId
+              ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
+              : t,
+          ),
         );
-        decrementRepliesCount(threadId).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
-          queryClient.invalidateQueries({ queryKey: ["threads"] });
-        }).catch(console.error);
+        decrementRepliesCount(threadId)
+          .then(() => {
+            queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
+            queryClient.invalidateQueries({ queryKey: ["threads"] });
+          })
+          .catch(console.error);
       }
     },
   });
@@ -175,7 +201,8 @@ export default function useReplyActions(threadId) {
               ...old.byId[updatedReply.$id],
               content: updatedReply.content,
               gifUrl: updatedReply.gifUrl ?? old.byId[updatedReply.$id].gifUrl,
-              imageUrl: updatedReply.imageUrl ?? old.byId[updatedReply.$id].imageUrl,
+              imageUrl:
+                updatedReply.imageUrl ?? old.byId[updatedReply.$id].imageUrl,
             },
           },
         };
@@ -194,7 +221,8 @@ export default function useReplyActions(threadId) {
       });
       queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
     },
-    onError: () => queryClient.invalidateQueries({ queryKey: ["replies", threadId] }),
+    onError: () =>
+      queryClient.invalidateQueries({ queryKey: ["replies", threadId] }),
   });
 
   const unpinReplyMutation = useMutation({
@@ -206,7 +234,8 @@ export default function useReplyActions(threadId) {
       });
       queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
     },
-    onError: () => queryClient.invalidateQueries({ queryKey: ["replies", threadId] }),
+    onError: () =>
+      queryClient.invalidateQueries({ queryKey: ["replies", threadId] }),
   });
 
   return {
@@ -222,85 +251,87 @@ export default function useReplyActions(threadId) {
 // NOTIFICATION HELPERS
 // =============================================================================
 async function fireReplyNotifications(serverReply, newReply, threadId) {
-  const actorId       = newReply.authorId
-  const actorName     = newReply.authorName
-  const actorAvatar   = newReply.actorAvatar   ?? null
-  const actorUsername = newReply.actorUsername ?? null
+  const actorId = newReply.authorId;
+  const actorName = newReply.authorName;
+  const actorAvatar = newReply.actorAvatar ?? null;
+  const actorUsername = newReply.actorUsername ?? null;
 
   // Plain-text preview of what was written (max 200 chars)
   const replyContent = (newReply.content ?? "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 200)
+    .slice(0, 200);
 
-  const promises = []
+  const promises = [];
 
   // ── 1. Reply notification ─────────────────────────────────────────────────
   // parentAuthorId set  → replying to someone's comment → "replied to your comment"
   // only threadAuthorId → root reply on thread          → "replied to your thread"
-  const isNestedReply = !!newReply.parentAuthorId
-  const recipientId   = newReply.parentAuthorId ?? newReply.threadAuthorId ?? null
-  const replyMessage  = isNestedReply
+  const isNestedReply = !!newReply.parentAuthorId;
+  const recipientId =
+    newReply.parentAuthorId ?? newReply.threadAuthorId ?? null;
+  const replyMessage = isNestedReply
     ? "replied to your comment."
-    : "replied to your thread."
+    : "replied to your thread.";
 
   if (recipientId && recipientId !== actorId) {
     promises.push(
       createNotification({
         recipientId,
-        type:         "reply",
+        type: "reply",
         actorId,
         actorName,
         actorAvatar,
         actorUsername,
         threadId,
-        replyId:      serverReply.$id,
+        replyId: serverReply.$id,
         replyContent,
-        message:      replyMessage,
-      })
-    )
+        message: replyMessage,
+      }),
+    );
   }
 
   // ── 2. Mention notifications ──────────────────────────────────────────────
   // Notify every @mentioned user, PLUS the author of the parent comment
   // if they were mentioned (deduplicated via Set below)
-  const mentionedUsernames = extractMentions(newReply.content)
+  const mentionedUsernames = extractMentions(newReply.content);
 
   // Also include anyone in the existing reply chain who might be mentioned
   // (the parentAuthorUsername if provided — passed from Reply.jsx)
-  const allMentions = new Set(mentionedUsernames)
+  const allMentions = new Set(mentionedUsernames);
 
   if (allMentions.size > 0) {
     const userDocs = await Promise.all(
-      [...allMentions].map(username => getUserIdByUsername(username))
-    )
+      [...allMentions].map((username) => getUserIdByUsername(username)),
+    );
     for (const doc of userDocs) {
-      if (!doc) continue
-      const mentionedUserId = doc.userId
+      if (!doc) continue;
+      const mentionedUserId = doc.userId;
       // Skip actor and skip anyone already notified by the reply notification
-      if (!mentionedUserId || mentionedUserId === actorId) continue
-      if (mentionedUserId === recipientId) continue // avoid double-notif
+      if (!mentionedUserId || mentionedUserId === actorId) continue;
+      if (mentionedUserId === recipientId) continue; // avoid double-notif
 
       promises.push(
         createNotification({
-          recipientId:  mentionedUserId,
-          type:         "mention",
+          recipientId: mentionedUserId,
+          type: "mention",
           actorId,
           actorName,
           actorAvatar,
           actorUsername,
           threadId,
-          replyId:      serverReply.$id,
+          replyId: serverReply.$id,
           replyContent,
-          message:      "mentioned you in a reply.",
-        })
-      )
+          message: "mentioned you in a reply.",
+        }),
+      );
     }
   }
 
-  const results = await Promise.allSettled(promises)
-  results.forEach(r => {
-    if (r.status === "rejected") console.error("Notification failed:", r.reason)
-  })
+  const results = await Promise.allSettled(promises);
+  results.forEach((r) => {
+    if (r.status === "rejected")
+      console.error("Notification failed:", r.reason);
+  });
 }

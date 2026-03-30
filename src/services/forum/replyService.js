@@ -4,7 +4,7 @@ import { Query, ID } from "appwrite";
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const REPLIES_COLLECTION_ID = import.meta.env
   .VITE_APPWRITE_REPLIES_COLLECTION_ID;
-
+const VOTES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_VOTES_COLLECTION_ID;
 
 export const fetchRepliesByThread = async (threadId) => {
   const response = await databases.listDocuments(
@@ -47,9 +47,17 @@ export const createReply = async ({
       authorId,
       authorName,
       parentReplyId,
-      upvotes: 0,
+      upvotes: 1, // ← default +1
       isPinned: false,
     },
+  );
+
+  // Auto-upvote by the author (like Reddit)
+  await databases.createDocument(
+    DATABASE_ID,
+    VOTES_COLLECTION_ID,
+    ID.unique(),
+    { replyId: res.$id, userId: authorId, vote: "up" },
   );
 
   return res;
