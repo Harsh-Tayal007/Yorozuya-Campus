@@ -17,16 +17,20 @@ function fmtDate(iso) {
   })
 }
 
-function LogEntry({ log, isFirst }) {
+function LogEntry({ log, isFirst, isLast }) {
   return (
     <div className="relative pl-8">
       {/* Timeline dot */}
-      <div className={`absolute left-0 top-1.5 w-3 h-3 rounded-full border-2
+      <div className={`absolute left-0 top-1.5 w-3 h-3 rounded-full border-2 z-10
                        ${isFirst
                          ? "border-primary bg-primary shadow-[0_0_8px_2px] shadow-primary/30"
                          : "border-border bg-background"}`} />
-      {/* Timeline line */}
-      <div className="absolute left-[5px] top-4 bottom-0 w-px bg-border/50" />
+
+      {/* Timeline line — solid, high contrast, stops before last entry bottom */}
+      {!isLast && (
+        <div className="absolute left-[5px] top-4 bottom-0 w-0.5
+                        bg-border dark:bg-border/80" />
+      )}
 
       <div className={`rounded-xl border p-5 space-y-3 mb-8
                        ${log.pinned
@@ -62,10 +66,13 @@ function LogEntry({ log, isFirst }) {
           </div>
         )}
 
-        {/* Body */}
-        <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-          {log.body}
-        </div>
+        {/* Body — rendered as rich HTML from Tiptap */}
+        {log.body && log.body !== "<p></p>" && (
+          <div
+            className="tiptap-render text-sm text-muted-foreground leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: log.body }}
+          />
+        )}
       </div>
     </div>
   )
@@ -74,8 +81,8 @@ function LogEntry({ log, isFirst }) {
 const ALL_TAGS = ["feature", "fix", "improvement", "breaking"]
 
 export default function UpdatesPage() {
-  const [logs, setLogs]         = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [logs, setLogs]           = useState([])
+  const [loading, setLoading]     = useState(true)
   const [activeTag, setActiveTag] = useState(null)
 
   useEffect(() => {
@@ -84,7 +91,6 @@ export default function UpdatesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Pinned first, then by publishedAt desc
   const sorted = [...logs].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
@@ -147,7 +153,12 @@ export default function UpdatesPage() {
       ) : (
         <div className="relative">
           {filtered.map((log, i) => (
-            <LogEntry key={log.$id} log={log} isFirst={i === 0} />
+            <LogEntry
+              key={log.$id}
+              log={log}
+              isFirst={i === 0}
+              isLast={i === filtered.length - 1}
+            />
           ))}
         </div>
       )}

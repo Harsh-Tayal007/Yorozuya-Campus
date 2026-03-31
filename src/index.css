@@ -227,3 +227,103 @@ body[data-scroll-locked] {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Tiptap rendered output (UpdatesPage, AdminUpdates card, anywhere with dangerouslySetInnerHTML) ── */
+.tiptap-render ol,
+.tiptap-render ul {
+  padding-left: 1.4rem;
+  margin: 0.35rem 0;
+}
+
+.tiptap-render ol {
+  list-style-type: decimal;
+}
+
+.tiptap-render ul {
+  list-style-type: disc;
+}
+
+.tiptap-render li {
+  margin: 0.15rem 0;
+}
+
+.tiptap-render li > p {
+  margin: 0;
+}
+
+.tiptap-render strong {
+  font-weight: 700;
+}
+
+.tiptap-render em {
+  font-style: italic;
+}
+
+.tiptap-render s {
+  text-decoration: line-through;
+}
+
+.tiptap-render h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0.6rem 0 0.25rem;
+  line-height: 1.3;
+}
+
+.tiptap-render h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0.2rem;
+  line-height: 1.3;
+}
+
+.tiptap-render h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0.4rem 0 0.15rem;
+  line-height: 1.3;
+}
+
+.tiptap-render p {
+  margin: 0.2rem 0;
+  line-height: 1.6;
+}
+
+.tiptap-render p:first-child {
+  margin-top: 0;
+}
+
+.tiptap-render p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-render code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8em;
+  background: rgba(128, 128, 128, 0.12);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+.tiptap-render pre {
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 0.4rem 0;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+}
+
+.tiptap-render blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 0.75rem;
+  margin: 0.4rem 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-render a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
