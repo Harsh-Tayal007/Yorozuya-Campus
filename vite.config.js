@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
           globIgnores: ["push-sw.js"],
           navigateFallbackDenylist: [/^\/push-sw\.js/],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
         },
         manifest: {
           id: "/",
@@ -55,6 +56,18 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor:   ["react", "react-dom", "react-router-dom"],
+            appwrite: ["appwrite"],
+            editor:   ["@tiptap/react", "@tiptap/starter-kit"],
+            ui:       ["lucide-react"],
+          },
+        },
+      },
+    },
     server: {
       proxy: {
         "/anthropic": {

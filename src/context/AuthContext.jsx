@@ -13,39 +13,49 @@ import { ROLE_PERMISSIONS } from "@/config/permissions"
 import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 import { upsertSavedAccount, vaultStore, vaultRefreshTTL } from "@/lib/savedAccounts"
 import { getActiveBan } from "@/services/moderation/banService"
+import { subscribeToPush, unsubscribeFromPush } from "@/services/notification/pushSubscriptionService"
 
 const AuthContext = createContext(null)
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const DATABASE_ID    = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const USERS_TABLE_ID = USERS_COLLECTION_ID
 
 // ── Build currentUser shape from accountUser + userDoc ───────────────────────
 const buildCurrentUser = (accountUser, userDoc) => ({
   ...accountUser,
-  username: userDoc.username,
-  universityId: userDoc.universityId ?? null,
-  programId: userDoc.programId ?? null,
-  branchId: userDoc.branchId ?? null,
+  username:         userDoc.username,
+  universityId:     userDoc.universityId    ?? null,
+  programId:        userDoc.programId       ?? null,
+  branchId:         userDoc.branchId        ?? null,
   profileCompleted: userDoc.profileCompleted ?? false,
-  avatarUrl: userDoc.avatarUrl ?? null,
-  avatarPublicId: userDoc.avatarPublicId ?? null,
-  bio: userDoc.bio ?? null,
-  yearOfStudy: userDoc.yearOfStudy ?? null,
-  name: userDoc.name ?? accountUser.name,
-  // ── new social fields ──
-  karma: userDoc.karma ?? 0,
-  followerCount: userDoc.followerCount ?? 0,
-  followingCount: userDoc.followingCount ?? 0,
+  avatarUrl:        userDoc.avatarUrl        ?? null,
+  avatarPublicId:   userDoc.avatarPublicId   ?? null,
+  bio:              userDoc.bio              ?? null,
+  yearOfStudy:      userDoc.yearOfStudy      ?? null,
+  name:             userDoc.name             ?? accountUser.name,
+  karma:            userDoc.karma            ?? 0,
+  followerCount:    userDoc.followerCount    ?? 0,
+  followingCount:   userDoc.followingCount   ?? 0,
 })
 
-// banStatus is populated separately after async check
+// ── Register SW + subscribe (called after every successful auth) ─────────────
+async function registerAndSubscribe(userId) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
+  try {
+    await navigator.serviceWorker.register("/push-sw.js", { scope: "/" })
+    await navigator.serviceWorker.ready          // wait for activation
+    await subscribeToPush(userId)
+  } catch (e) {
+    console.warn("Push subscription failed:", e)
+  }
+}
 
 export const AuthProvider = ({ children }) => {
-  const [authStatus, setAuthStatus] = useState(false)
+  const [authStatus, setAuthStatus]   = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
-  const [role, setRole] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [userDocId, setUserDocId] = useState(null)   // ← cached DB doc $id
+  const [role, setRole]               = useState(null)
+  const [isLoading, setIsLoading]     = useState(true)
+  const [userDocId, setUserDocId]     = useState(null)
 
   const assertRoleFromDB = (role) => {
     if (!role) throw new Error("Invariant violation: role missing from DB")
@@ -57,12 +67,12 @@ export const AuthProvider = ({ children }) => {
     return ROLE_PERMISSIONS[role] || []
   }, [role])
 
-  const hasPermission = (permission) => permissions.includes(permission)
-  const hasAnyPermission = (permissionList) => permissionList.some((p) => permissions.includes(p))
+  const hasPermission    = (permission)     => permissions.includes(permission)
+  const hasAnyPermission = (permissionList) => permissionList.some(p => permissions.includes(p))
 
   const sessionRestored = useRef(false)
 
-  // ── Restore session ──────────────────────────────────────────────────────
+  // ── Restore session ────────────────────────────────────────────────────────
   useEffect(() => {
     if (sessionRestored.current) return
     sessionRestored.current = true
@@ -81,32 +91,32 @@ export const AuthProvider = ({ children }) => {
         const userDoc = res.documents[0]
 
         if (!userDoc.username) throw new Error("Username missing in user profile")
-        if (!userDoc.role) throw new Error("Role missing in user profile")
+        if (!userDoc.role)     throw new Error("Role missing in user profile")
 
         setRole(assertRoleFromDB(userDoc.role))
         setUserDocId(userDoc.$id)
 
-        // Check ban status
         const activeBan = await getActiveBan(accountUser.$id).catch(() => null)
 
         setCurrentUser({
           ...buildCurrentUser(accountUser, userDoc),
           activeBan: activeBan ?? null,
-          isBanned: !!activeBan,
+          isBanned:  !!activeBan,
         })
         setAuthStatus(true)
 
         upsertSavedAccount({
-          userId: accountUser.$id,
-          name: userDoc.name || accountUser.name,
-          username: userDoc.username,
-          email: accountUser.email,
+          userId:    accountUser.$id,
+          name:      userDoc.name || accountUser.name,
+          username:  userDoc.username,
+          email:     accountUser.email,
           avatarUrl: userDoc.avatarUrl || null,
         })
 
-        // Refresh TTL so active users never get logged out of vault
         vaultRefreshTTL(accountUser.$id)
 
+        // Re-subscribe in case SW was cleared or this is a new device
+        registerAndSubscribe(accountUser.$id)
 
       } catch (err) {
         console.error("Auth restore failed", err)
@@ -122,10 +132,8 @@ export const AuthProvider = ({ children }) => {
     restoreSession()
   }, [])
 
-  // ── Login ────────────────────────────────────────────────────────────────
+  // ── Login ──────────────────────────────────────────────────────────────────
   const login = async ({ email, password }) => {
-
-    // If switching, delete current session first so loginUser doesn't get "session exists" error
     const isSwitching = !!sessionStorage.getItem("unizuya_switch_to")
     if (isSwitching) {
       try { await account.deleteSession("current") } catch { /* ignore */ }
@@ -149,7 +157,7 @@ export const AuthProvider = ({ children }) => {
     const userDoc = res.documents[0]
 
     if (!userDoc.username) throw new Error("Username missing in user profile")
-    if (!userDoc.role) throw new Error("Role missing in user profile")
+    if (!userDoc.role)     throw new Error("Role missing in user profile")
 
     setRole(userDoc.role)
     setUserDocId(userDoc.$id)
@@ -159,23 +167,25 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser({
       ...buildCurrentUser(accountUser, userDoc),
       activeBan: activeBan ?? null,
-      isBanned: !!activeBan,
+      isBanned:  !!activeBan,
     })
     setAuthStatus(true)
 
-    // Store encrypted password for seamless switching
     if (password) await vaultStore(accountUser.$id, password)
 
     upsertSavedAccount({
-      userId: accountUser.$id,
-      name: userDoc.name || accountUser.name,
-      username: userDoc.username,
-      email: accountUser.email,
+      userId:    accountUser.$id,
+      name:      userDoc.name || accountUser.name,
+      username:  userDoc.username,
+      email:     accountUser.email,
       avatarUrl: userDoc.avatarUrl || null,
     })
+
+    // Subscribe after login — no-ops silently if already subscribed
+    registerAndSubscribe(accountUser.$id)
   }
 
-  // ── Signup ───────────────────────────────────────────────────────────────
+  // ── Signup ─────────────────────────────────────────────────────────────────
   const completeSignup = async (data) => {
     const { name, email, password, universityId, programId, branchId } = data
 
@@ -194,10 +204,10 @@ export const AuthProvider = ({ children }) => {
       programId,
       branchId,
       profileCompleted: true,
-      avatarUrl: null,
-      avatarPublicId: null,
-      bio: null,
-      yearOfStudy: null,
+      avatarUrl:        null,
+      avatarPublicId:   null,
+      bio:              null,
+      yearOfStudy:      null,
     })
 
     await account.createEmailPasswordSession(email, password)
@@ -216,81 +226,74 @@ export const AuthProvider = ({ children }) => {
     setAuthStatus(true)
 
     upsertSavedAccount({
-      userId: loggedInUser.$id,
-      name: profile.name,
-      username: profile.username,
-      email: loggedInUser.email,
+      userId:    loggedInUser.$id,
+      name:      profile.name,
+      username:  profile.username,
+      email:     loggedInUser.email,
       avatarUrl: profile.avatarUrl || null,
     })
+
+    // Subscribe after signup
+    registerAndSubscribe(loggedInUser.$id)
 
     return loggedInUser
   }
 
-  // ── Update academic profile ───────────────────────────────────────────────
-  // Fixed: uses cached userDocId — no extra listDocuments needed
+  // ── Update academic profile ────────────────────────────────────────────────
   const completeAcademicProfile = async ({ universityId, programId, branchId }) => {
     if (!currentUser) throw new Error("User not authenticated")
-    if (!userDocId) throw new Error("User doc ID not cached")
+    if (!userDocId)   throw new Error("User doc ID not cached")
 
     await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, {
       universityId, programId, branchId, profileCompleted: true,
     })
 
-    setCurrentUser((prev) => ({
+    setCurrentUser(prev => ({
       ...prev, universityId, programId, branchId, profileCompleted: true,
     }))
   }
 
-  // ── Update profile (bio, yearOfStudy, avatar, name) ──────────────────────
-  // 1 DB request + optional Cloudinary upload + optional account.updateName
+  // ── Update profile ─────────────────────────────────────────────────────────
   const updateProfile = async ({
-    name,
-    bio,
-    yearOfStudy,
-    avatarUrl,
-    avatarPublicId,
-    oldAvatarPublicId,
+    name, bio, yearOfStudy, avatarUrl, avatarPublicId, oldAvatarPublicId,
   }) => {
     if (!currentUser) throw new Error("User not authenticated")
-    if (!userDocId) throw new Error("User doc ID not cached")
+    if (!userDocId)   throw new Error("User doc ID not cached")
 
-    // Delete old Cloudinary avatar if replacing
     if (oldAvatarPublicId && oldAvatarPublicId !== avatarPublicId) {
-      await deleteCloudinaryImage(oldAvatarPublicId).catch(() => { })
+      await deleteCloudinaryImage(oldAvatarPublicId).catch(() => {})
     }
 
-    // Build DB update payload — only include defined fields
     const updates = {}
-    if (name !== undefined) updates.name = name
-    if (bio !== undefined) updates.bio = bio
-    if (yearOfStudy !== undefined) updates.yearOfStudy = yearOfStudy
-    if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl
+    if (name          !== undefined) updates.name          = name
+    if (bio           !== undefined) updates.bio           = bio
+    if (yearOfStudy   !== undefined) updates.yearOfStudy   = yearOfStudy
+    if (avatarUrl     !== undefined) updates.avatarUrl     = avatarUrl
     if (avatarPublicId !== undefined) updates.avatarPublicId = avatarPublicId
 
-    // Update DB doc
     await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, updates)
 
-    // If name changed, update Appwrite Auth account name too
     if (name !== undefined && name !== currentUser.name) {
-      await account.updateName(name).catch(() => { })
+      await account.updateName(name).catch(() => {})
     }
 
-    // Update local state — no re-fetch needed
-    setCurrentUser((prev) => ({ ...prev, ...updates }))
+    setCurrentUser(prev => ({ ...prev, ...updates }))
 
     if (currentUser?.$id) {
       upsertSavedAccount({
-        userId: currentUser.$id,
-        name: updates.name ?? currentUser.name,
-        username: currentUser.username,
-        email: currentUser.email,
+        userId:    currentUser.$id,
+        name:      updates.name      ?? currentUser.name,
+        username:  currentUser.username,
+        email:     currentUser.email,
         avatarUrl: updates.avatarUrl ?? currentUser.avatarUrl ?? null,
       })
     }
   }
 
-  // ── Logout ───────────────────────────────────────────────────────────────
+  // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = async () => {
+    // Remove push subscription before session ends
+    await unsubscribeFromPush().catch(() => {})
     await logoutUser()
     setAuthStatus(false)
     setCurrentUser(null)

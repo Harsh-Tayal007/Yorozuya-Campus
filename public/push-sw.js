@@ -12,18 +12,28 @@ self.addEventListener("push", (event) => {
   catch { data = { title: "Unizuya", body: event.data?.text() ?? "" }; }
 
   const {
-    title = "Unizuya", body = "", url = "/dashboard",
-    icon  = "/pwa-192.png", badge = "/favicon-96x96.png", tag = "unizuya-notif",
+    title = "Unizuya",
+    body  = "",
+    url   = "/dashboard",
+    icon  = "/pwa-192.png",
+    badge = "/favicon-96x96.png",
+    tag   = "unizuya-notif",
+    type,
   } = data;
+
+  // Changelog notifications get a dedicated tag so they don't
+  // collapse with regular activity notifications
+  const notifTag = type === "changelog" ? "unizuya-changelog" : tag;
 
   event.waitUntil(
     self.registration.showNotification(title, {
-      body, icon, badge, tag,
-      renotify: true,
+      body, icon, badge,
+      tag:                notifTag,
+      renotify:           true,
       requireInteraction: false,
-      data: { url },
+      data:               { url },
       actions: [
-        { action: "open",    title: "View"    },
+        { action: "open",    title: "View" },
         { action: "dismiss", title: "Dismiss" },
       ],
     })
