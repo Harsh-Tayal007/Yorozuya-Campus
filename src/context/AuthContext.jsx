@@ -14,10 +14,11 @@ import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage"
 import { upsertSavedAccount, vaultStore, vaultRefreshTTL } from "@/lib/savedAccounts"
 import { getActiveBan } from "@/services/moderation/banService"
 import { subscribeToPush, unsubscribeFromPush } from "@/services/notification/pushSubscriptionService"
+import { sendVerificationEmail } from "@/services/auth/emailVerificationService"
 
 const AuthContext = createContext(null)
 
-const DATABASE_ID    = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const USERS_TABLE_ID = USERS_COLLECTION_ID
 
 // ── Build currentUser shape from accountUser + userDoc ───────────────────────
@@ -28,6 +29,7 @@ const buildCurrentUser = (accountUser, userDoc) => ({
   programId:        userDoc.programId       ?? null,
   branchId:         userDoc.branchId        ?? null,
   profileCompleted: userDoc.profileCompleted ?? false,
+  emailVerified:    userDoc.emailVerified    ?? accountUser.emailVerification ?? false, // ← new
   avatarUrl:        userDoc.avatarUrl        ?? null,
   avatarPublicId:   userDoc.avatarPublicId   ?? null,
   bio:              userDoc.bio              ?? null,
@@ -51,11 +53,11 @@ async function registerAndSubscribe(userId) {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [authStatus, setAuthStatus]   = useState(false)
+  const [authStatus, setAuthStatus] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
-  const [role, setRole]               = useState(null)
-  const [isLoading, setIsLoading]     = useState(true)
-  const [userDocId, setUserDocId]     = useState(null)
+  const [role, setRole] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [userDocId, setUserDocId] = useState(null)
 
   const assertRoleFromDB = (role) => {
     if (!role) throw new Error("Invariant violation: role missing from DB")
@@ -67,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     return ROLE_PERMISSIONS[role] || []
   }, [role])
 
-  const hasPermission    = (permission)     => permissions.includes(permission)
+  const hasPermission = (permission) => permissions.includes(permission)
   const hasAnyPermission = (permissionList) => permissionList.some(p => permissions.includes(p))
 
   const sessionRestored = useRef(false)
@@ -91,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         const userDoc = res.documents[0]
 
         if (!userDoc.username) throw new Error("Username missing in user profile")
-        if (!userDoc.role)     throw new Error("Role missing in user profile")
+        if (!userDoc.role) throw new Error("Role missing in user profile")
 
         setRole(assertRoleFromDB(userDoc.role))
         setUserDocId(userDoc.$id)
@@ -101,15 +103,15 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser({
           ...buildCurrentUser(accountUser, userDoc),
           activeBan: activeBan ?? null,
-          isBanned:  !!activeBan,
+          isBanned: !!activeBan,
         })
         setAuthStatus(true)
 
         upsertSavedAccount({
-          userId:    accountUser.$id,
-          name:      userDoc.name || accountUser.name,
-          username:  userDoc.username,
-          email:     accountUser.email,
+          userId: accountUser.$id,
+          name: userDoc.name || accountUser.name,
+          username: userDoc.username,
+          email: accountUser.email,
           avatarUrl: userDoc.avatarUrl || null,
         })
 
@@ -157,7 +159,7 @@ export const AuthProvider = ({ children }) => {
     const userDoc = res.documents[0]
 
     if (!userDoc.username) throw new Error("Username missing in user profile")
-    if (!userDoc.role)     throw new Error("Role missing in user profile")
+    if (!userDoc.role) throw new Error("Role missing in user profile")
 
     setRole(userDoc.role)
     setUserDocId(userDoc.$id)
@@ -167,17 +169,17 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser({
       ...buildCurrentUser(accountUser, userDoc),
       activeBan: activeBan ?? null,
-      isBanned:  !!activeBan,
+      isBanned: !!activeBan,
     })
     setAuthStatus(true)
 
     if (password) await vaultStore(accountUser.$id, password)
 
     upsertSavedAccount({
-      userId:    accountUser.$id,
-      name:      userDoc.name || accountUser.name,
-      username:  userDoc.username,
-      email:     accountUser.email,
+      userId: accountUser.$id,
+      name: userDoc.name || accountUser.name,
+      username: userDoc.username,
+      email: accountUser.email,
       avatarUrl: userDoc.avatarUrl || null,
     })
 
@@ -191,9 +193,13 @@ export const AuthProvider = ({ children }) => {
 
     try { await account.deleteSession("current") } catch { /* ignore */ }
 
+    // 1. Create Appwrite auth account
     const authUser = await account.create(ID.unique(), email, password, name)
+
+    // 2. Generate username
     const username = await generateAvailableUsername(name)
 
+    // 3. Create user profile doc — emailVerified: false
     await databases.createDocument(DATABASE_ID, USERS_TABLE_ID, ID.unique(), {
       userId: authUser.$id,
       email,
@@ -204,15 +210,26 @@ export const AuthProvider = ({ children }) => {
       programId,
       branchId,
       profileCompleted: true,
-      avatarUrl:        null,
-      avatarPublicId:   null,
-      bio:              null,
-      yearOfStudy:      null,
+      emailVerified: false,           // ← new field
+      avatarUrl: null,
+      avatarPublicId: null,
+      bio: null,
+      yearOfStudy: null,
     })
 
+    // 4. Create session so we can call account.createVerification
     await account.createEmailPasswordSession(email, password)
     const loggedInUser = await account.get()
 
+    // 5. Send verification email (non-blocking — don't fail signup if this errors)
+    try {
+      await sendVerificationEmail({ userId: loggedInUser.$id, email, name })
+    } catch (verifyErr) {
+      console.warn("Verification email failed to send:", verifyErr)
+      // Signup still succeeds — user can resend from the gate screen
+    }
+
+    // 6. Hydrate state
     const profileRes = await databases.listDocuments(
       DATABASE_ID, USERS_TABLE_ID,
       [Query.equal("userId", loggedInUser.$id)]
@@ -221,19 +238,21 @@ export const AuthProvider = ({ children }) => {
     const profile = profileRes.documents[0]
 
     setUserDocId(profile.$id)
-    setCurrentUser(buildCurrentUser(loggedInUser, profile))
+    setCurrentUser({
+      ...buildCurrentUser(loggedInUser, profile),
+      emailVerified: false,
+    })
     setRole(profile.role)
     setAuthStatus(true)
 
     upsertSavedAccount({
-      userId:    loggedInUser.$id,
-      name:      profile.name,
-      username:  profile.username,
-      email:     loggedInUser.email,
+      userId: loggedInUser.$id,
+      name: profile.name,
+      username: profile.username,
+      email: loggedInUser.email,
       avatarUrl: profile.avatarUrl || null,
     })
 
-    // Subscribe after signup
     registerAndSubscribe(loggedInUser.$id)
 
     return loggedInUser
@@ -242,7 +261,7 @@ export const AuthProvider = ({ children }) => {
   // ── Update academic profile ────────────────────────────────────────────────
   const completeAcademicProfile = async ({ universityId, programId, branchId }) => {
     if (!currentUser) throw new Error("User not authenticated")
-    if (!userDocId)   throw new Error("User doc ID not cached")
+    if (!userDocId) throw new Error("User doc ID not cached")
 
     await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, {
       universityId, programId, branchId, profileCompleted: true,
@@ -258,33 +277,33 @@ export const AuthProvider = ({ children }) => {
     name, bio, yearOfStudy, avatarUrl, avatarPublicId, oldAvatarPublicId,
   }) => {
     if (!currentUser) throw new Error("User not authenticated")
-    if (!userDocId)   throw new Error("User doc ID not cached")
+    if (!userDocId) throw new Error("User doc ID not cached")
 
     if (oldAvatarPublicId && oldAvatarPublicId !== avatarPublicId) {
-      await deleteCloudinaryImage(oldAvatarPublicId).catch(() => {})
+      await deleteCloudinaryImage(oldAvatarPublicId).catch(() => { })
     }
 
     const updates = {}
-    if (name          !== undefined) updates.name          = name
-    if (bio           !== undefined) updates.bio           = bio
-    if (yearOfStudy   !== undefined) updates.yearOfStudy   = yearOfStudy
-    if (avatarUrl     !== undefined) updates.avatarUrl     = avatarUrl
+    if (name !== undefined) updates.name = name
+    if (bio !== undefined) updates.bio = bio
+    if (yearOfStudy !== undefined) updates.yearOfStudy = yearOfStudy
+    if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl
     if (avatarPublicId !== undefined) updates.avatarPublicId = avatarPublicId
 
     await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, updates)
 
     if (name !== undefined && name !== currentUser.name) {
-      await account.updateName(name).catch(() => {})
+      await account.updateName(name).catch(() => { })
     }
 
     setCurrentUser(prev => ({ ...prev, ...updates }))
 
     if (currentUser?.$id) {
       upsertSavedAccount({
-        userId:    currentUser.$id,
-        name:      updates.name      ?? currentUser.name,
-        username:  currentUser.username,
-        email:     currentUser.email,
+        userId: currentUser.$id,
+        name: updates.name ?? currentUser.name,
+        username: currentUser.username,
+        email: currentUser.email,
         avatarUrl: updates.avatarUrl ?? currentUser.avatarUrl ?? null,
       })
     }
@@ -293,7 +312,7 @@ export const AuthProvider = ({ children }) => {
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = async () => {
     // Remove push subscription before session ends
-    await unsubscribeFromPush().catch(() => {})
+    await unsubscribeFromPush().catch(() => { })
     await logoutUser()
     setAuthStatus(false)
     setCurrentUser(null)

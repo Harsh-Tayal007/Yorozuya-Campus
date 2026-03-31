@@ -78,6 +78,7 @@ import NotificationsPage from "@/pages/dashboard/NotificationsPage"
 import AdminModeration from "@/pages/admin/moderation/AdminModeration"
 import AdminUpdates from "@/pages/admin/updates/AdminUpdates"
 import UpdatesPage from "@/pages/updates/UpdatesPage"
+import VerifyEmail from "@/pages/auth/VerifyEmail"
 
 const AppRoutes = () => {
   return (
@@ -109,6 +110,7 @@ const AppRoutes = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/updates" element={<UpdatesPage />} />
         </Route>
 
