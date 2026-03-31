@@ -15,6 +15,9 @@ import {
   GraduationCap,
   Wrench,
   CalendarDaysIcon,
+  UserCircle,
+  Bell,
+  Megaphone,
 } from "lucide-react"
 
 export const dashboardRootLink = {
@@ -36,6 +39,13 @@ export const homeRootLink = {
   label: "Home",
   path: "/",
   icon: Home,
+}
+
+export const updatesRootLink = {
+  id: "updates",
+  label: "What's New",
+  path: "/updates",
+  icon: Megaphone,
 }
 
 export const dashboardSidebarSections = [
@@ -67,12 +77,23 @@ export const dashboardSidebarSections = [
   },
 
   {
-    id: "preferences",
-    label: "Preferences",
-    icon: SlidersHorizontal,
-    lockedForPublic: true,          // ← NEW
-    children: [
-      { id: "settings", label: "Settings", path: "/dashboard/settings", icon: Settings },
-    ],
-  },
+  id: "account",          // was "preferences" or similar
+  label: "Account",       // rename from "Preferences"
+  icon: UserCircle,       // or whatever fits
+  lockedForPublic: true,
+  children: [
+    {
+      id: "notifications",
+      label: "Notifications",
+      path: "/dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      path: "/dashboard/settings",
+      icon: Settings,
+    },
+  ]
+}
 ]

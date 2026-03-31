@@ -76,6 +76,8 @@ import TimetableBuilder from "@/pages/tools/TimetableBuilder"
 import PrivacyPolicy from "@/pages/auth/PrivacyPolicy"
 import NotificationsPage from "@/pages/dashboard/NotificationsPage"
 import AdminModeration from "@/pages/admin/moderation/AdminModeration"
+import AdminUpdates from "@/pages/admin/updates/AdminUpdates"
+import UpdatesPage from "@/pages/updates/UpdatesPage"
 
 const AppRoutes = () => {
   return (
@@ -107,6 +109,7 @@ const AppRoutes = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/updates" element={<UpdatesPage />} />
         </Route>
 
         {/* Auth routes */}
@@ -178,6 +181,11 @@ const AppRoutes = () => {
           <Route path="moderation" element={
             <RequirePermissionRoute permission={PERMISSIONS.VIEW_REPORTS}>
               <AdminModeration />
+            </RequirePermissionRoute>
+          } />
+          <Route path="updates" element={
+            <RequirePermissionRoute permission={PERMISSIONS.VIEW_ADMIN_DASHBOARD}>
+              <AdminUpdates />
             </RequirePermissionRoute>
           } />
         </Route>

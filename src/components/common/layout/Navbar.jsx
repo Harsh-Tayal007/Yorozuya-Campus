@@ -10,6 +10,7 @@ import { useState, useRef, useEffect } from "react"
 import { useSidebar } from "@/context/SidebarContext"
 import NotificationBell from "../navigation/NotificationBell"
 import SwitchAccountModal from "../navigation/SwitchAccountModal"
+import WhatsNewBadge from "../navigation/WhatsNewBadge"
 
 const NAVBAR_H = 68
 
@@ -201,6 +202,7 @@ const Navbar = () => {
           <div className="h-8 w-24 rounded-full bg-muted animate-pulse" />
         ) : authStatus ? (
           <div className="flex items-center gap-2">
+            <WhatsNewBadge />
             <NotificationBell />
             <button
               ref={triggerRef}

@@ -24,12 +24,12 @@ const stripHtml = (html = "") =>
   html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
 
 const TYPE_META = {
-  reply:      { Icon: MessageSquare, color: "text-white", iconBg: "bg-blue-500",   avatarBg: "bg-blue-500/15",   ring: "ring-blue-500/30"   },
-  mention:    { Icon: AtSign,        color: "text-white", iconBg: "bg-purple-500", avatarBg: "bg-purple-500/15", ring: "ring-purple-500/30" },
-  follow:     { Icon: UserPlus,      color: "text-white", iconBg: "bg-green-500",  avatarBg: "bg-green-500/15",  ring: "ring-green-500/30"  },
-  task:       { Icon: CheckSquare,   color: "text-white", iconBg: "bg-violet-500", avatarBg: "bg-violet-500/15", ring: "ring-violet-500/30" },
-  ban:        { Icon: ShieldX,       color: "text-white", iconBg: "bg-red-500",    avatarBg: "bg-red-500/15",    ring: "ring-red-500/30"    },
-  ban_lifted: { Icon: ShieldCheck,   color: "text-white", iconBg: "bg-green-500",  avatarBg: "bg-green-500/15",  ring: "ring-green-500/30"  },
+  reply: { Icon: MessageSquare, color: "text-white", iconBg: "bg-blue-500", avatarBg: "bg-blue-500/15", ring: "ring-blue-500/30" },
+  mention: { Icon: AtSign, color: "text-white", iconBg: "bg-purple-500", avatarBg: "bg-purple-500/15", ring: "ring-purple-500/30" },
+  follow: { Icon: UserPlus, color: "text-white", iconBg: "bg-green-500", avatarBg: "bg-green-500/15", ring: "ring-green-500/30" },
+  task: { Icon: CheckSquare, color: "text-white", iconBg: "bg-violet-500", avatarBg: "bg-violet-500/15", ring: "ring-violet-500/30" },
+  ban: { Icon: ShieldX, color: "text-white", iconBg: "bg-red-500", avatarBg: "bg-red-500/15", ring: "ring-red-500/30" },
+  ban_lifted: { Icon: ShieldCheck, color: "text-white", iconBg: "bg-green-500", avatarBg: "bg-green-500/15", ring: "ring-green-500/30" },
 }
 
 // ── Avatar with type badge ─────────────────────────────────────────────────────
@@ -226,11 +226,16 @@ const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
     </div>
 
     {notifications.length > 0 && (
-      <div className={`border-t border-border/50 flex items-center justify-center shrink-0
-                       ${large ? "py-3" : "py-2"}`}>
-        <p className={`text-muted-foreground/35 ${large ? "text-[11px]" : "text-[10px]"}`}>
+      <div className="border-t border-border/50 flex items-center justify-between px-4 py-2.5 shrink-0">
+        <p className="text-[10px] text-muted-foreground/35">
           {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
         </p>
+        <button
+          onClick={() => { onClose(); window.location.href = "/dashboard/notifications" }}
+          className="text-[11px] text-primary hover:underline font-medium"
+        >
+          View all →
+        </button>
       </div>
     )}
   </>

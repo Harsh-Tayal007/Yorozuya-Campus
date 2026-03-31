@@ -6,7 +6,8 @@ import { PERMISSIONS } from "@/config/permissions"
 import {
   LayoutDashboard, School, BookOpen, Layers, FileText,
   Activity, Menu, Users, GitBranch, Upload, ClipboardList,
-  ChevronDown, LogOut, User as UserIcon, BarChart2, ShieldX
+  ChevronDown, LogOut, User as UserIcon, BarChart2, ShieldX,
+  Megaphone
 } from "lucide-react"
 import { useTrackActivity } from "@/hooks/useTrackActivity"
 
@@ -27,6 +28,7 @@ const adminNav = [
   { label: "Stats", to: "/admin/stats", icon: BarChart2, permission: PERMISSIONS.VIEW_ACTIVITY_LOG },
   { label: "User Roles", to: "/admin/roles", icon: Users, permission: PERMISSIONS.MANAGE_USERS },
   { label: "Moderation", to: "/admin/moderation", icon: ShieldX, permission: PERMISSIONS.VIEW_REPORTS },
+  { label: "Updates", to: "/admin/updates", icon: Megaphone, permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
 ]
 
 function AdminTopBar({ sidebarOpen, setSidebarOpen }) {

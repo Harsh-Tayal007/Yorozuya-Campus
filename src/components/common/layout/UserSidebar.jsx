@@ -9,6 +9,7 @@ import {
   dashboardSidebarSections,
   forumRootLink,
   homeRootLink,
+  updatesRootLink,
 } from "@/config/dashboardSidebarConfig"
 import LoginGateSheet from "@/components/common/auth/LoginGateSheet"
 import UserSearchModal from "@/components/profile/UserSearchModal"
@@ -92,7 +93,7 @@ export default function UserSidebar() {
   }, [])
 
   const visible  = isOpen || isPinned
-  const topLinks = [homeRootLink, forumRootLink]
+  const topLinks = [homeRootLink, forumRootLink, updatesRootLink]
 
   return (
     <>
