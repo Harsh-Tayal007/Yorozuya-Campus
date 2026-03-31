@@ -420,8 +420,9 @@ const AccountTab = ({ user }) => {
         "/",
         "POST"
       )
-      const result = JSON.parse(execution.responseBody || "{}")
-      if (result.error) throw new Error(result.error)
+      let result = {}
+      try { result = JSON.parse(execution.responseBody || "{}") } catch { }
+      if (execution.status === "failed" || result.error) throw new Error(result.error ?? "Function execution failed")
       toast.success(`Recovery email sent to ${user.email}`, {
         description: "Check your inbox and follow the link to reset your password.",
         duration: 6000,

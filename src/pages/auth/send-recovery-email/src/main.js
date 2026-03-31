@@ -24,8 +24,9 @@ export default async ({ req, res, log, error }) => {
         return res.json({ error: "Missing userId, secret, or email" }, 400)
       }
 
-      const verifyUrl = `${appUrl}/verify-email?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(secret)}`
-
+      // Create verification token server-side — admin SDK returns the secret
+  const token = await users.createVerification(userId, `${appUrl}/verify-email`)
+  const verifyUrl = `${appUrl}/verify-email?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(token.secret)}`
       // If CF worker is configured, use it for styled email
       if (emailWorkerUrl) {
         const workerRes = await fetch(`${emailWorkerUrl}/send/verify`, {

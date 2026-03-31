@@ -24,20 +24,20 @@ const USERS_TABLE_ID = USERS_COLLECTION_ID
 // ── Build currentUser shape from accountUser + userDoc ───────────────────────
 const buildCurrentUser = (accountUser, userDoc) => ({
   ...accountUser,
-  username:         userDoc.username,
-  universityId:     userDoc.universityId    ?? null,
-  programId:        userDoc.programId       ?? null,
-  branchId:         userDoc.branchId        ?? null,
+  username: userDoc.username,
+  universityId: userDoc.universityId ?? null,
+  programId: userDoc.programId ?? null,
+  branchId: userDoc.branchId ?? null,
   profileCompleted: userDoc.profileCompleted ?? false,
-  emailVerified:    userDoc.emailVerified    ?? accountUser.emailVerification ?? false, // ← new
-  avatarUrl:        userDoc.avatarUrl        ?? null,
-  avatarPublicId:   userDoc.avatarPublicId   ?? null,
-  bio:              userDoc.bio              ?? null,
-  yearOfStudy:      userDoc.yearOfStudy      ?? null,
-  name:             userDoc.name             ?? accountUser.name,
-  karma:            userDoc.karma            ?? 0,
-  followerCount:    userDoc.followerCount    ?? 0,
-  followingCount:   userDoc.followingCount   ?? 0,
+  emailVerified: userDoc.emailVerified ?? accountUser.emailVerification ?? false, // ← new
+  avatarUrl: userDoc.avatarUrl ?? null,
+  avatarPublicId: userDoc.avatarPublicId ?? null,
+  bio: userDoc.bio ?? null,
+  yearOfStudy: userDoc.yearOfStudy ?? null,
+  name: userDoc.name ?? accountUser.name,
+  karma: userDoc.karma ?? 0,
+  followerCount: userDoc.followerCount ?? 0,
+  followingCount: userDoc.followingCount ?? 0,
 })
 
 // ── Register SW + subscribe (called after every successful auth) ─────────────
@@ -309,6 +309,27 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Add this function inside AuthProvider, after updateProfile:
+  const refreshUser = async () => {
+    try {
+      const accountUser = await getCurrentUser()
+      const res = await databases.listDocuments(
+        DATABASE_ID, USERS_TABLE_ID,
+        [Query.equal("userId", accountUser.$id)]
+      )
+      if (res.total === 0) return
+      const userDoc = res.documents[0]
+      const activeBan = await getActiveBan(accountUser.$id).catch(() => null)
+      setCurrentUser({
+        ...buildCurrentUser(accountUser, userDoc),
+        activeBan: activeBan ?? null,
+        isBanned: !!activeBan,
+      })
+    } catch (err) {
+      console.error("refreshUser failed", err)
+    }
+  }
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = async () => {
     // Remove push subscription before session ends
@@ -336,6 +357,7 @@ export const AuthProvider = ({ children }) => {
         isAdmin,
         isLoading,
         userDocId,
+        
 
         login,
         completeSignup,
@@ -350,6 +372,8 @@ export const AuthProvider = ({ children }) => {
 
         user: currentUser,
         loading: isLoading,
+
+        refreshUser,
       }}
     >
       {children}
