@@ -19,15 +19,15 @@ async function fanOutUpdateNotification(title, body, version) {
       keys: { p256dh: doc.p256dh, auth: doc.auth },
     }))
 
-    const plainBody = body?.replace(/<[^>]+>/g, "").slice(0, 100) ?? ""
+    const plainBody = body?.replace(/<[^>]+>/g, "").trim().slice(0, 120) ?? ""
 
     await fetch(`${PUSH_URL}/send-bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subscriptions,
-        title: `📣 ${title}${version ? ` ${version}` : ""}`,
-        body:  plainBody,
+        title: `📣 New Update${version ? ` · ${version}` : ""}: ${title}`,
+        body:  plainBody || "Tap to see what's new on Unizuya.",
         url:   "/updates",
         tag:   "changelog",
         type:  "changelog",
