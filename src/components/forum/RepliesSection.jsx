@@ -1,4 +1,6 @@
 import CreateReplyBox from "./CreateReplyBox"
+import { useAuth } from "@/context/AuthContext"
+import BannedBanner from "@/components/forum/BannedBanner"
 import Reply from "./Reply"
 import { useRepliesContext } from "./RepliesProvider"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -163,6 +165,8 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
   const isFocusMode = !!focusReplyId
   const currentSort = SORT_OPTIONS.find(o => o.key === sortBy)
 
+  const { currentUser } = useAuth()
+
   useEffect(() => {
     if (!dropdownOpen) return
     const handler = (e) => {
@@ -206,10 +210,13 @@ export default function RepliesSection({ threadAuthor, focusReplyId }) {
       <div className="space-y-4">
 
         <h2 id="replies-section" className="text-lg font-semibold">
-  {totalCount} {totalCount === 1 ? "Reply" : "Replies"}
-</h2>
+          {totalCount} {totalCount === 1 ? "Reply" : "Replies"}
+        </h2>
 
-        <CreateReplyBox threadAuthor={threadAuthor} />
+        {currentUser?.isBanned
+          ? <BannedBanner ban={currentUser.activeBan} />
+          : <CreateReplyBox threadAuthor={threadAuthor} />
+        }
 
         <div className="flex items-center gap-2 h-9">
 

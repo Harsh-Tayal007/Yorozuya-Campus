@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Flag, ShieldX, ShieldCheck, Clock, CheckCircle2,
   XCircle, Loader2, ExternalLink,
-  Search, RefreshCw, Ban, User, MessageSquare,
+  Search, RefreshCw, Ban, User, MessageSquare, Trash2,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -20,6 +20,7 @@ import {
   liftBan,
 } from "@/services/moderation/banService"
 import { databases, Query } from "@/lib/appwrite"
+import { deleteReply, hardDeleteReply } from "@/services/forum/replyService"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -195,6 +196,7 @@ function BanModal({ isOpen, onClose, onBan, target, canPermanent }) {
 function ResolveModal({ isOpen, onClose, report, onResolve }) {
   const [resolution,   setResolution]   = useState("")
   const [loading,      setLoading]      = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [showBanModal, setShowBanModal] = useState(false)
   const { currentUser, hasPermission }  = useAuth()
   const canBan       = hasPermission(PERMISSIONS.BAN_USER)
@@ -209,6 +211,28 @@ function ResolveModal({ isOpen, onClose, report, onResolve }) {
       onClose()
     } catch { /* handled by parent */ }
     finally { setLoading(false) }
+  }
+
+  // Delete the reported reply/comment from the forum
+  const handleDeleteContent = async () => {
+    if (report.targetType !== "reply" || !report.targetId) return
+    setDeleteLoading(true)
+    try {
+      // We don't know if the reply has children here, so we do a soft-delete
+      // (marks as deleted by mods) — safe for both cases.
+      // Pass modDeleted=true so Reply.jsx renders "[deleted by mods]"
+      await deleteReply(report.targetId, true)
+      await onResolve({
+        reportId: report.$id,
+        resolution: (resolution.trim() || "Content removed by moderator."),
+        dismiss: false,
+      })
+      onClose()
+    } catch (e) {
+      console.error("Delete content failed", e)
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   return (
@@ -271,6 +295,22 @@ function ResolveModal({ isOpen, onClose, report, onResolve }) {
               <ShieldX size={13} /> Ban User
             </button>
           )}
+
+          {/* Delete content button — only for reply/comment reports */}
+          {report.targetType === "reply" && report.targetId && (
+            <button
+              onClick={handleDeleteContent}
+              disabled={deleteLoading}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30
+                         text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-500/20 transition disabled:opacity-50"
+            >
+              {deleteLoading
+                ? <Loader2 size={13} className="animate-spin" />
+                : <Trash2 size={13} />}
+              Delete Content
+            </button>
+          )}
+
           <button
             onClick={() => handleResolve(false)}
             disabled={loading}
@@ -663,7 +703,9 @@ function BanUserSearchModal({ isOpen, onClose, canPermanent, bannedBy, bannedByU
       const res = await databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID,
-        [Query.search("username", query.trim()), Query.limit(5)]
+        // FIX: Query.search requires a fulltext index and was returning 400.
+        // Query.startsWith works with a regular string attribute + index.
+        [Query.startsWith("username", query.trim()), Query.limit(5)]
       )
       setResults(res.documents)
     } catch { setResults([]) }
@@ -735,6 +777,8 @@ function BanUserSearchModal({ isOpen, onClose, canPermanent, bannedBy, bannedByU
         isOpen={showBan && !!picked}
         onClose={() => { setShowBan(false); setPicked(null) }}
         canPermanent={canPermanent}
+        // FIX: use picked.userId (the auth $id stored in the users doc),
+        // not picked.$id (the document $id) — banUser needs the auth userId.
         target={{ userId: picked?.userId, username: picked?.username }}
         onBan={async ({ userId, username, reason, banType, expiresAt }) => {
           await banUser({ userId, username, reason, banType, expiresAt, bannedBy, bannedByUsername })

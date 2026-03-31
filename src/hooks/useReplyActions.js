@@ -16,6 +16,7 @@ import {
   createNotification,
   getUserIdByUsername,
 } from "@/services/notification/notificationService";
+import { useAuth } from "@/context/AuthContext";
 
 // Extract @username mentions from plain text or HTML content
 function extractMentions(content = "") {
@@ -29,8 +30,14 @@ export default function useReplyActions(threadId) {
   const queryClient = useQueryClient();
 
   // ─── CREATE ───────────────────────────────────────────────────────────────
+  const { user } = useAuth(); // add this import at top: import { useAuth } from "@/context/AuthContext"
+
   const createReplyMutation = useMutation({
-    mutationFn: createReply,
+    mutationFn: (vars) => {
+      if (user?.isBanned)
+        throw new Error("You are banned and cannot post replies.");
+      return createReply(vars);
+    },
 
     onMutate: async (newReply) => {
       await queryClient.cancelQueries({ queryKey: ["replies", threadId] });

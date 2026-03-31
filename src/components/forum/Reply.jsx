@@ -376,7 +376,9 @@ const Reply = ({
                 ) : (
                   <div className="space-y-2">
                     {reply.deleted ? (
-                      <p className="text-sm leading-relaxed text-foreground/85 break-words">[deleted]</p>
+                      <p className="text-sm leading-relaxed text-foreground/85 break-words">
+                        {reply.modDeleted ? "[deleted by mods]" : "[deleted]"}
+                      </p>
                     ) : (
                       <>
                         {reply.content && <ReplyContent content={reply.content} />}

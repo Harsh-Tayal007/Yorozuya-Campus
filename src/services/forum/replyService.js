@@ -64,21 +64,16 @@ export const createReply = async ({
 };
 
 // Soft delete — keeps the document but marks it deleted (used when reply has children)
-export const deleteReply = async (replyId) => {
-  const res = await databases.updateDocument(
-    DATABASE_ID,
-    REPLIES_COLLECTION_ID,
-    replyId,
-    {
-      content: "[deleted]",
-      deleted: true,
-      gifUrl: null,
-      imageUrl: null,
-      imagePublicId: null,
-    },
-  );
-  return res;
-};
+export async function deleteReply(replyId, modDeleted = false) {
+  return databases.updateDocument(DATABASE_ID, REPLIES_COLLECTION_ID, replyId, {
+    content: modDeleted ? "[deleted by mods]" : "[deleted]",
+    deleted: true,
+    modDeleted: modDeleted,   // ← add this field to your Appwrite collection too
+    gifUrl: null,
+    imageUrl: null,
+    imagePublicId: null,
+  })
+}
 
 // Hard delete — completely removes the document (used when reply has no children)
 export const hardDeleteReply = async (replyId) => {
