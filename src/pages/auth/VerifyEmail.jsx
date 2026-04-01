@@ -161,7 +161,7 @@ const VerifyEmail = () => {
                                 <p className="text-sm text-slate-400 mt-1.5">{errorMsg}</p>
                             </div>
                             <button
-                                onClick={() => navigate("/dashboard/verify", { replace: true })}
+                                onClick={() => navigate("/dashboard", { replace: true })}
                                 className="w-full h-10 rounded-xl font-semibold text-sm text-white
                   bg-gradient-to-r from-blue-600 to-indigo-600
                   hover:from-blue-500 hover:to-indigo-500
