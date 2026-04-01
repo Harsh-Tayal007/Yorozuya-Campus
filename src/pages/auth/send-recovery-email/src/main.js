@@ -7,7 +7,8 @@ export default async ({ req, res, log, error }) => {
     const { action, email, userId, secret, newPassword, name } = body
 
     const appUrl = process.env.APP_URL || "http://localhost:5173"
-    const emailWorkerUrl = process.env.EMAIL_WORKER_URL // e.g. https://unizuya-email.harshtayal710.workers.dev
+    const emailWorkerUrl = process.env.EMAIL_WORKER_URL
+    log("emailWorkerUrl: " + emailWorkerUrl)
 
     const client = new Client()
       .setEndpoint(process.env.APPWRITE_ENDPOINT)
@@ -16,18 +17,17 @@ export default async ({ req, res, log, error }) => {
 
     const users = new Users(client)
 
-    // ── MODE 0: Send styled verification email via CF worker ──────────────
+    // ── MODE 0: Send verification email ───────────────────────────────────
     if (action === "verify") {
       log("Mode: send verification email to " + email)
 
-      if (!userId || !secret || !email) {
-        return res.json({ error: "Missing userId, secret, or email" }, 400)
+      if (!userId || !email) {
+        return res.json({ error: "Missing userId or email" }, 400)
       }
 
-      // Create verification token server-side — admin SDK returns the secret
-  const token = await users.createVerification(userId, `${appUrl}/verify-email`)
-  const verifyUrl = `${appUrl}/verify-email?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(token.secret)}`
-      // If CF worker is configured, use it for styled email
+      const token = await users.createToken(userId)
+      const verifyUrl = `${appUrl}/verify-email?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(token.secret)}`
+
       if (emailWorkerUrl) {
         const workerRes = await fetch(`${emailWorkerUrl}/send/verify`, {
           method: "POST",
@@ -40,7 +40,6 @@ export default async ({ req, res, log, error }) => {
         return res.json({ ok: true })
       }
 
-      // Fallback: send via Resend directly (plain styled version)
       const resend = new Resend(process.env.RESEND_API_KEY)
       const firstName = (name || "").split(" ")[0] || "there"
       const { error: resendError } = await resend.emails.send({
@@ -74,7 +73,23 @@ export default async ({ req, res, log, error }) => {
       return res.json({ ok: true })
     }
 
-    // ── MODE 1: Send recovery email ───────────────────────────────────────
+    // ── MODE 1: Confirm verification (called from /verify-email page) ─────
+    if (action === "confirmVerify") {
+      log("Mode: confirm verification for userId " + userId)
+
+      if (!userId) return res.json({ error: "Missing userId" }, 400)
+
+      try {
+        await users.updateEmailVerification(userId, true)
+        log("Email verified for userId " + userId)
+        return res.json({ ok: true })
+      } catch (err) {
+        error("Verification failed: " + err.message)
+        return res.json({ error: err.message }, 500)
+      }
+    }
+
+    // ── MODE 2: Send recovery email ───────────────────────────────────────
     if (email && !newPassword) {
       log("Mode: send recovery email to " + email)
 
@@ -92,7 +107,6 @@ export default async ({ req, res, log, error }) => {
       const recoveryUrl = `${appUrl}/reset-password?userId=${user.$id}&secret=${token.secret}`
       const firstName = (user.name || "").split(" ")[0] || "there"
 
-      // Use CF worker for styled email if available
       if (emailWorkerUrl) {
         const workerRes = await fetch(`${emailWorkerUrl}/send/reset`, {
           method: "POST",
@@ -105,7 +119,6 @@ export default async ({ req, res, log, error }) => {
         return res.json({ success: true })
       }
 
-      // Fallback: original Resend send
       const resend = new Resend(process.env.RESEND_API_KEY)
       const { data, error: resendError } = await resend.emails.send({
         from: "Unizuya <onboarding@resend.dev>",
@@ -138,7 +151,7 @@ export default async ({ req, res, log, error }) => {
       return res.json({ success: true })
     }
 
-    // ── MODE 2: Verify token + update password server-side ────────────────
+    // ── MODE 3: Reset password server-side ────────────────────────────────
     if (userId && secret && newPassword) {
       log("Mode: reset password for userId " + userId)
 
