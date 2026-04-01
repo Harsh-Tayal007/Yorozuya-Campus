@@ -43,7 +43,7 @@ export default async ({ req, res, log, error }) => {
       const resend = new Resend(process.env.RESEND_API_KEY)
       const firstName = (name || "").split(" ")[0] || "there"
       const { error: resendError } = await resend.emails.send({
-        from: "Unizuya <onboarding@resend.dev>",
+        from: "Unizuya <noreply@unizuya.in>",
         to: email,
         subject: "Verify your Unizuya email",
         html: `
@@ -121,7 +121,7 @@ export default async ({ req, res, log, error }) => {
 
       const resend = new Resend(process.env.RESEND_API_KEY)
       const { data, error: resendError } = await resend.emails.send({
-        from: "Unizuya <onboarding@resend.dev>",
+        from: "Unizuya <noreply@unizuya.in>",
         to: email,
         subject: "Reset your Unizuya password",
         html: `
