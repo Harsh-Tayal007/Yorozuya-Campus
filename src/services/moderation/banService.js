@@ -149,3 +149,12 @@ export async function getUserBanHistory(userId) {
   ])
   return res.documents
 }
+
+/**
+ * Hard-delete a single ban record from the database.
+ * Should only be called on lifted/inactive bans.
+ * Requires DELETE_REPORTS permission (admin + owner).
+ */
+export async function deleteBan(banId) {
+  return databases.deleteDocument(DATABASE_ID, BANS_COL, banId)
+}

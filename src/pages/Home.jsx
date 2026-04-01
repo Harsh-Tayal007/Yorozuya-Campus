@@ -268,6 +268,7 @@ export default function Home() {
               <RoadmapItem label="Shareable link option" done />
 
               {/* ── Upcoming ── */}
+              <RoadmapItem label="Attendence management tool (system)" />
               <RoadmapItem label="Direct messages & group chats" />
               <RoadmapItem label="AI-powered study assistant" />
               <RoadmapItem label="Collaborative notes" />

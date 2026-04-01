@@ -98,3 +98,57 @@ export async function getPendingReportCount() {
   ])
   return res.total
 }
+
+/**
+ * Report a broken/404 URL. Works for both logged-in and anonymous users.
+ */
+export async function reportBrokenLink({ url, reporterId = "anonymous", reporterUsername = "anonymous" }) {
+  // Dedup: don't create another pending report for the same URL from same reporter
+  const existing = await databases.listDocuments(DATABASE_ID, REPORTS_COL, [
+    Query.equal("reporterId", reporterId),
+    Query.equal("targetType", "broken_link"),
+    Query.equal("targetId", url),
+    Query.equal("status", "pending"),
+    Query.limit(1),
+  ])
+  if (existing.total > 0) return // silently skip, don't throw
+
+  return databases.createDocument(DATABASE_ID, REPORTS_COL, ID.unique(), {
+    reporterId,
+    reporterUsername,
+    targetType:           "broken_link",
+    targetId:             url,           // full URL as the unique key
+    targetAuthorId:       "system",
+    targetAuthorUsername: "system",
+    reason:               "Broken link",
+    details:              null,
+    contentPreview:       url,           // shown in admin panel as preview
+    threadId:             null,
+    status:               "pending",
+    resolvedBy:           null,
+    resolvedAt:           null,
+    resolution:           null,
+  })
+}
+
+/**
+ * Hard-delete a single report document from the database.
+ * Requires DELETE_REPORTS permission (admin + owner).
+ */
+export async function deleteReport(reportId) {
+  return databases.deleteDocument(DATABASE_ID, REPORTS_COL, reportId)
+}
+
+/**
+ * Bulk-delete an array of report IDs.
+ * Appwrite has no batch delete, so we fire all deletes in parallel.
+ * Requires BULK_DELETE_REPORTS permission (owner only).
+ *
+ * @param {string[]} reportIds
+ */
+export async function bulkDeleteReports(reportIds) {
+  if (!reportIds?.length) return
+  await Promise.all(
+    reportIds.map(id => databases.deleteDocument(DATABASE_ID, REPORTS_COL, id))
+  )
+}

@@ -3,20 +3,22 @@ import { useEffect, useState } from "react"
 import { SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { reportBrokenLink } from "@/services/moderation/reportService"
+import { useAuth } from "@/context/AuthContext"
 
 const TOTAL_SECONDS = 10
 
 const NotFound = () => {
   const navigate = useNavigate()
-  const TOTAL_SECONDS = 10
+  const { currentUser } = useAuth()
   const [seconds, setSeconds] = useState(TOTAL_SECONDS)
   const [paused, setPaused] = useState(false)
+  const [reported, setReported] = useState(false)
 
   const radius = 60
   const stroke = 6
   const normalizedRadius = radius - stroke * 0.5
   const circumference = normalizedRadius * 2 * Math.PI
-
   const [progress, setProgress] = useState(0)
   const strokeDashoffset = circumference * (1 - progress)
 
@@ -27,13 +29,10 @@ const NotFound = () => {
 
     const animate = (timestamp) => {
       if (!startTime) startTime = timestamp
-
       const elapsed = timestamp - startTime + elapsedBeforePause
       const newProgress = Math.min(elapsed / (TOTAL_SECONDS * 1000), 1)
-
       setProgress(newProgress)
       setSeconds(Math.ceil(TOTAL_SECONDS * (1 - newProgress)))
-
       if (newProgress < 1 && !paused) {
         animationFrame = requestAnimationFrame(animate)
       } else if (newProgress >= 1) {
@@ -41,15 +40,27 @@ const NotFound = () => {
       }
     }
 
-    if (!paused) {
-      animationFrame = requestAnimationFrame(animate)
-    }
-
+    if (!paused) animationFrame = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(animationFrame)
   }, [paused])
 
-  const cancelRedirect = () => {
-    setPaused(true)
+  const cancelRedirect = () => setPaused(true)
+
+  const handleReportBrokenLink = async () => {
+    cancelRedirect()
+    if (reported) return
+
+    try {
+      await reportBrokenLink({
+        url: window.location.href,
+        reporterId:       currentUser?.$id       ?? "anonymous",
+        reporterUsername: currentUser?.username   ?? "anonymous",
+      })
+      setReported(true)
+      toast("Thanks for reporting!", { description: "Our team will look into this broken link." })
+    } catch {
+      toast.error("Failed to send report. Please try again.")
+    }
   }
 
   return (
@@ -106,7 +117,6 @@ const NotFound = () => {
             Redirecting to homepage in {seconds}s...
           </p>
         )}
-
         {paused && (
           <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-4">
             Redirect paused
@@ -117,19 +127,15 @@ const NotFound = () => {
           <Button variant="outline" onClick={() => { cancelRedirect(); navigate(-1) }} className="w-full">
             Go Back
           </Button>
-
           <Button onClick={() => { cancelRedirect(); navigate("/", { replace: true }) }} className="w-full">
             Go to Homepage Now
           </Button>
-
           <button
-            onClick={() => {
-              cancelRedirect()
-              toast("Thanks for reporting!", { description: "We'll look into this broken link." })
-            }}
-            className="text-xs text-slate-500 dark:text-slate-400 hover:underline mt-2"
+            onClick={handleReportBrokenLink}
+            disabled={reported}
+            className="text-xs text-slate-500 dark:text-slate-400 hover:underline mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Report broken link
+            {reported ? "✓ Reported" : "Report broken link"}
           </button>
         </div>
       </div>

@@ -48,6 +48,10 @@ export const PERMISSIONS = {
   UNBAN_USER:                "unban:user",
   /** Permanent ban — owner only */
   PERMANENT_BAN_USER:        "ban:user-permanent",
+  /** Delete individual reports — admin + owner */
+  DELETE_REPORTS:            "delete:reports",
+  /** Bulk-clear resolved/dismissed reports — owner only */
+  BULK_DELETE_REPORTS:       "delete:reports-bulk",
 
   // ─── Audit / Activity ────────────────────────────────────────────────────
   VIEW_ACTIVITY_LOG:         "view:activity-log",
@@ -64,10 +68,8 @@ export const PERMISSIONS = {
 export const ROLE_PERMISSIONS = {
   /**
    * 👑 OWNER — single platform owner, absolute control.
-   * In future, destructive actions (delete university, delete user, etc.)
-   * will additionally require a runtime confirmation key checked server-side.
    */
-  owner: Object.values(PERMISSIONS),   // every permission automatically
+  owner: Object.values(PERMISSIONS),
 
   /**
    * 🔴 ADMIN — full operational control, no destructive deletes,
@@ -104,6 +106,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.BAN_USER,
     PERMISSIONS.UNBAN_USER,
     PERMISSIONS.PERMANENT_BAN_USER,
+    PERMISSIONS.DELETE_REPORTS,          // ← admin can delete individual reports
+    // ← no BULK_DELETE_REPORTS (owner only)
 
     PERMISSIONS.VIEW_ACTIVITY_LOG,
 
@@ -134,6 +138,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.BAN_USER,
     PERMISSIONS.UNBAN_USER,
     // ← no PERMANENT_BAN_USER
+    // ← no DELETE_REPORTS
+    // ← no BULK_DELETE_REPORTS
 
     PERMISSIONS.VIEW_ACTIVITY_LOG,
 
