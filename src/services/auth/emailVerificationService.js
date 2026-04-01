@@ -1,3 +1,7 @@
+import { functions } from "@/lib/appwrite"
+
+const FUNCTION_ID = import.meta.env.VITE_APPWRITE_RECOVERY_FUNCTION_ID
+
 export const sendVerificationEmail = async ({ userId, email, name }) => {
   const execution = await functions.createExecution(
     FUNCTION_ID,
