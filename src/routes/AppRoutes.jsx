@@ -79,6 +79,8 @@ import AdminModeration from "@/pages/admin/moderation/AdminModeration"
 import AdminUpdates from "@/pages/admin/updates/AdminUpdates"
 import UpdatesPage from "@/pages/updates/UpdatesPage"
 import VerifyEmail from "@/pages/auth/VerifyEmail"
+import AttendancePage from "@/pages/attendance/AttendancePage"
+import ClassAttendanceReport from "@/pages/attendance/ClassAttendanceReport"
 
 const AppRoutes = () => {
   return (
@@ -134,6 +136,8 @@ const AppRoutes = () => {
                 <Route path="tasks" element={<TaskTracker />} />
                 <Route path="timetable" element={<TimetableBuilder />} />
                 <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="attendance" element={<AttendancePage />} />
+                <Route path="attendance/class/:classId" element={<ClassAttendanceReport />} />
 
                 <Route path="syllabus">
                   <Route index element={<DashboardSyllabus />} />

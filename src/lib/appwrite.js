@@ -12,3 +12,8 @@ export const functions = new Functions(client);   // ✅ ADD THIS
 export { ID, Query };
 
 export default client;
+
+export const CLASSES_COLLECTION_ID        = import.meta.env.VITE_APPWRITE_CLASSES_COLLECTION_ID
+export const ENROLLMENTS_COLLECTION_ID    = import.meta.env.VITE_APPWRITE_ENROLLMENTS_COLLECTION_ID
+export const SESSIONS_COLLECTION_ID       = import.meta.env.VITE_APPWRITE_SESSIONS_COLLECTION_ID
+export const ATTENDANCE_RECORDS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_ATTENDANCE_RECORDS_COLLECTION_ID

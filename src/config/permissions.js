@@ -7,7 +7,6 @@ export const PERMISSIONS = {
   // ─── Universities ────────────────────────────────────────────────────────
   VIEW_UNIVERSITIES:         "view:universities",
   MANAGE_UNIVERSITIES:       "manage:universities",
-  /** Requires owner confirmation key — permanent deletion */
   DELETE_UNIVERSITY:         "delete:university",
 
   // ─── Programs ────────────────────────────────────────────────────────────
@@ -38,7 +37,6 @@ export const PERMISSIONS = {
 
   // ─── Users ───────────────────────────────────────────────────────────────
   MANAGE_USERS:              "manage:users",
-  /** Only owner can permanently delete a user account */
   DELETE_USER:               "delete:user",
 
   // ─── Moderation ──────────────────────────────────────────────────────────
@@ -46,11 +44,8 @@ export const PERMISSIONS = {
   RESOLVE_REPORTS:           "resolve:reports",
   BAN_USER:                  "ban:user",
   UNBAN_USER:                "unban:user",
-  /** Permanent ban — owner only */
   PERMANENT_BAN_USER:        "ban:user-permanent",
-  /** Delete individual reports — admin + owner */
   DELETE_REPORTS:            "delete:reports",
-  /** Bulk-clear resolved/dismissed reports — owner only */
   BULK_DELETE_REPORTS:       "delete:reports-bulk",
 
   // ─── Audit / Activity ────────────────────────────────────────────────────
@@ -59,115 +54,90 @@ export const PERMISSIONS = {
   // ─── Forum ───────────────────────────────────────────────────────────────
   PIN_REPLY:                 "pin:reply",
 
+  // ─── Attendance ──────────────────────────────────────────────────────────
+  MANAGE_CLASSES:              "manage:classes",
+  CREATE_ATTENDANCE_SESSION:   "create:attendance-session",
+  MARK_ATTENDANCE:             "mark:attendance",
+  VIEW_ATTENDANCE_REPORTS:     "view:attendance-reports",
+
   // ─── Owner-only gates ────────────────────────────────────────────────────
-  /** Master key actions — only the single platform owner */
   OWNER_ACTIONS:             "owner:actions",
 }
 
 
 export const ROLE_PERMISSIONS = {
-  /**
-   * 👑 OWNER — single platform owner, absolute control.
-   */
   owner: Object.values(PERMISSIONS),
 
-  /**
-   * 🔴 ADMIN — full operational control, no destructive deletes,
-   * no owner-only gates.
-   */
   admin: [
     PERMISSIONS.VIEW_ADMIN_DASHBOARD,
-
     PERMISSIONS.VIEW_UNIVERSITIES,
     PERMISSIONS.MANAGE_UNIVERSITIES,
-
     PERMISSIONS.VIEW_PROGRAMS,
     PERMISSIONS.MANAGE_PROGRAMS,
-
     PERMISSIONS.MANAGE_BRANCHES,
-
     PERMISSIONS.VIEW_SYLLABUS,
     PERMISSIONS.MANAGE_SYLLABUS,
-
     PERMISSIONS.VIEW_UNITS,
     PERMISSIONS.MANAGE_UNITS,
-
     PERMISSIONS.VIEW_RESOURCES,
     PERMISSIONS.MANAGE_RESOURCES,
-
     PERMISSIONS.VIEW_PYQS,
     PERMISSIONS.MANAGE_PYQS,
-
     PERMISSIONS.MANAGE_USERS,
-
-    // Moderation
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.RESOLVE_REPORTS,
     PERMISSIONS.BAN_USER,
     PERMISSIONS.UNBAN_USER,
     PERMISSIONS.PERMANENT_BAN_USER,
-    PERMISSIONS.DELETE_REPORTS,          // ← admin can delete individual reports
-    // ← no BULK_DELETE_REPORTS (owner only)
-
+    PERMISSIONS.DELETE_REPORTS,
     PERMISSIONS.VIEW_ACTIVITY_LOG,
-
     PERMISSIONS.PIN_REPLY,
+    // Attendance — admin has full oversight
+    PERMISSIONS.MANAGE_CLASSES,
+    PERMISSIONS.CREATE_ATTENDANCE_SESSION,
+    PERMISSIONS.VIEW_ATTENDANCE_REPORTS,
   ],
 
-  /**
-   * 🟠 MODERATOR — forum & content moderation, no structural changes.
-   */
   moderator: [
     PERMISSIONS.VIEW_ADMIN_DASHBOARD,
-
     PERMISSIONS.VIEW_PROGRAMS,
     PERMISSIONS.MANAGE_PROGRAMS,
-
     PERMISSIONS.VIEW_UNITS,
     PERMISSIONS.MANAGE_UNITS,
-
     PERMISSIONS.VIEW_RESOURCES,
     PERMISSIONS.MANAGE_RESOURCES,
-
     PERMISSIONS.VIEW_PYQS,
     PERMISSIONS.MANAGE_PYQS,
-
-    // Moderation — can view & resolve reports, temp-ban only
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.RESOLVE_REPORTS,
     PERMISSIONS.BAN_USER,
     PERMISSIONS.UNBAN_USER,
-    // ← no PERMANENT_BAN_USER
-    // ← no DELETE_REPORTS
-    // ← no BULK_DELETE_REPORTS
-
     PERMISSIONS.VIEW_ACTIVITY_LOG,
-
     PERMISSIONS.PIN_REPLY,
   ],
 
-  /**
-   * 🟡 EDITOR — upload content only, zero moderation.
-   */
   editor: [
     PERMISSIONS.VIEW_ADMIN_DASHBOARD,
-
     PERMISSIONS.VIEW_RESOURCES,
     PERMISSIONS.MANAGE_RESOURCES,
-
     PERMISSIONS.VIEW_PYQS,
     PERMISSIONS.MANAGE_PYQS,
   ],
 
-  /**
-   * 🔵 USER — no admin access.
-   */
-  user: [],
+  // ─── Teacher ─────────────────────────────────────────────────────────────
+  teacher: [
+    PERMISSIONS.MANAGE_CLASSES,
+    PERMISSIONS.CREATE_ATTENDANCE_SESSION,
+    PERMISSIONS.VIEW_ATTENDANCE_REPORTS,
+  ],
+
+  // ─── Student / default user ───────────────────────────────────────────────
+  user: [
+    PERMISSIONS.MARK_ATTENDANCE,
+  ],
 }
 
-// ── Helper: check if a role can perform permanent bans ────────────────────────
 export const canPermanentBan = (role) =>
   ROLE_PERMISSIONS[role]?.includes(PERMISSIONS.PERMANENT_BAN_USER) ?? false
 
-// ── Helper: owner-only gate (for future confirmation-key flows) ───────────────
 export const isOwnerRole = (role) => role === "owner"

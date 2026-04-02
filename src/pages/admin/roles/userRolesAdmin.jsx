@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
-import { Users, Search, Shield, Star, Pencil as PencilIcon, User as UserIcon, X, ExternalLink } from "lucide-react"
+import { Users, Search, Shield, Star, Pencil as PencilIcon, User as UserIcon, X, ExternalLink, BookOpen } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { getUsers, updateUserRole } from "@/services/user/userService"
@@ -16,6 +16,13 @@ const ROLE_CONFIG = {
   moderator: { label: "Moderator", color: "#8b5cf6", bg: "bg-violet-500/10", text: "text-violet-500", icon: Star },
   editor: { label: "Editor", color: "#3b82f6", bg: "bg-blue-500/10", text: "text-blue-500", icon: PencilIcon },
   user: { label: "User", color: "#6b7280", bg: "bg-muted", text: "text-muted-foreground", icon: UserIcon },
+  teacher: {
+    label: "Teacher",
+    color: "#10b981",
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-500",
+    icon: BookOpen,
+  },
 }
 
 function RoleBadge({ role }) {

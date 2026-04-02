@@ -18,6 +18,7 @@ import {
   UserCircle,
   Bell,
   Megaphone,
+  ClipboardCheck,
 } from "lucide-react"
 
 export const dashboardRootLink = {
@@ -75,6 +76,16 @@ export const dashboardSidebarSections = [
       { id: "grade-calc", label: "Grade Calculator", path: "/dashboard/grade-calc", icon: GraduationCap, soon: true },
     ],
   },
+
+  {
+  id: "attendance",
+  label: "Attendance",
+  icon: ClipboardCheck,
+  lockedForPublic: true,
+  children: [
+    { id: "attendance-home", label: "My Attendance", path: "/dashboard/attendance", icon: ClipboardCheck },
+  ],
+},
 
   {
   id: "account",          // was "preferences" or similar
