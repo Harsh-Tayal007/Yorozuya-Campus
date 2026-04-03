@@ -5,7 +5,7 @@
  * Users enter their email → calls the Appwrite function → Resend sends the email
  */
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { functions } from "@/lib/appwrite"
 import { motion } from "framer-motion"
@@ -14,6 +14,7 @@ import { Mail, ArrowLeft, Check } from "lucide-react"
 const FUNCTION_ID = import.meta.env.VITE_APPWRITE_RECOVERY_FUNCTION_ID
 
 const ForgotPassword = () => {
+
   const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
@@ -54,6 +55,14 @@ const ForgotPassword = () => {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const meta = document.createElement("meta")
+    meta.name = "robots"
+    meta.content = "noindex, nofollow"
+    document.head.appendChild(meta)
+    return () => document.head.removeChild(meta) // cleanup on unmount
+  }, [])
 
   return (
     <div className="

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { functions } from "@/lib/appwrite"
 import { Eye, EyeOff, KeyRound, Check } from "lucide-react"
@@ -13,11 +13,11 @@ const ResetPassword = () => {
 
   const [newPassword, setNewPassword] = useState("")
   const [confirmPass, setConfirmPass] = useState("")
-  const [showNew,     setShowNew]     = useState(false)
+  const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [loading,     setLoading]     = useState(false)
-  const [error,       setError]       = useState(null)
-  const [success,     setSuccess]     = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
 
   // Invalid link guard
   if (!userId || !secret) {
@@ -45,8 +45,8 @@ const ResetPassword = () => {
     setError(null)
 
     if (!newPassword || !confirmPass) { setError("Both fields are required"); return }
-    if (newPassword.length < 8)       { setError("Password must be at least 8 characters"); return }
-    if (newPassword !== confirmPass)   { setError("Passwords don't match"); return }
+    if (newPassword.length < 8) { setError("Password must be at least 8 characters"); return }
+    if (newPassword !== confirmPass) { setError("Passwords don't match"); return }
 
     try {
       setLoading(true)
@@ -71,6 +71,14 @@ const ResetPassword = () => {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const meta = document.createElement("meta")
+    meta.name = "robots"
+    meta.content = "noindex, nofollow"
+    document.head.appendChild(meta)
+    return () => document.head.removeChild(meta) // cleanup on unmount
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4
@@ -146,11 +154,10 @@ const ResetPassword = () => {
                   {newPassword && (
                     <div className="flex gap-1 mt-1.5">
                       {[...Array(4)].map((_, i) => (
-                        <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                          newPassword.length >= 8 + i * 4
+                        <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${newPassword.length >= 8 + i * 4
                             ? i < 1 ? "bg-red-400" : i < 2 ? "bg-yellow-400" : i < 3 ? "bg-blue-400" : "bg-green-400"
                             : "bg-slate-200 dark:bg-white/10"
-                        }`} />
+                          }`} />
                       ))}
                     </div>
                   )}

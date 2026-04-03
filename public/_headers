@@ -1,0 +1,8 @@
+/forgot-password
+  X-Robots-Tag: noindex, nofollow
+
+/reset-password
+  X-Robots-Tag: noindex, nofollow
+
+/verify-email
+  X-Robots-Tag: noindex, nofollow

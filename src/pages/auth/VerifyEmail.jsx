@@ -78,6 +78,14 @@ const VerifyEmail = () => {
         verify()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+    useEffect(() => {
+        const meta = document.createElement("meta")
+        meta.name = "robots"
+        meta.content = "noindex, nofollow"
+        document.head.appendChild(meta)
+        return () => document.head.removeChild(meta) // cleanup on unmount
+    }, [])
+
     return (
         <div className="
       relative min-h-screen flex items-center justify-center overflow-hidden px-4
