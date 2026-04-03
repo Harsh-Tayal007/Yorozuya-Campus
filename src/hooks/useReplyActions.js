@@ -126,73 +126,75 @@ export default function useReplyActions(threadId) {
 
   // ─── DELETE ───────────────────────────────────────────────────────────────
   const deleteReplyMutation = useMutation({
-    mutationFn: ({ replyId, hasChildren }) =>
-      hasChildren ? deleteReply(replyId) : hardDeleteReply(replyId),
-
-    onMutate: async ({ replyId, hasChildren }) => {
-      await queryClient.cancelQueries({ queryKey: ["replies", threadId] });
-      const previousReplies = queryClient.getQueryData(["replies", threadId]);
-      queryClient.setQueryData(["replies", threadId], (old) => {
-        if (!old || !old.byId?.[replyId]) return old;
-        if (hasChildren) {
-          return {
-            ...old,
-            byId: {
-              ...old.byId,
-              [replyId]: {
-                ...old.byId[replyId],
-                content: "[deleted]",
-                deleted: true,
-                gifUrl: null,
-                imageUrl: null,
-                imagePublicId: null,
-              },
+  // ① Pass modDeleted through to the service call
+  mutationFn: ({ replyId, hasChildren, modDeleted = false }) =>
+    hasChildren
+      ? deleteReply(replyId, modDeleted)   // soft-delete: needs the flag
+      : hardDeleteReply(replyId),          // hard-delete: no content to flag
+ 
+  onMutate: async ({ replyId, hasChildren, modDeleted = false }) => {
+    await queryClient.cancelQueries({ queryKey: ["replies", threadId] })
+    const previousReplies = queryClient.getQueryData(["replies", threadId])
+ 
+    queryClient.setQueryData(["replies", threadId], (old) => {
+      if (!old || !old.byId?.[replyId]) return old
+      if (hasChildren) {
+        return {
+          ...old,
+          byId: {
+            ...old.byId,
+            [replyId]: {
+              ...old.byId[replyId],
+              // ② Show the right label immediately in the UI
+              content:        modDeleted ? "[deleted by mods]" : "[deleted]",
+              deleted:        true,
+              modDeleted:     modDeleted,
+              gifUrl:         null,
+              imageUrl:       null,
+              imagePublicId:  null,
             },
-          };
-        } else {
-          const newById = { ...old.byId };
-          delete newById[replyId];
-          const newChildren = { ...old.children };
-          for (const parent in newChildren) {
-            newChildren[parent] = newChildren[parent].filter(
-              (id) => id !== replyId,
-            );
-          }
-          delete newChildren[replyId];
-          return { byId: newById, children: newChildren };
+          },
         }
-      });
-      return { previousReplies };
-    },
-
-    onError: (err, variables, context) => {
-      if (context?.previousReplies) {
-        queryClient.setQueryData(
-          ["replies", threadId],
-          context.previousReplies,
-        );
+      } else {
+        const newById = { ...old.byId }
+        delete newById[replyId]
+        const newChildren = { ...old.children }
+        for (const parent in newChildren) {
+          newChildren[parent] = newChildren[parent].filter(id => id !== replyId)
+        }
+        delete newChildren[replyId]
+        return { byId: newById, children: newChildren }
       }
-    },
-
-    onSuccess: (_, { hasChildren }) => {
-      queryClient.invalidateQueries({ queryKey: ["replies", threadId] });
-      if (!hasChildren) {
-        queryClient.setQueryData(["threads"], (old = []) =>
-          old.map((t) =>
-            t.$id === threadId
-              ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
-              : t,
-          ),
-        );
-        decrementRepliesCount(threadId)
-          .then(() => {
-            queryClient.invalidateQueries({ queryKey: ["thread", threadId] });
-            queryClient.invalidateQueries({ queryKey: ["threads"] });
-          })
-          .catch(console.error);
-      }
-    },
-  });
+    })
+ 
+    return { previousReplies }
+  },
+ 
+  onError: (err, variables, context) => {
+    if (context?.previousReplies) {
+      queryClient.setQueryData(["replies", threadId], context.previousReplies)
+    }
+  },
+ 
+  onSuccess: (_, { hasChildren }) => {
+    queryClient.invalidateQueries({ queryKey: ["replies", threadId] })
+    if (!hasChildren) {
+      queryClient.setQueryData(["threads"], (old = []) =>
+        old.map(t =>
+          t.$id === threadId
+            ? { ...t, repliesCount: Math.max(0, (t.repliesCount ?? 1) - 1) }
+            : t
+        )
+      )
+      decrementRepliesCount(threadId)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["thread", threadId] })
+          queryClient.invalidateQueries({ queryKey: ["threads"] })
+        })
+        .catch(console.error)
+    }
+  },
+});
 
   // ─── UPDATE ───────────────────────────────────────────────────────────────
   const updateReplyMutation = useMutation({

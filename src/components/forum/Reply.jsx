@@ -165,6 +165,11 @@ const Reply = ({
   const isOP = reply?.authorId === threadAuthor
   const canPin = (hasPermission("pin:reply") || isOP) && depth === 0
 
+  const canAdminDelete = !isOwn && (
+    hasPermission("resolve:reports") ||   // moderators
+    hasPermission("manage:users")         // admins
+  )
+
   const isHighlighted = useHashHighlight(reply.$id)
 
   // Author info — { role, avatarUrl, username }
@@ -233,9 +238,13 @@ const Reply = ({
     const id = reply.$id ?? reply.id
     const replyHasChildren = (replies.children?.[id] ?? []).length > 0
     await deleteCloudinaryImage(reply.imagePublicId)
-    await deleteReply.mutateAsync({ replyId: id, hasChildren: replyHasChildren })
+    await deleteReply.mutateAsync({
+      replyId: id,
+      hasChildren: replyHasChildren,
+      modDeleted: canAdminDelete,   // ← true when an admin/mod deletes someone else's reply
+    })
     setShowOptions(false)
-  }, [reply, deleteReply, replies.children])
+  }, [reply, deleteReply, replies.children, canAdminDelete])
 
   const handleEditSave = useCallback(() => {
     if (!editText.trim()) return
@@ -398,6 +407,7 @@ const Reply = ({
                     reply={reply}
                     isOwn={isOwn}
                     canPin={canPin}
+                    canAdminDelete={canAdminDelete}   // ← ADD THIS LINE
                     onPin={handlePin}
                     anchorRef={dotsRef}
                     onCollapse={() => setCollapsed(true)}
