@@ -158,7 +158,7 @@ export default function UserRolesAdmin() {
     if (!deleteTarget) return
     try {
       setDeleteLoading(true)
-      await deleteAccountPermanently(deleteTarget.$id)
+      await deleteAccountPermanently(deleteTarget.userId)
       toast.success(`${deleteTarget.username}'s account has been permanently deleted.`)
       setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
