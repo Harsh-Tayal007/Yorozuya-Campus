@@ -5,7 +5,8 @@ import {
 } from "recharts"
 import {
   Users, Eye, UserPlus, Sparkles,
-  Mail, RefreshCw, TrendingUp, Loader2, Info, ChevronDown, ChevronUp
+  Mail, RefreshCw, TrendingUp, Loader2, Info, ChevronDown, ChevronUp,
+  DatabaseZap, CheckCircle2, AlertCircle,
 } from "lucide-react"
 import { databases, account } from "@/lib/appwrite"
 import { Query } from "appwrite"
@@ -18,6 +19,13 @@ const shortDate = (d) => {
   if (!d) return ""
   const [, m, day] = d.split("-")
   return `${day}/${m}`
+}
+
+// Returns yesterday's date string "YYYY-MM-DD" (mirrors worker logic)
+function yesterdayStr() {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().split("T")[0]
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -64,14 +72,13 @@ function ChartTooltip({ active, payload, label }) {
   )
 }
 
-// ── Scrollable chart wrapper (horizontal scroll on mobile) ────────────────────
+// ── Scrollable chart wrapper ──────────────────────────────────────────────────
 function ScrollChart({ data, minWidth = 600, height = 240, children }) {
   const scrollRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
 
-  // Mouse drag to scroll on desktop too
   const onMouseDown = (e) => {
     setIsDragging(true)
     setStartX(e.pageX - scrollRef.current.offsetLeft)
@@ -105,7 +112,6 @@ function ScrollChart({ data, minWidth = 600, height = 240, children }) {
           {children}
         </ResponsiveContainer>
       </div>
-      {/* Scroll hint on mobile */}
       {data.length > 7 && (
         <p className="text-[10px] text-muted-foreground/50 text-center mt-2 sm:hidden">
           ← scroll to see more →
@@ -181,6 +187,145 @@ function EmptyChart({ message }) {
   )
 }
 
+// ── Manual Flush Button ───────────────────────────────────────────────────────
+// Flushes a specific date's KV data → Appwrite.
+// flushSecret comes from VITE_FLUSH_SECRET env var.
+function FlushButton({ onFlushed }) {
+  const [state, setState] = useState("idle") // idle | loading | success | error
+  const [flushDate, setFlushDate] = useState(yesterdayStr)
+  const [open, setOpen] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
+  const secret = import.meta.env.VITE_FLUSH_SECRET
+
+  const handleFlush = async () => {
+    setState("loading")
+    setErrorMsg("")
+    try {
+      const res = await fetch(`${WORKER}/admin/flush`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${secret}`,
+        },
+        body: JSON.stringify({ date: flushDate }),
+      })
+      if (res.status === 401) throw new Error("Unauthorized — check VITE_FLUSH_SECRET")
+      if (!res.ok) throw new Error(`Worker returned ${res.status}`)
+      setState("success")
+      setOpen(false)
+      onFlushed?.()
+      setTimeout(() => setState("idle"), 3000)
+    } catch (e) {
+      setState("error")
+      setErrorMsg(e.message)
+      setTimeout(() => setState("idle"), 4000)
+    }
+  }
+
+  // ── Trigger button ──
+  const triggerBtn = (
+    <button
+      onClick={() => setOpen(v => !v)}
+      disabled={state === "loading"}
+      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg
+                  border transition-colors disabled:opacity-50
+                  ${state === "success"
+                    ? "border-emerald-500/40 text-emerald-500 bg-emerald-500/5"
+                    : state === "error"
+                    ? "border-red-500/40 text-red-500 bg-red-500/5"
+                    : "border-border hover:bg-muted text-foreground"}`}
+    >
+      {state === "loading" ? (
+        <Loader2 size={13} className="animate-spin" />
+      ) : state === "success" ? (
+        <CheckCircle2 size={13} />
+      ) : state === "error" ? (
+        <AlertCircle size={13} />
+      ) : (
+        <DatabaseZap size={13} />
+      )}
+      {state === "success" ? "Flushed!" : state === "error" ? "Failed" : "Flush to DB"}
+    </button>
+  )
+
+  return (
+    <div className="relative">
+      {triggerBtn}
+
+      {/* ── Dropdown panel ── */}
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+
+          <div className="absolute right-0 top-full mt-2 z-20 w-72
+                          rounded-xl border border-border bg-background shadow-xl p-4 space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Manual flush to Appwrite</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Writes KV data for the selected date into the Appwrite daily_stats collection.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-muted-foreground">Date to flush</label>
+              <input
+                type="date"
+                value={flushDate}
+                max={yesterdayStr()}
+                onChange={e => setFlushDate(e.target.value)}
+                className="w-full text-xs rounded-lg border border-border bg-muted/40
+                           px-3 py-2 text-foreground focus:outline-none focus:ring-1
+                           focus:ring-primary"
+              />
+              <p className="text-[10px] text-muted-foreground/50">
+                Defaults to yesterday. KV keys expire after ~25 h for user data.
+              </p>
+            </div>
+
+            {errorMsg && (
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-500/10
+                              border border-red-500/20 text-[11px] text-red-500">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                {errorMsg}
+              </div>
+            )}
+
+            {!secret && (
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10
+                              border border-amber-500/20 text-[11px] text-amber-600">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  <strong>VITE_FLUSH_SECRET</strong> is not set. Add it to your <code>.env</code> file and redeploy.
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={() => setOpen(false)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-border
+                           hover:bg-muted transition-colors text-muted-foreground">
+                Cancel
+              </button>
+              <button
+                onClick={handleFlush}
+                disabled={state === "loading" || !secret || !flushDate}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5
+                           rounded-lg bg-primary text-primary-foreground
+                           hover:bg-primary/90 transition-colors disabled:opacity-50">
+                {state === "loading"
+                  ? <><Loader2 size={12} className="animate-spin" /> Flushing…</>
+                  : <><DatabaseZap size={12} /> Flush {flushDate}</>}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminStats() {
   const [today, setToday] = useState(null)
@@ -188,7 +333,7 @@ export default function AdminStats() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastSync, setLastSync] = useState(null)
-  const [selected, setSelected] = useState(null) // clicked bar data
+  const [selected, setSelected] = useState(null)
 
   const [limits, setLimits] = useState({ cgpa: 10, timetable: 1 })
   const [limitsLoading, setLimitsLoading] = useState(true)
@@ -196,9 +341,7 @@ export default function AdminStats() {
   const [limitsSaved, setLimitsSaved] = useState(false)
 
   const [usersExpanded, setUsersExpanded] = useState(false)
-
   const [usernameMap, setUsernameMap] = useState({})
-
 
   const resolveUsernames = async (userIds) => {
     if (!userIds.length) return {}
@@ -230,7 +373,6 @@ export default function AdminStats() {
       const tData = await tRes.json()
       const hData = await hRes.json()
       setToday(tData)
-      // Resolve usernames for top token users
       const topUsers = tData.top_token_users ?? []
       if (topUsers.length) {
         const map = await resolveUsernames(topUsers.map(u => u.userId))
@@ -244,8 +386,6 @@ export default function AdminStats() {
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }, [])
-
-  // ADD after the load useCallback, before useEffect(() => { load() }, [load])
 
   const loadLimits = useCallback(async () => {
     setLimitsLoading(true)
@@ -274,10 +414,7 @@ export default function AdminStats() {
 
   useEffect(() => { load() }, [load])
 
-  // ── Build chart data: history (sorted asc) + today appended ──────────────
-  // We always include today even if history is empty so chart isn't blank
   const buildActivityData = () => {
-    // Exclude today's date from history to avoid duplicate bar
     const todayDate = today?.date
     const hist = history
       .filter(d => d.date !== todayDate)
@@ -304,9 +441,9 @@ export default function AdminStats() {
   }
 
   const buildGeminiData = () => {
-    const todayDate = today?.date  // ← add this
+    const todayDate = today?.date
     const rows = history
-      .filter(d => d.date !== todayDate)  // ← add this filter
+      .filter(d => d.date !== todayDate)
       .slice(-14)
       .map(d => ({
         date: shortDate(d.date),
@@ -328,8 +465,6 @@ export default function AdminStats() {
   const activityData = buildActivityData()
   const geminiData = buildGeminiData()
 
-  // ── Summary totals ────────────────────────────────────────────────────────
-  // Include today's live data in totals so numbers aren't 0 before first flush
   const todayActive = today?.active_users ?? 0
   const todayViews = today?.page_views ?? 0
   const todaySignups = today?.new_signups ?? 0
@@ -341,16 +476,13 @@ export default function AdminStats() {
   const histTokens = history.slice(-30).reduce((s, d) => s + (d.gemini_tokens_total ?? 0), 0)
   const histEmails = history.slice(-30).reduce((s, d) => s + (d.resend_emails_sent ?? 0), 0)
 
-  // Add today to these so they're non-zero from day 1
   const totalMAU = histMAU + todayActive
   const totalWAU = histWAU + todayActive
   const totalTokens = histTokens + todayTokens
   const totalEmails = histEmails + todayEmails
 
-  // Quota: use page_views as proxy for worker requests
   const totalWorkerReqs = history.reduce((s, d) => s + (d.page_views ?? 0), 0) + todayViews
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-10">
 
@@ -362,18 +494,26 @@ export default function AdminStats() {
             Live today + 30-day history · flushed to Appwrite at midnight UTC
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+
+        {/* ── Action buttons row ── */}
+        <div className="flex items-center gap-2 shrink-0">
           {lastSync && (
             <span className="text-xs text-muted-foreground hidden sm:block">
               Updated {lastSync.toLocaleTimeString()}
             </span>
           )}
-          <button onClick={load} disabled={loading}
+
+          <button
+            onClick={load}
+            disabled={loading}
             className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg
                        border border-border hover:bg-muted transition-colors disabled:opacity-50">
             {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
             Refresh
           </button>
+
+          {/* Flush button — only shown if VITE_FLUSH_SECRET is defined */}
+          <FlushButton onFlushed={load} />
         </div>
       </div>
 
@@ -425,8 +565,6 @@ export default function AdminStats() {
         hint="Page views = every layout mount (PublicLayout, UserLayout, AdminLayout). Active users = unique userId seen today. Drag or touch-scroll to pan on small screens."
       >
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-
-          {/* Selected bar detail (mobile-friendly alternative to hover) */}
           {selected && (
             <div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border
                             flex items-center justify-between flex-wrap gap-2">
@@ -468,41 +606,27 @@ export default function AdminStats() {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={0}
-                  tickMargin={8}
+                  axisLine={false} tickLine={false} interval={0} tickMargin={8}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }}
-                  axisLine={false} tickLine={false}
-                  width={30}
-                  allowDecimals={false}
+                  axisLine={false} tickLine={false} width={30} allowDecimals={false}
                 />
-                <Tooltip
-                  content={<ChartTooltip />}
-                  cursor={{ fill: "rgba(128,128,128,0.06)", radius: 4 }}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 11, paddingTop: 16 }}
-                  iconType="circle" iconSize={8}
-                />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(128,128,128,0.06)", radius: 4 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 16 }} iconType="circle" iconSize={8} />
                 <Bar dataKey="Active users" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={16} cursor="pointer">
                   {activityData.map((entry, i) => (
-                    <Cell key={i} fill={entry.isToday ? "#2563eb" : "#3b82f6"}
-                      fillOpacity={entry.isToday ? 1 : 0.75} />
+                    <Cell key={i} fill={entry.isToday ? "#2563eb" : "#3b82f6"} fillOpacity={entry.isToday ? 1 : 0.75} />
                   ))}
                 </Bar>
                 <Bar dataKey="Page views" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={16} cursor="pointer">
                   {activityData.map((entry, i) => (
-                    <Cell key={i} fill={entry.isToday ? "#7c3aed" : "#8b5cf6"}
-                      fillOpacity={entry.isToday ? 1 : 0.75} />
+                    <Cell key={i} fill={entry.isToday ? "#7c3aed" : "#8b5cf6"} fillOpacity={entry.isToday ? 1 : 0.75} />
                   ))}
                 </Bar>
                 <Bar dataKey="New signups" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={16} cursor="pointer">
                   {activityData.map((entry, i) => (
-                    <Cell key={i} fill={entry.isToday ? "#059669" : "#10b981"}
-                      fillOpacity={entry.isToday ? 1 : 0.75} />
+                    <Cell key={i} fill={entry.isToday ? "#059669" : "#10b981"} fillOpacity={entry.isToday ? 1 : 0.75} />
                   ))}
                 </Bar>
               </BarChart>
@@ -522,39 +646,19 @@ export default function AdminStats() {
           ) : (
             <ScrollChart data={geminiData} minWidth={Math.max(500, geminiData.length * 80)} height={220}>
               <LineChart data={geminiData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--color-border-tertiary, rgba(0,0,0,0.08))"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }}
-                  axisLine={false} tickLine={false}
-                  interval={0}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }}
-                  axisLine={false} tickLine={false}
-                  width={42}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  content={<ChartTooltip />}
-                  cursor={{ stroke: "rgba(128,128,128,0.15)", strokeWidth: 1 }}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-tertiary, rgba(0,0,0,0.08))" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} axisLine={false} tickLine={false} interval={0} />
+                <YAxis tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} axisLine={false} tickLine={false} width={42} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(128,128,128,0.15)", strokeWidth: 1 }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 16 }} iconType="circle" iconSize={8} />
-                <Line dataKey="Total" stroke="#ec4899" strokeWidth={2.5}
-                  dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
-                <Line dataKey="CGPA" stroke="#f97316" strokeWidth={1.5}
-                  dot={{ r: 2, fill: "#f97316" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
-                <Line dataKey="Timetable" stroke="#a855f7" strokeWidth={1.5}
-                  dot={{ r: 2, fill: "#a855f7" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
+                <Line dataKey="Total" stroke="#ec4899" strokeWidth={2.5} dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
+                <Line dataKey="CGPA" stroke="#f97316" strokeWidth={1.5} dot={{ r: 2, fill: "#f97316" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
+                <Line dataKey="Timetable" stroke="#a855f7" strokeWidth={1.5} dot={{ r: 2, fill: "#a855f7" }} strokeDasharray="5 3" activeDot={{ r: 4 }} />
               </LineChart>
             </ScrollChart>
           )}
 
-          {/* ── Top token users today ──────────────────────────────────── */}
+          {/* ── Top token users today ── */}
           <div className="mt-4 pt-4 border-t border-border">
             <button
               onClick={() => setUsersExpanded(v => !v)}
@@ -564,18 +668,14 @@ export default function AdminStats() {
                   Top token users today
                 </p>
                 {(today?.top_token_users?.length ?? 0) > 0 && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold
-                                   bg-pink-500/10 text-pink-500">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-500/10 text-pink-500">
                     {today.top_token_users.length}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground/50
-                              group-hover:text-muted-foreground transition-colors">
+              <div className="flex items-center gap-1.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
                 <span className="text-[10px]">{usersExpanded ? "collapse" : "expand"}</span>
-                {usersExpanded
-                  ? <ChevronUp size={13} />
-                  : <ChevronDown size={13} />}
+                {usersExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
               </div>
             </button>
 
@@ -587,13 +687,10 @@ export default function AdminStats() {
                     <span className="text-xs text-muted-foreground">Loading…</span>
                   </div>
                 ) : !today?.top_token_users?.length ? (
-                  <p className="text-xs text-muted-foreground py-3 text-center">
-                    No AI scans recorded today yet.
-                  </p>
+                  <p className="text-xs text-muted-foreground py-3 text-center">No AI scans recorded today yet.</p>
                 ) : (
                   <>
-                    <div className="grid text-[10px] font-semibold uppercase tracking-widest
-                                    text-muted-foreground/50 px-2 mb-2"
+                    <div className="grid text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 px-2 mb-2"
                       style={{ gridTemplateColumns: "1fr 80px 60px 60px 44px" }}>
                       <span>User ID</span>
                       <span className="text-right">Tokens</span>
@@ -601,54 +698,33 @@ export default function AdminStats() {
                       <span className="text-right">TT</span>
                       <span className="text-right">Scans</span>
                     </div>
-
                     {today.top_token_users.map((u, i) => {
                       const isHeavy = u.tokens > 20000
                       const isMid = u.tokens > 8000
-                      const tokenColor = isHeavy ? "text-red-500"
-                        : isMid ? "text-amber-500"
-                          : "text-emerald-500"
+                      const tokenColor = isHeavy ? "text-red-500" : isMid ? "text-amber-500" : "text-emerald-500"
                       return (
                         <div key={u.userId}
-                          className={`grid items-center px-2 py-2 rounded-lg text-xs
-                                      transition-colors hover:bg-muted/40
-                                      ${i === 0
-                              ? "bg-pink-500/5 border border-pink-500/10"
-                              : "border border-transparent"}`}
+                          className={`grid items-center px-2 py-2 rounded-lg text-xs transition-colors hover:bg-muted/40
+                                      ${i === 0 ? "bg-pink-500/5 border border-pink-500/10" : "border border-transparent"}`}
                           style={{ gridTemplateColumns: "1fr 80px 60px 60px 44px" }}>
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className={`shrink-0 w-4 h-4 rounded text-[10px] font-bold
-                                             flex items-center justify-center
-                                             ${i === 0
-                                ? "bg-pink-500 text-white"
-                                : "bg-muted text-muted-foreground"}`}>
+                            <span className={`shrink-0 w-4 h-4 rounded text-[10px] font-bold flex items-center justify-center
+                                             ${i === 0 ? "bg-pink-500 text-white" : "bg-muted text-muted-foreground"}`}>
                               {i + 1}
                             </span>
-
                             <a href={`/profile/${usernameMap[u.userId] ?? u.userId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title={u.userId}
+                              target="_blank" rel="noopener noreferrer" title={u.userId}
                               className="text-[11px] text-primary hover:underline truncate font-medium">
                               {usernameMap[u.userId] ?? `${u.userId.slice(0, 8)}…`}
                             </a>
                           </div>
-                          <span className={`text-right font-bold tabular-nums ${tokenColor}`}>
-                            {fmt(u.tokens)}
-                          </span>
-                          <span className="text-right tabular-nums text-muted-foreground">
-                            {fmt(u.cgpa)}
-                          </span>
-                          <span className="text-right tabular-nums text-muted-foreground">
-                            {fmt(u.timetable)}
-                          </span>
-                          <span className="text-right tabular-nums font-semibold text-foreground">
-                            {u.scans}
-                          </span>
+                          <span className={`text-right font-bold tabular-nums ${tokenColor}`}>{fmt(u.tokens)}</span>
+                          <span className="text-right tabular-nums text-muted-foreground">{fmt(u.cgpa)}</span>
+                          <span className="text-right tabular-nums text-muted-foreground">{fmt(u.timetable)}</span>
+                          <span className="text-right tabular-nums font-semibold text-foreground">{u.scans}</span>
                         </div>
                       )
                     })}
-
                     <p className="text-[10px] text-muted-foreground/40 text-right pt-1">
                       User IDs truncated · resets at midnight UTC
                     </p>
@@ -657,9 +733,8 @@ export default function AdminStats() {
               </div>
             )}
           </div>
-
-        </div>   {/* closes the card div */}
-      </Section> {/* closes the Gemini Section */}
+        </div>
+      </Section>
 
       {/* ── AI SCAN LIMITS ── */}
       <Section
@@ -744,34 +819,10 @@ export default function AdminStats() {
         hint="Worker requests estimated from page_views count. Gemini token limit is per day, others per month."
       >
         <div className="rounded-xl border border-border bg-card px-5 py-5 space-y-5">
-          <QuotaBar
-            label="Cloudflare Worker requests"
-            note="(estimated from page views, resets daily)"
-            used={todayViews}
-            limit={100000}
-            color="#3b82f6"
-          />
-          <QuotaBar
-            label="Resend emails"
-            note="(monthly)"
-            used={totalEmails}
-            limit={3000}
-            color="#f59e0b"
-          />
-          <QuotaBar
-            label="Gemini 2.5 Flash tokens"
-            note="(daily free limit)"
-            used={todayTokens}
-            limit={1000000}
-            color="#ec4899"
-          />
-          <QuotaBar
-            label="Appwrite DB operations"
-            note="(monthly free tier: 750k)"
-            used={totalWorkerReqs * 2}
-            limit={750000}
-            color="#8b5cf6"
-          />
+          <QuotaBar label="Cloudflare Worker requests" note="(estimated from page views, resets daily)" used={todayViews} limit={100000} color="#3b82f6" />
+          <QuotaBar label="Resend emails" note="(monthly)" used={totalEmails} limit={3000} color="#f59e0b" />
+          <QuotaBar label="Gemini 2.5 Flash tokens" note="(daily free limit)" used={todayTokens} limit={1000000} color="#ec4899" />
+          <QuotaBar label="Appwrite DB operations" note="(monthly free tier: 750k)" used={totalWorkerReqs * 2} limit={750000} color="#8b5cf6" />
           <p className="text-[11px] text-muted-foreground/50 pt-1 border-t border-border">
             Cloudflare: 100k req/day · Resend: 3,000 emails/month · Gemini Flash: 1M tokens/day · Appwrite: 750k operations/month
           </p>
