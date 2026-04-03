@@ -9,6 +9,7 @@ import {
   User, GraduationCap, BookOpen, GitBranch, Calendar,
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
   KeyRound, AlertCircle,
+  Trash2,
 } from "lucide-react"
 
 import { getUniversities } from "@/services/university/universityService"
@@ -18,6 +19,8 @@ import { uploadAvatar } from "@/services/user/profileService"
 import { account, functions } from "@/lib/appwrite"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { usePush } from "@/context/PushNotificationContext"
+import DeleteAccountModal from "@/components/modals/DeleteAccountModal"
+import { deleteAccountPermanently } from "@/services/user/deleteAccountService"
 
 const YEAR_OPTIONS = [
   { value: "1", label: "1st Year" }, { value: "2", label: "2nd Year" },
@@ -306,6 +309,9 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
 // TAB: ACCOUNT  (OAuth detection + set/change password + forgot password)
 // =============================================================================
 const AccountTab = ({ user }) => {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
+ 
   const [activeForm, setActiveForm] = useState(null)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -315,12 +321,14 @@ const AccountTab = ({ user }) => {
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
-
+ 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+ 
   // ── Detect OAuth provider ─────────────────────────────────────────────────
   const [oauthProvider, setOauthProvider] = useState(null)
-  const [hasPassword, setHasPassword] = useState(false) // OAuth user who also set a password
+  const [hasPassword, setHasPassword] = useState(false)
   const [identityLoading, setIdentityLoading] = useState(true)
-
+ 
   useEffect(() => {
     const detectProvider = async () => {
       try {
@@ -328,9 +336,6 @@ const AccountTab = ({ user }) => {
         if (identities.total > 0) {
           setOauthProvider(identities.identities[0].provider)
         }
-        // Check if a password session exists by trying prefs
-        // Appwrite doesn't expose "hasPassword" directly, so we check via
-        // account.get() — if passwordUpdate is non-null, they have a password
         const me = await account.get()
         setHasPassword(!!me.passwordUpdate)
       } catch {
@@ -342,23 +347,22 @@ const AccountTab = ({ user }) => {
     }
     detectProvider()
   }, [])
-
+ 
   const isOAuth = !!oauthProvider
-
+ 
   const resetForms = () => {
     setEmail(""); setPassword(""); setNewPassword(""); setConfirmPass("")
     setShowPass(false); setShowNew(false); setShowConfirm(false)
   }
   const setForm = (form) => { resetForms(); setActiveForm(prev => prev === form ? null : form) }
-
+ 
   const showHideBtn = (visible, toggle) => (
     <button type="button" onClick={() => toggle(v => !v)}
       className="text-muted-foreground hover:text-foreground transition-colors">
       {visible ? <EyeOff size={14} /> : <Eye size={14} />}
     </button>
   )
-
-  // ── Change email (email/password users only) ──────────────────────────────
+ 
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
     if (!email.trim() || !password) { toast.error("All fields required"); return }
@@ -371,8 +375,7 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to update email")
     } finally { setSaving(false) }
   }
-
-  // ── Change password (email/password users who already have one) ───────────
+ 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
     if (!password || !newPassword || !confirmPass) { toast.error("All fields required"); return }
@@ -388,9 +391,7 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to update password")
     } finally { setSaving(false) }
   }
-
-  // ── SET password for the first time (OAuth users, no current password) ────
-  // Appwrite allows updatePassword with empty oldPassword for OAuth-only accounts
+ 
   const handleSetPasswordSubmit = async (e) => {
     e.preventDefault()
     if (!newPassword || !confirmPass) { toast.error("All fields required"); return }
@@ -398,7 +399,6 @@ const AccountTab = ({ user }) => {
     if (newPassword.length < 8) { toast.error("Min 8 characters"); return }
     try {
       setSaving(true)
-      // Pass empty string as oldPassword — Appwrite accepts this for OAuth accounts
       await account.updatePassword(newPassword, "")
       toast.success("Password set! You can now log in with email + password too.", { duration: 5000 })
       setHasPassword(true)
@@ -407,8 +407,7 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to set password")
     } finally { setSaving(false) }
   }
-
-  // ── Forgot / reset password ───────────────────────────────────────────────
+ 
   const handleForgotPassword = async () => {
     if (!user?.email) { toast.error("No email found on your account"); return }
     try {
@@ -416,9 +415,7 @@ const AccountTab = ({ user }) => {
       const execution = await functions.createExecution(
         import.meta.env.VITE_APPWRITE_RECOVERY_FUNCTION_ID,
         JSON.stringify({ email: user.email }),
-        false,
-        "/",
-        "POST"
+        false, "/", "POST"
       )
       let result = {}
       try { result = JSON.parse(execution.responseBody || "{}") } catch { }
@@ -431,7 +428,21 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to send recovery email")
     } finally { setSaving(false) }
   }
-
+ 
+  // ── Account deletion ───────────────────────────────────────────────────────
+  const handleDeleteAccount = async () => {
+    await deleteAccountPermanently()
+    // Worker already deleted the Appwrite auth account, so logout() would
+    // throw "session not found". Instead, directly clear local auth state
+    // and force a full page reload to flush all React Query caches,
+    // context state, and service worker subscriptions cleanly.
+    toast.success("Your account has been permanently deleted.")
+    // Small delay so toast is visible before reload
+    setTimeout(() => {
+      window.location.replace("/")
+    }, 800)
+  }
+ 
   if (identityLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -439,10 +450,10 @@ const AccountTab = ({ user }) => {
       </div>
     )
   }
-
+ 
   return (
     <div>
-      {/* OAuth notice banner */}
+      {/* ── OAuth notice ── */}
       {isOAuth && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -464,9 +475,9 @@ const AccountTab = ({ user }) => {
           <OAuthBadge provider={oauthProvider} />
         </motion.div>
       )}
-
+ 
+      {/* ── General section (email + password) ── */}
       <Section title="General">
-        {/* Email — disabled for OAuth users */}
         <AccountRow
           icon={Mail}
           label="Email address"
@@ -493,8 +504,7 @@ const AccountTab = ({ user }) => {
             </div>
           </form>
         </AccountRow>
-
-        {/* Password row — changes behavior based on isOAuth + hasPassword */}
+ 
         <AccountRow
           icon={Lock}
           label={isOAuth && !hasPassword ? "Set a password" : "Password"}
@@ -505,7 +515,6 @@ const AccountTab = ({ user }) => {
           disabled={false}
           disabledReason={null}
         >
-          {/* OAuth user — no password yet → SET password form */}
           {isOAuth && !hasPassword && (
             <form onSubmit={handleSetPasswordSubmit} className="space-y-3">
               <p className="text-xs text-muted-foreground">
@@ -533,12 +542,9 @@ const AccountTab = ({ user }) => {
               </div>
             </form>
           )}
-
-          {/* Has password (either email/password user OR OAuth who set one) → CHANGE form */}
+ 
           {hasPassword && (
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
-              {/* OAuth users don't need old password if they want to change —
-                  but Appwrite requires it once a password is set, so always ask */}
               <Field label="Current Password">
                 <Input value={password} onChange={e => setPassword(e.target.value)}
                   type={showPass ? "text" : "password"} placeholder="Current password"
@@ -568,8 +574,8 @@ const AccountTab = ({ user }) => {
           )}
         </AccountRow>
       </Section>
-
-      {/* Forgot / reset password — shown for everyone who has a password */}
+ 
+      {/* ── Password Recovery ── */}
       {hasPassword && (
         <Section title="Password Recovery">
           <div className="py-3.5">
@@ -602,6 +608,49 @@ const AccountTab = ({ user }) => {
           </div>
         </Section>
       )}
+ 
+      {/* ── Danger Zone ───────────────────────────────────────────────────── */}
+      <div className="mt-8">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Danger Zone
+        </p>
+        <div className="rounded-2xl border border-red-200/70 dark:border-red-500/25 bg-card px-4">
+          <div className="flex items-start justify-between gap-4 py-4">
+            <div className="flex items-start gap-3">
+              <Trash2 size={15} className="text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Delete account</p>
+                <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
+                  Permanently removes your profile, posts, and all personal data. Attendance records are preserved.
+                </p>
+              </div>
+            </div>
+            <motion.button
+              type="button"
+              onClick={() => setDeleteModalOpen(true)}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl
+                         border border-red-200 dark:border-red-500/30
+                         text-sm font-medium text-red-600 dark:text-red-400
+                         hover:bg-red-50 dark:hover:bg-red-500/10
+                         hover:border-red-400 dark:hover:border-red-400/50
+                         transition-all duration-150"
+            >
+              <Trash2 size={13} />
+              Delete account
+            </motion.button>
+          </div>
+        </div>
+      </div>
+ 
+      {/* ── Confirmation modal ── */}
+      <DeleteAccountModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+      />
     </div>
   )
 }
