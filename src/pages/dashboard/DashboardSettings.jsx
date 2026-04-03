@@ -399,7 +399,7 @@ const AccountTab = ({ user }) => {
     if (newPassword.length < 8) { toast.error("Min 8 characters"); return }
     try {
       setSaving(true)
-      await account.updatePassword(newPassword, "")
+      await account.updatePassword(newPassword)
       toast.success("Password set! You can now log in with email + password too.", { duration: 5000 })
       setHasPassword(true)
       setActiveForm(null); resetForms()
