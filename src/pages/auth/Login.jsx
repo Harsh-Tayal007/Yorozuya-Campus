@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { motion } from "framer-motion"
 
-// ── OAuth handler ─────────────────────────────────────────────────────────────
+// ── OAuth handlers ────────────────────────────────────────────────────────────
 const loginWithGoogle = () => {
   account.createOAuth2Session(
     "google",
@@ -82,54 +82,45 @@ const SwitchBanner = ({ target }) => {
   )
 }
 
-// ── Helper: detect if input looks like an email ───────────────────────────────
 const looksLikeEmail = (val) => val.includes("@")
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const Login = () => {
   const { login } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location  = useLocation()
+  const navigate  = useNavigate()
 
-  // Respect redirect-after-login
   const searchParams = new URLSearchParams(location.search)
-  const isSwitch = searchParams.get("switch") === "1"
-  const from = !isSwitch
+  const isSwitch     = searchParams.get("switch") === "1"
+  const from         = !isSwitch
     ? (searchParams.get("redirect") || location.state?.from?.pathname || "/dashboard")
     : "/dashboard"
 
-  // Read switch target from sessionStorage (set by SwitchAccountModal)
   const switchTarget = (() => {
     try { return JSON.parse(sessionStorage.getItem("unizuya_switch_to")) }
     catch { return null }
   })()
 
-  const [form, setForm] = useState({
-    identifier: switchTarget?.email || "", // email or username
-    password: "",
-  })
-  const [errors, setErrors] = useState({})
+  // If the target account is OAuth-only (no password ever set), show OAuth flow
+  const isOAuthTarget = switchTarget?.provider && !switchTarget?.hasPassword
+
+  const [form, setForm]               = useState({ identifier: switchTarget?.email || "", password: "" })
+  const [errors, setErrors]           = useState({})
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [error, setError]             = useState(null)
+  const [loading, setLoading]         = useState(false)
 
   // Auto-submit via PasswordCredential API when switching
   useEffect(() => {
-    if (!isSwitch || !switchTarget) return
+    if (!isSwitch || !switchTarget || isOAuthTarget) return
     if (!window.PasswordCredential) return
 
     const trySeamlessSwitch = async () => {
       try {
-        const cred = await navigator.credentials.get({
-          password: true,
-          mediation: "silent",
-        })
-
+        const cred = await navigator.credentials.get({ password: true, mediation: "silent" })
         if (!cred || cred.id !== switchTarget.email) return
-
         setLoading(true)
         setForm({ identifier: cred.id, password: cred.password })
-
         await login({ email: cred.id, password: cred.password })
         sessionStorage.removeItem("unizuya_switch_to")
         window.location.href = "/dashboard"
@@ -144,7 +135,6 @@ const Login = () => {
   const validate = () => {
     const newErrors = {}
     const id = form.identifier.trim()
-
     if (!id) {
       newErrors.identifier = "Email or username is required"
     } else if (looksLikeEmail(id) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
@@ -152,9 +142,7 @@ const Login = () => {
     } else if (!looksLikeEmail(id) && id.length < 3) {
       newErrors.identifier = "Username must be at least 3 characters"
     }
-
     if (!form.password) newErrors.password = "Password is required"
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -171,23 +159,18 @@ const Login = () => {
     setLoading(true)
     setError(null)
     try {
-      // Resolve username → email if needed
       const resolvedEmail = await resolveLoginEmail(form.identifier.trim())
-
       await login({ email: resolvedEmail, password: form.password })
-
-      // Store in browser's password manager for future seamless switches
       if (window.PasswordCredential) {
         try {
           const cred = new PasswordCredential({
-            id: resolvedEmail,
+            id:       resolvedEmail,
             password: form.password,
-            name: switchTarget?.username || resolvedEmail,
+            name:     switchTarget?.username || resolvedEmail,
           })
           await navigator.credentials.store(cred)
         } catch { /* user declined or not supported */ }
       }
-
       sessionStorage.removeItem("unizuya_switch_to")
       navigate(from, { replace: true })
     } catch (err) {
@@ -197,7 +180,18 @@ const Login = () => {
     }
   }
 
-  // Detect whether user is typing username (no @) to show hint
+  // Handle OAuth switch — delete current session then redirect to OAuth
+  const handleOAuthSwitch = async () => {
+    setLoading(true)
+    try {
+      await account.deleteSession("current").catch(() => {})
+    } finally {
+      // OAuth callback will handle the rest; don't clear switch_to yet
+      // so OAuthCallback can upsert the correct saved account
+      loginWithGoogle()
+    }
+  }
+
   const isUsernameMode = form.identifier && !looksLikeEmail(form.identifier)
 
   return (
@@ -207,7 +201,6 @@ const Login = () => {
       from-slate-100 via-white to-slate-200
       dark:from-[#080e1a] dark:via-[#0d1628] dark:to-[#080e1a]
     ">
-      {/* Glow blobs */}
       <div className="pointer-events-none absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-40
         bg-blue-400 dark:bg-blue-600 top-[-160px] left-[-160px]" />
       <div className="pointer-events-none absolute w-[400px] h-[400px] rounded-full blur-3xl opacity-30
@@ -227,7 +220,6 @@ const Login = () => {
           shadow-2xl shadow-slate-200/60 dark:shadow-black/60
         ">
           <CardHeader className="space-y-1.5 text-center pb-2 pt-8">
-            {/* Logo mark */}
             <div className="mx-auto mb-3 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
@@ -239,7 +231,7 @@ const Login = () => {
             </CardTitle>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {isSwitch && switchTarget
-                ? "Enter your password to continue"
+                ? "Sign in to continue"
                 : "Sign in to your Unizuya account"}
             </p>
           </CardHeader>
@@ -279,137 +271,21 @@ const Login = () => {
             {/* Switch banner */}
             <SwitchBanner target={switchTarget} />
 
-            {/* OAuth — hide when switching */}
-            {!switchTarget && (
-              <>
-                <OAuthButton onClick={loginWithGoogle} icon={<GoogleIcon />} label="Continue with Google" />
-                <div className="mb-5" />
-                <OrDivider />
-              </>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              {/* Email or Username */}
-              <div className="space-y-1.5">
-                <Label htmlFor="identifier" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Email or Username
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="identifier"
-                    name="identifier"
-                    type="text"
-                    autoComplete="username"
-                    placeholder="you@example.com or brave_fox_4821"
-                    value={form.identifier}
-                    onChange={handleChange}
-                    disabled={loading || !!switchTarget}
-                    className="
-                      h-10
-                      bg-slate-50 dark:bg-white/5
-                      border-slate-200 dark:border-white/10
-                      text-slate-900 dark:text-white
-                      placeholder:text-slate-400 dark:placeholder:text-slate-600
-                      focus:border-blue-500 focus:ring-blue-500/20
-                      transition
-                      disabled:opacity-70
-                    "
-                  />
-                  {/* Username mode indicator */}
-                  {isUsernameMode && !errors.identifier && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <span className="text-[10px] font-mono text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10
-                        px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-500/20">
-                        @username
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {errors.identifier && <p className="text-xs text-red-500 dark:text-red-400">{errors.identifier}</p>}
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Password
-                  </Label>
-                  {!switchTarget && (
-                    <button
-                      type="button"
-                      onClick={() => navigate("/forgot-password")}
-                      className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition"
-                    >
-                      Forgot password?
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Your password"
-                    value={form.password}
-                    onChange={handleChange}
-                    disabled={loading}
-                    autoFocus={!!switchTarget}
-                    className="
-                      h-10 pr-10
-                      bg-slate-50 dark:bg-white/5
-                      border-slate-200 dark:border-white/10
-                      text-slate-900 dark:text-white
-                      placeholder:text-slate-400 dark:placeholder:text-slate-600
-                      focus:border-blue-500 focus:ring-blue-500/20
-                      transition
-                    "
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((p) => !p)}
-                    disabled={!form.password || loading}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition disabled:opacity-30"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-xs text-red-500 dark:text-red-400">{errors.password}</p>}
-              </div>
-
-              {/* Backend error */}
-              {error && (
-                <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
-                  <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
-                </div>
-              )}
-
-              {/* Submit */}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="
-                  w-full h-10 mt-1
-                  bg-gradient-to-r from-blue-600 to-indigo-600
-                  hover:from-blue-500 hover:to-indigo-500
-                  text-white font-semibold
-                  shadow-lg shadow-blue-600/25
-                  transition-all duration-200
-                  disabled:opacity-60
-                "
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    {isSwitch ? "Switching…" : "Signing in…"}
-                  </span>
-                ) : isSwitch ? "Switch Account" : "Sign in"}
-              </Button>
-
-              {/* Cancel switch */}
-              {isSwitch && (
+            {/* ── OAuth-only switch target ─────────────────────────────────── */}
+            {isSwitch && switchTarget && isOAuthTarget ? (
+              <div className="space-y-3 mt-2">
+                <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+                  This account uses{" "}
+                  <span className="font-medium text-slate-700 dark:text-slate-200 capitalize">
+                    {switchTarget.provider}
+                  </span>{" "}
+                  to sign in.
+                </p>
+                <OAuthButton
+                  onClick={handleOAuthSwitch}
+                  icon={<GoogleIcon />}
+                  label={`Continue with ${switchTarget.provider.charAt(0).toUpperCase() + switchTarget.provider.slice(1)}`}
+                />
                 <button
                   type="button"
                   onClick={() => {
@@ -420,19 +296,160 @@ const Login = () => {
                 >
                   Cancel
                 </button>
-              )}
-            </form>
+              </div>
+            ) : (
+              <>
+                {/* Standard login — show OAuth only when not switching */}
+                {!switchTarget && (
+                  <>
+                    <OAuthButton onClick={loginWithGoogle} icon={<GoogleIcon />} label="Continue with Google" />
+                    <div className="mb-5" />
+                    <OrDivider />
+                  </>
+                )}
 
-            {!isSwitch && (
-              <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
-                Don't have an account?{" "}
-                <Link
-                  to="/signup"
-                  className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition"
-                >
-                  Sign up
-                </Link>
-              </p>
+                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                  {/* Email or Username */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="identifier" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Email or Username
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="identifier"
+                        name="identifier"
+                        type="text"
+                        autoComplete="username"
+                        placeholder="you@example.com or brave_fox_4821"
+                        value={form.identifier}
+                        onChange={handleChange}
+                        disabled={loading || !!switchTarget}
+                        className="
+                          h-10
+                          bg-slate-50 dark:bg-white/5
+                          border-slate-200 dark:border-white/10
+                          text-slate-900 dark:text-white
+                          placeholder:text-slate-400 dark:placeholder:text-slate-600
+                          focus:border-blue-500 focus:ring-blue-500/20
+                          transition disabled:opacity-70
+                        "
+                      />
+                      {isUsernameMode && !errors.identifier && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <span className="text-[10px] font-mono text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10
+                            px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-500/20">
+                            @username
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {errors.identifier && <p className="text-xs text-red-500 dark:text-red-400">{errors.identifier}</p>}
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Password
+                      </Label>
+                      {!switchTarget && (
+                        <button
+                          type="button"
+                          onClick={() => navigate("/forgot-password")}
+                          className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Your password"
+                        value={form.password}
+                        onChange={handleChange}
+                        disabled={loading}
+                        autoFocus={!!switchTarget}
+                        className="
+                          h-10 pr-10
+                          bg-slate-50 dark:bg-white/5
+                          border-slate-200 dark:border-white/10
+                          text-slate-900 dark:text-white
+                          placeholder:text-slate-400 dark:placeholder:text-slate-600
+                          focus:border-blue-500 focus:ring-blue-500/20
+                          transition
+                        "
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(p => !p)}
+                        disabled={!form.password || loading}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition disabled:opacity-30"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {errors.password && <p className="text-xs text-red-500 dark:text-red-400">{errors.password}</p>}
+                  </div>
+
+                  {error && (
+                    <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
+                      <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="
+                      w-full h-10 mt-1
+                      bg-gradient-to-r from-blue-600 to-indigo-600
+                      hover:from-blue-500 hover:to-indigo-500
+                      text-white font-semibold
+                      shadow-lg shadow-blue-600/25
+                      transition-all duration-200
+                      disabled:opacity-60
+                    "
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        {isSwitch ? "Switching…" : "Signing in…"}
+                      </span>
+                    ) : isSwitch ? "Switch Account" : "Sign in"}
+                  </Button>
+
+                  {isSwitch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sessionStorage.removeItem("unizuya_switch_to")
+                        window.location.href = "/dashboard"
+                      }}
+                      className="w-full h-10 rounded-lg border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </form>
+
+                {!isSwitch && (
+                  <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
+                    Don't have an account?{" "}
+                    <Link
+                      to="/signup"
+                      className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition"
+                    >
+                      Sign up
+                    </Link>
+                  </p>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

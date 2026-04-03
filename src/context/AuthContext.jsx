@@ -64,6 +64,16 @@ export const AuthProvider = ({ children }) => {
     return role
   }
 
+  const detectOAuthProvider = async () => {
+  try {
+    const identities = await account.listIdentities()
+    if (identities.total > 0) return identities.identities[0].provider
+    return null
+  } catch {
+    return null
+  }
+}
+
   const permissions = useMemo(() => {
     if (!role) return []
     return ROLE_PERMISSIONS[role] || []
@@ -107,12 +117,14 @@ export const AuthProvider = ({ children }) => {
         })
         setAuthStatus(true)
 
+        const provider = await detectOAuthProvider()
         upsertSavedAccount({
           userId: accountUser.$id,
-          name: userDoc.name || accountUser.name,
+          name:   userDoc.name || accountUser.name,
           username: userDoc.username,
-          email: accountUser.email,
+          email:  accountUser.email,
           avatarUrl: userDoc.avatarUrl || null,
+          provider,   // ← NEW: "google" | "github" | null
         })
 
         vaultRefreshTTL(accountUser.$id)
@@ -175,13 +187,15 @@ export const AuthProvider = ({ children }) => {
 
     if (password) await vaultStore(accountUser.$id, password)
 
-    upsertSavedAccount({
-      userId: accountUser.$id,
-      name: userDoc.name || accountUser.name,
-      username: userDoc.username,
-      email: accountUser.email,
-      avatarUrl: userDoc.avatarUrl || null,
-    })
+    const provider = await detectOAuthProvider()
+        upsertSavedAccount({
+          userId: accountUser.$id,
+          name:   userDoc.name || accountUser.name,
+          username: userDoc.username,
+          email:  accountUser.email,
+          avatarUrl: userDoc.avatarUrl || null,
+          provider,   // ← NEW
+        })
 
     // Subscribe after login — no-ops silently if already subscribed
     registerAndSubscribe(accountUser.$id)
@@ -246,12 +260,13 @@ export const AuthProvider = ({ children }) => {
     setAuthStatus(true)
 
     upsertSavedAccount({
-      userId: loggedInUser.$id,
-      name: profile.name,
-      username: profile.username,
-      email: loggedInUser.email,
-      avatarUrl: profile.avatarUrl || null,
-    })
+          userId: loggedInUser.$id,
+          name:   profile.name,
+          username: profile.username,
+          email:  loggedInUser.email,
+          avatarUrl: profile.avatarUrl || null,
+          provider: null,   // ← NEW: signup is always email/password
+        })
 
     registerAndSubscribe(loggedInUser.$id)
 
