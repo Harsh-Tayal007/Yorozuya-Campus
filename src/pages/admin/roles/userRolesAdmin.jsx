@@ -11,13 +11,14 @@ import { deleteAccountPermanently } from "@/services/user/deleteAccountService"
 import { useAuth } from "@/context/AuthContext"
 import { ROLES } from "@/config/roles"
 import { CustomSelect, GlassCard } from "@/components/admin/CustomSelect"
+import { logRoleChanged, logAccountDeleted } from "@/services/admin/auditLogService"
 
 const ROLE_CONFIG = {
-  admin:     { label: "Admin",     color: "#ef4444", bg: "bg-red-500/10",     text: "text-red-500",           icon: Shield    },
-  moderator: { label: "Moderator", color: "#8b5cf6", bg: "bg-violet-500/10",  text: "text-violet-500",        icon: Star      },
-  editor:    { label: "Editor",    color: "#3b82f6", bg: "bg-blue-500/10",    text: "text-blue-500",          icon: PencilIcon },
-  user:      { label: "User",      color: "#6b7280", bg: "bg-muted",          text: "text-muted-foreground",  icon: UserIcon  },
-  teacher:   { label: "Teacher",   color: "#10b981", bg: "bg-emerald-500/10", text: "text-emerald-500",       icon: BookOpen  },
+  admin: { label: "Admin", color: "#ef4444", bg: "bg-red-500/10", text: "text-red-500", icon: Shield },
+  moderator: { label: "Moderator", color: "#8b5cf6", bg: "bg-violet-500/10", text: "text-violet-500", icon: Star },
+  editor: { label: "Editor", color: "#3b82f6", bg: "bg-blue-500/10", text: "text-blue-500", icon: PencilIcon },
+  user: { label: "User", color: "#6b7280", bg: "bg-muted", text: "text-muted-foreground", icon: UserIcon },
+  teacher: { label: "Teacher", color: "#10b981", bg: "bg-emerald-500/10", text: "text-emerald-500", icon: BookOpen },
 }
 
 function RoleBadge({ role }) {
@@ -117,7 +118,7 @@ function DeleteUserModal({ user: targetUser, onClose, onConfirm, loading }) {
 export default function UserRolesAdmin() {
   const { user, role } = useAuth()
   const queryClient = useQueryClient()
-  const [search, setSearch]             = useState("")
+  const [search, setSearch] = useState("")
   const [deleteTarget, setDeleteTarget] = useState(null)   // user object to delete
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -148,6 +149,13 @@ export default function UserRolesAdmin() {
         { username: targetUser.username, oldRole: targetUser.role }
       )
       toast.success(`${targetUser.username} is now ${newRole}`)
+      await logRoleChanged({
+        actor: { $id: user.$id, username: user.username },
+        targetUsername: targetUser.username,
+        targetUserId: targetUser.userId,   // the Appwrite auth ID field
+        oldRole: targetUser.role,
+        newRole,
+      }).catch(() => { })  // never block UI for audit failures
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
     } catch (err) {
       toast.error(err?.message || "Failed to update role")
@@ -160,6 +168,11 @@ export default function UserRolesAdmin() {
       setDeleteLoading(true)
       await deleteAccountPermanently(deleteTarget.userId)
       toast.success(`${deleteTarget.username}'s account has been permanently deleted.`)
+      await logAccountDeleted({
+        actor: { $id: user.$id, username: user.username },
+        targetUserId: deleteTarget.userId,
+        targetUsername: deleteTarget.username,
+      }).catch(() => { })
       setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
     } catch (err) {
@@ -243,7 +256,7 @@ export default function UserRolesAdmin() {
             <AnimatePresence>
               {filtered.map((u, i) => {
                 const isSelf = u.$id === user.$id
-                const cfg    = ROLE_CONFIG[u.role] ?? ROLE_CONFIG.user
+                const cfg = ROLE_CONFIG[u.role] ?? ROLE_CONFIG.user
                 return (
                   <motion.div key={u.$id}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}

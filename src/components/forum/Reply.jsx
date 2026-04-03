@@ -26,6 +26,7 @@ import ReplyContent from "./ReplyContent"
 import TiptapEditor from "./TiptapEditor"
 import useHashHighlight from "@/hooks/useHashHighlight"
 import ReportModal from "@/components/forum/ReportModal"
+import { logReplyDeleted } from "@/services/admin/auditLogService"
 
 // =============================================================================
 // CONSTANTS
@@ -241,10 +242,19 @@ const Reply = ({
     await deleteReply.mutateAsync({
       replyId: id,
       hasChildren: replyHasChildren,
-      modDeleted: canAdminDelete,   // ← true when an admin/mod deletes someone else's reply
+      modDeleted: canAdminDelete,
     })
+    // Log to activity if this was a mod/admin action on someone else's reply
+    if (canAdminDelete && user) {
+      logReplyDeleted({
+        actor: { $id: user.$id, username: user.username },
+        targetUsername: reply.authorName,
+        replyId: id,
+        threadId,
+      }).catch(() => { })
+    }
     setShowOptions(false)
-  }, [reply, deleteReply, replies.children, canAdminDelete])
+  }, [reply, deleteReply, replies.children, canAdminDelete, user, threadId])
 
   const handleEditSave = useCallback(() => {
     if (!editText.trim()) return
