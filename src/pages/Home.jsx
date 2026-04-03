@@ -123,8 +123,7 @@ export default function Home() {
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground
                           max-w-xl mx-auto leading-relaxed">
-              A unified academic platform — PYQs, syllabus, resources and a
-              student forum, all in one place.
+              An all in one academic platform for students to access syllabus, past year questions, study resources and connect through a student forum.
             </p>
           </motion.div>
 
@@ -178,7 +177,7 @@ export default function Home() {
           <GlassCard className="p-6 sm:p-7">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center
-                              justify-center shrink-0 mt-0.5">
+                      justify-center shrink-0 mt-0.5">
                 <GraduationCap size={15} className="text-indigo-500" />
               </div>
               <div>
@@ -189,25 +188,20 @@ export default function Home() {
 
             <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
               <p>
-                The name{" "}
-                <span className="font-semibold text-foreground">Unizuya</span>{" "}
-                is inspired by the idea of{" "}
-                <span className="italic text-foreground">"Odd Jobs"</span> — a concept
-                from Japanese pop culture where a single platform takes care of many
-                different needs.
+                The name <span className="font-semibold text-foreground">Unizuya</span> is inspired by the idea of <span className="italic text-foreground">"Odd Jobs"</span> from Japanese pop culture, where one place handles many different needs.
               </p>
               <p>
-                In the same spirit, Unizuya brings together multiple academic services
-                to make student life simpler and more organised — from past year questions
-                and syllabus to study resources and a student discussion forum.
+                In the same spirit, Unizuya is a campus platform designed to bring together syllabus, past year questions, study resources and a student forum in one place. It helps students access everything they need for academics without switching between multiple platforms.
               </p>
-              <p>Think of it as your university companion that actually does odd jobs for you.</p>
+              <p>
+                Think of it as your university companion for learning, productivity and academic management, built to simplify student life.
+              </p>
             </div>
 
             <div className="mt-5 pt-5 border-t border-border/40">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                Currently in active development. More features and universities added over time.
+                Currently in active development. More features and universities will be added over time.
               </div>
             </div>
           </GlassCard>
@@ -219,22 +213,55 @@ export default function Home() {
             What you can do
           </motion.h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
             <FeatureCard
-              icon={FileText} title="Past Year Questions"
-              desc="Access PYQs organised by university, program and branch — searchable and filterable."
-              color="bg-orange-500/15 text-orange-500" delay={0.28} />
+              icon={FileText}
+              title="Past Year Questions"
+              desc="Access past year questions organised by university, course and subject to prepare effectively for exams."
+              color="bg-orange-500/15 text-orange-500"
+              delay={0.28}
+            />
+
             <FeatureCard
-              icon={BookOpen} title="Syllabus & Study Materials"
-              desc="Browse structured syllabus and upload or download study resources for any subject."
-              color="bg-blue-500/15 text-blue-500" delay={0.32} />
+              icon={BookOpen}
+              title="Syllabus and Study Materials"
+              desc="Explore syllabus and upload or download study resources to stay organised throughout your semester."
+              color="bg-blue-500/15 text-blue-500"
+              delay={0.32}
+            />
+
             <FeatureCard
-              icon={MessageSquare} title="Student Forum"
-              desc="Ask questions, share insights and discuss academics with students from your university."
-              color="bg-indigo-500/15 text-indigo-500" delay={0.36} />
+              icon={MessageSquare}
+              title="Student Forum"
+              desc="Ask questions, share knowledge and participate in discussions with students across universities."
+              color="bg-indigo-500/15 text-indigo-500"
+              delay={0.36}
+            />
+
             <FeatureCard
-              icon={Layers} title="Organised by University"
-              desc="Everything is scoped to your university and program — see only what's relevant to you."
-              color="bg-emerald-500/15 text-emerald-500" delay={0.40} />
+              icon={Layers}
+              title="University Based Content"
+              desc="View content tailored to your university, branch and course so you only see relevant academic information."
+              color="bg-emerald-500/15 text-emerald-500"
+              delay={0.40}
+            />
+
+            <FeatureCard
+              icon={GraduationCap}
+              title="Attendance Management"
+              desc="Track attendance using token based system and manage class records easily for better academic tracking."
+              color="bg-pink-500/15 text-pink-500"
+              delay={0.44}
+            />
+
+            <FeatureCard
+              icon={Zap}
+              title="Student Productivity Tools"
+              desc="Use tools like CGPA calculator, timetable builder and task tracker to manage your academic workflow."
+              color="bg-yellow-500/15 text-yellow-500"
+              delay={0.48}
+            />
+
           </div>
         </section>
 

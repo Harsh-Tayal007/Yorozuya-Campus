@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Main pages -->
+  <url>
+    <loc>https://unizuya.in/</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/forum</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/universities</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/resources</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/updates</loc>
+  </url>
+
+  <!-- Auth & utility pages -->
+  <url>
+    <loc>https://unizuya.in/login</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/signup</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/forgot-password</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/reset-password</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/privacy</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/verify-email</loc>
+  </url>
+
+  <!-- Dynamic route structures (important for SEO understanding) -->
+
+  <url>
+    <loc>https://unizuya.in/university/</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/programs/</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/programs/syllabus</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/programs/branches</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/programs/resources</loc>
+  </url>
+
+  <url>
+    <loc>https://unizuya.in/programs/pyqs</loc>
+  </url>
+
+</urlset>

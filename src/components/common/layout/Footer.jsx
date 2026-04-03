@@ -2,11 +2,11 @@ import { Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 
 const PLATFORM_LINKS = [
-  { label: "Home",         to: "/"             },
-  { label: "Forum",        to: "/forum"        },
+  { label: "Home", to: "/" },
+  { label: "Forum", to: "/forum" },
   { label: "Universities", to: "/universities" },
-  { label: "Resources",    to: "/universities" },
-  { label: "PYQs",         to: "/universities" },
+  { label: "Resources", to: "/universities" },
+  { label: "PYQs", to: "/universities" },
 ]
 
 const LEGAL_LINKS = [
@@ -44,8 +44,7 @@ export default function Footer() {
                 </span>
               </Link>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
-                A unified academic platform helping students access syllabus,
-                resources, PYQs, and connect through a student forum — all in one place.
+                Unizuya is a academic platform for students to access syllabus, past year questions, study resources and a student forum. It also includes attendance management and productivity tools to simplify academic life.
               </p>
               <div className="mt-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
                               bg-amber-50 dark:bg-amber-500/10
@@ -88,8 +87,8 @@ export default function Footer() {
                   <>
                     {[
                       { label: "Dashboard", to: "/dashboard" },
-                      { label: "Profile",   to: `/profile/${currentUser.username}` },
-                      { label: "Settings",  to: "/dashboard/settings" },
+                      { label: "Profile", to: `/profile/${currentUser.username}` },
+                      { label: "Settings", to: "/dashboard/settings" },
                     ].map(link => (
                       <li key={link.label}>
                         <Link to={link.to}
@@ -104,7 +103,7 @@ export default function Footer() {
                 ) : (
                   <>
                     {[
-                      { label: "Login",   to: "/login"  },
+                      { label: "Login", to: "/login" },
                       { label: "Sign Up", to: "/signup" },
                     ].map(link => (
                       <li key={link.label}>
