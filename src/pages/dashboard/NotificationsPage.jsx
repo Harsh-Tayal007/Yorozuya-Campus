@@ -148,8 +148,8 @@ export default function NotificationsPage() {
                                 {notif.type === "ban" && (
                                     <div className="mx-4 mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-600 dark:text-red-300">
                                         You cannot post or reply while banned. Contact{" "}
-                                        <a href="mailto:support@unizuya.com" className="underline" onClick={e => e.stopPropagation()}>
-                                            support@unizuya.com
+                                        <a href="mailto:support@unizuya.in" className="underline" onClick={e => e.stopPropagation()}>
+                                            support@unizuya.in
                                         </a>{" "}
                                         to appeal.
                                     </div>

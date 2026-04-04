@@ -186,9 +186,9 @@ const PrivacyPolicy = () => {
 
               <p className="text-xs text-slate-400 dark:text-slate-500">
                 If you believe a moderation action was taken in error, contact us at{" "}
-                <a href="mailto:support@unizuya.com"
+                <a href="mailto:support@unizuya.in"
                   className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                  support@unizuya.com
+                  support@unizuya.in
                 </a>
                 .
               </p>
@@ -213,9 +213,9 @@ const PrivacyPolicy = () => {
             <p>
               For questions about your data, deletion requests, or moderation appeals,
               reach out at{" "}
-              <a href="mailto:support@unizuya.com"
+              <a href="mailto:support@unizuya.in"
                 className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                support@unizuya.com
+                support@unizuya.in
               </a>
               . We aim to respond within 48 hours.
             </p>

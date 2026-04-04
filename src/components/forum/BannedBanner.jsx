@@ -32,8 +32,8 @@ export default function BannedBanner() {
         )}
         <p className="text-slate-500 mt-1 text-xs">
           You can read content but cannot post or reply. Contact{" "}
-          <a href="mailto:support@unizuya.com" className="text-blue-400 hover:underline">
-            support@unizuya.com
+          <a href="mailto:support@unizuya.in" className="text-blue-400 hover:underline">
+            support@unizuya.in
           </a>{" "}
           to appeal.
         </p>
