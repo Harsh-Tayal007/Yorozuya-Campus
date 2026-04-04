@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Link } from "react-router-dom"
 import {
     ClipboardCheck, Users, BookOpen,
-    ChevronDown, ArrowUpRight, Search
+    ChevronDown, ArrowUpRight, Search, UserPlus, UserMinus
 } from "lucide-react"
 import { getAllClasses } from "@/services/attendance/classService"
 import { getSessionsByClass } from "@/services/attendance/sessionService"
@@ -12,18 +12,19 @@ import { getEnrollmentsByClass } from "@/services/attendance/classService"
 import { Query } from "appwrite"
 import { databases } from "@/lib/appwrite"
 import { DATABASE_ID } from "@/config/appwrite"
+import { useUpdateClassTeachers } from "@/hooks/attendance/useClasses"
+import { toast } from "sonner"
 
 const USERS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
-function useTeacherNames(teacherIds) {
+function useAllTeachers() {
     return useQuery({
-        queryKey: ["teacher-names", teacherIds],
+        queryKey: ["all-teachers"],
         queryFn: async () => {
-            if (!teacherIds.length) return {}
             const res = await databases.listDocuments(
                 DATABASE_ID, USERS_COLLECTION_ID,
-                [Query.equal("userId", teacherIds), Query.limit(100),
-                Query.select(["userId", "username", "name"])]
+                [Query.equal("role", "teacher"), Query.limit(200),
+                Query.select(["userId", "name", "username"])]
             )
             const map = {}
             for (const doc of res.documents) {
@@ -31,7 +32,6 @@ function useTeacherNames(teacherIds) {
             }
             return map
         },
-        enabled: teacherIds.length > 0,
         staleTime: 1000 * 60 * 5,
     })
 }
@@ -73,9 +73,123 @@ function StatCard({ icon: Icon, label, value, accent, loading }) {
     )
 }
 
+function AssignTeachersModal({ cls, teacherMap, allTeacherIds, onClose }) {
+    const [assigned, setAssigned] = useState([...(cls.teacherIds ?? [])])
+    const updateTeachers = useUpdateClassTeachers()
+
+    // All known teachers not yet assigned
+    const available = allTeacherIds.filter(id => !assigned.includes(id))
+
+    const handleAdd = (id) => setAssigned(a => [...a, id])
+    const handleRemove = (id) => {
+        if (assigned.length === 1) {
+            toast.error("A class must have at least one teacher")
+            return
+        }
+        setAssigned(a => a.filter(t => t !== id))
+    }
+
+    const handleSave = async () => {
+        await updateTeachers.mutateAsync({ classId: cls.$id, teacherIds: assigned })
+        onClose()
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4
+                    bg-black/50 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-card border border-border/60 rounded-2xl shadow-2xl
+                   w-full max-w-sm p-6 space-y-4"
+            >
+                <div>
+                    <h2 className="text-base font-bold">Assign Teachers</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">{cls.name}</p>
+                </div>
+
+                {/* Currently assigned */}
+                <div className="space-y-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                        Assigned ({assigned.length})
+                    </p>
+                    {assigned.length === 0 ? (
+                        <p className="text-xs text-muted-foreground/50">No teachers assigned</p>
+                    ) : (
+                        <div className="space-y-1">
+                            {assigned.map(id => (
+                                <div key={id}
+                                    className="flex items-center justify-between px-3 py-2 rounded-xl
+                             border border-border/40 bg-muted/10">
+                                    <span className="text-sm font-medium text-foreground">
+                                        {teacherMap?.[id] ?? id.slice(0, 12) + "…"}
+                                    </span>
+                                    <button
+                                        onClick={() => handleRemove(id)}
+                                        className="text-muted-foreground hover:text-destructive
+                               transition-colors p-1 rounded-lg hover:bg-destructive/10">
+                                        <UserMinus size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Available to add */}
+                {available.length > 0 && (
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            Add Teacher
+                        </p>
+                        <div className="space-y-1 max-h-36 overflow-y-auto">
+                            {available.map(id => (
+                                <div key={id}
+                                    className="flex items-center justify-between px-3 py-2 rounded-xl
+                             border border-border/40 hover:bg-muted/20 transition-colors">
+                                    <span className="text-sm text-muted-foreground">
+                                        {teacherMap?.[id] ?? id.slice(0, 12) + "…"}
+                                    </span>
+                                    <button
+                                        onClick={() => handleAdd(id)}
+                                        className="text-muted-foreground hover:text-emerald-400
+                               transition-colors p-1 rounded-lg hover:bg-emerald-500/10">
+                                        <UserPlus size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {available.length === 0 && assigned.length === allTeacherIds.length && (
+                    <p className="text-xs text-muted-foreground/50 text-center py-1">
+                        All teachers are assigned to this class
+                    </p>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                    <button onClick={onClose}
+                        className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm
+                       text-muted-foreground hover:bg-muted transition-all">
+                        Cancel
+                    </button>
+                    <button onClick={handleSave} disabled={updateTeachers.isPending}
+                        className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                       text-white text-sm font-medium transition-all disabled:opacity-50">
+                        {updateTeachers.isPending ? "Saving…" : "Save"}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    )
+}
+
 // ── Per-class row ─────────────────────────────────────────────────────────────
-function ClassRow({ cls, index }) {
+function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
     const [expanded, setExpanded] = useState(false)
+    const [showAssign, setShowAssign] = useState(false)
 
     const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
         queryKey: ["sessions", cls.$id],
@@ -271,6 +385,42 @@ function ClassRow({ cls, index }) {
                             No completed sessions yet
                         </p>
                     )}
+
+                    {/* Teachers assigned */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                Assigned Teachers ({cls.teacherIds?.length ?? 0})
+                            </p>
+                            <button
+                                onClick={() => setShowAssign(true)}
+                                className="flex items-center gap-1 text-xs text-indigo-400
+                 hover:text-indigo-300 transition-colors"
+                            >
+                                <UserPlus size={11} /> Manage
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {(cls.teacherIds ?? []).map(id => (
+                                <span key={id}
+                                    className="text-xs px-2 py-1 rounded-lg border border-border/40
+                   bg-muted/20 text-foreground">
+                                    {teacherMap?.[id] ?? id.slice(0, 10) + "…"}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <AnimatePresence>
+                        {showAssign && (
+                            <AssignTeachersModal
+                                cls={cls}
+                                teacherMap={teacherMap}
+                                allTeacherIds={allTeacherIds}
+                                onClose={() => setShowAssign(false)}
+                            />
+                        )}
+                    </AnimatePresence>
                 </div>
             )}
         </motion.div>
@@ -357,8 +507,12 @@ export default function AdminAttendance() {
 
 
     // Unique teacher IDs for filter
+    const { data: allTeachersMap = {} } = useAllTeachers()
+    const allTeacherIds = Object.keys(allTeachersMap)
+    // still need teacherIds for the filter dropdown (only assigned teachers)
     const teacherIds = [...new Set(allClasses.flatMap(c => c.teacherIds ?? []))]
-    const { data: teacherMap = {} } = useTeacherNames(teacherIds)
+    // merge both maps so names resolve everywhere
+    const teacherMap = { ...allTeachersMap }
 
     const filtered = allClasses.filter(c => {
         const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -438,7 +592,13 @@ export default function AdminAttendance() {
                         {filtered.length} class{filtered.length !== 1 ? "es" : ""}
                     </p>
                     {filtered.map((cls, i) => (
-                        <ClassRow key={cls.$id} cls={cls} index={i} />
+                        <ClassRow
+                            key={cls.$id}
+                            cls={cls}
+                            index={i}
+                            teacherMap={teacherMap}
+                            allTeacherIds={allTeacherIds}
+                        />
                     ))}
                 </div>
             )}

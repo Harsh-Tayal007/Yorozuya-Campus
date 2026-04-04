@@ -14,6 +14,7 @@ import {
   getEnrollment,
   updateClass,
   deleteClassAndAllData,
+  updateClassTeachers,
 } from "@/services/attendance/classService";
 import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS } from "@/config/permissions";
@@ -126,6 +127,19 @@ export function useDeleteClass() {
     onSuccess: () => {
       toast.success("Class and all associated data deleted")
       qc.invalidateQueries({ queryKey: ["classes"] })
+    },
+    onError: (err) => toast.error(err.message),
+  })
+}
+
+export function useUpdateClassTeachers() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ classId, teacherIds }) => updateClassTeachers(classId, teacherIds),
+    onSuccess: () => {
+      toast.success("Teachers updated")
+      qc.invalidateQueries({ queryKey: ["classes"] })
+      qc.invalidateQueries({ queryKey: ["classes-all"] })
     },
     onError: (err) => toast.error(err.message),
   })

@@ -200,3 +200,10 @@ export async function deleteClassAndAllData(classId) {
   // 4. Delete class doc
   await databases.deleteDocument(DATABASE_ID, CLASSES_COLLECTION_ID, classId)
 }
+
+export async function updateClassTeachers(classId, teacherIds) {
+  return databases.updateDocument(
+    DATABASE_ID, CLASSES_COLLECTION_ID, classId,
+    { teacherIds }
+  )
+}

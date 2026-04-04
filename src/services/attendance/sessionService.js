@@ -66,10 +66,25 @@ export async function startSession({
   // ── Fetch enrollments (needed for tokens + notifications) ─────────────────
   const enrollments = await getEnrollmentsByClass(classId);
 
-  // ── Generate unique token per student (token mode only) ───────────────────
-  if (mode === "token") {
-    await generateStudentTokens(session.$id, classId, enrollments);
+  // ── Guard: teacher must be assigned to this class ─────────────────────────
+  if (!cls.teacherIds.includes(teacherId)) {
+    await databases.deleteDocument(
+      DATABASE_ID,
+      SESSIONS_COLLECTION_ID,
+      session.$id,
+    );
+    throw new Error("You are not assigned to this class.");
   }
+
+ // ── Generate tokens with rollback on failure ──────────────────────────────
+if (mode === "token") {
+  try {
+    await generateStudentTokens(session.$id, classId, enrollments)
+  } catch {
+    await databases.deleteDocument(DATABASE_ID, SESSIONS_COLLECTION_ID, session.$id)
+    throw new Error("Failed to generate tokens. Please try starting the session again.")
+  }
+}
 
   // ── Fire notifications in background — don't block session start ──────────
   Promise.allSettled(
