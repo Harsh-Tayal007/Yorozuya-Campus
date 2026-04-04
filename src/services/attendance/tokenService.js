@@ -29,7 +29,7 @@ export async function generateStudentTokens(sessionId, classId, enrollments) {
 export async function getMyToken(sessionId, studentId) {
   const res = await databases.listDocuments(
     DATABASE_ID, SESSION_TOKENS_COLLECTION_ID,
-    [Query.equal("sessionId", sessionId), Query.equal("studentId", studentId)]
+    [Query.equal("sessionId", sessionId), Query.equal("studentId", studentId), Query.limit(1)]
   )
   return res.documents[0] ?? null
 }
@@ -38,7 +38,7 @@ export async function getMyToken(sessionId, studentId) {
 export async function getSessionTokens(sessionId) {
   const res = await databases.listDocuments(
     DATABASE_ID, SESSION_TOKENS_COLLECTION_ID,
-    [Query.equal("sessionId", sessionId), Query.limit(200)]
+    [Query.equal("sessionId", sessionId), Query.limit(500)]
   )
   return res.documents
 }
@@ -55,7 +55,7 @@ export async function markTokenUsed(tokenDocId) {
 export async function deleteSessionTokens(sessionId) {
   const res = await databases.listDocuments(
     DATABASE_ID, SESSION_TOKENS_COLLECTION_ID,
-    [Query.equal("sessionId", sessionId), Query.limit(200)]
+    [Query.equal("sessionId", sessionId), Query.limit(500)]
   )
   await Promise.all(res.documents.map(d =>
     databases.deleteDocument(DATABASE_ID, SESSION_TOKENS_COLLECTION_ID, d.$id)

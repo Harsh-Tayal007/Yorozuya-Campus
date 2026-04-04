@@ -4,7 +4,7 @@
 //   2. Task reminder type added to TYPE_META
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Bell, CheckCheck, MessageSquare, AtSign, UserPlus, X, CheckSquare, ShieldX, ShieldCheck } from "lucide-react"
+import { Bell, CheckCheck, MessageSquare, AtSign, UserPlus, X, CheckSquare, ShieldX, ShieldCheck, ClipboardCheck } from "lucide-react"
 import { motion, AnimatePresence, useAnimation, useDragControls, useMotionValue, useTransform } from "framer-motion"
 import useNotifications from "@/hooks/useNotifications"
 
@@ -30,6 +30,7 @@ const TYPE_META = {
   task: { Icon: CheckSquare, color: "text-white", iconBg: "bg-violet-500", avatarBg: "bg-violet-500/15", ring: "ring-violet-500/30" },
   ban: { Icon: ShieldX, color: "text-white", iconBg: "bg-red-500", avatarBg: "bg-red-500/15", ring: "ring-red-500/30" },
   ban_lifted: { Icon: ShieldCheck, color: "text-white", iconBg: "bg-green-500", avatarBg: "bg-green-500/15", ring: "ring-green-500/30" },
+  attendance: { Icon: ClipboardCheck, color: "text-white", iconBg: "bg-emerald-500", avatarBg: "bg-emerald-500/15", ring: "ring-emerald-500/30" },
 }
 
 // ── Avatar with type badge ─────────────────────────────────────────────────────
@@ -412,13 +413,11 @@ export default function NotificationBell() {
   const handleNavigate = (notif) => {
     close()
 
-    // ── Ban notifications → notifications page ──
     if (notif.type === "ban" || notif.type === "ban_lifted") {
       window.location.href = "/dashboard/notifications"
       return
     }
 
-    // Task reminder → navigate to task tracker
     if (notif.type === "task") {
       window.location.href = "/dashboard/tasks"
       return
@@ -429,7 +428,13 @@ export default function NotificationBell() {
       return
     }
 
-    if (!notif.threadId) return
+    // ── ADD HERE — before the threadId guard ──
+    if (notif.type === "attendance") {
+      window.location.href = "/dashboard/attendance"
+      return
+    }
+
+    if (!notif.threadId) return   // ← now attendance never hits this
 
     if (notif.type === "reply" && notif.message?.includes("thread")) {
       window.location.href = notif.replyId

@@ -2,12 +2,12 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ClipboardCheck, Hash, BookOpen, Clock,
-  CheckCircle2, AlertCircle, RefreshCw
+  CheckCircle2, AlertCircle, RefreshCw, ChevronDown
 } from "lucide-react"
 import { useStudentClasses } from "@/hooks/attendance/useClasses"
 import {
   useStudentActiveSessions, useMarkAttendance,
-  useMySessionToken
+  useMySessionToken, useStudentHistory
 } from "@/hooks/attendance/useAttendanceSession"
 import { useAuth } from "@/context/AuthContext"
 import { useQueryClient } from "@tanstack/react-query"
@@ -21,11 +21,11 @@ const inputCls = `w-full h-10 px-3 rounded-xl border border-border/60 bg-card/60
 
 // ── Join Class Modal ──────────────────────────────────────────────────────────
 function JoinClassModal({ onClose }) {
-  const [code, setCode]   = useState("")
-  const [name, setName]   = useState("")
-  const [roll, setRoll]   = useState("")
+  const [code, setCode] = useState("")
+  const [name, setName] = useState("")
+  const [roll, setRoll] = useState("")
   const [isLeet, setIsLeet] = useState(false)
-  const { joinClass }     = useStudentClasses()
+  const { joinClass } = useStudentClasses()
 
   const handle = async () => {
     if (!code || !name || !roll) return
@@ -75,9 +75,9 @@ function JoinClassModal({ onClose }) {
             className={`w-full flex items-center justify-between px-3 py-2.5
                         rounded-xl border transition-all duration-150
                         ${isLeet
-                          ? "border-amber-500/40 bg-amber-500/10"
-                          : "border-border/60 bg-muted/20 hover:bg-muted/40"
-                        }`}
+                ? "border-amber-500/40 bg-amber-500/10"
+                : "border-border/60 bg-muted/20 hover:bg-muted/40"
+              }`}
           >
             <div className="text-left">
               <p className={`text-xs font-semibold ${isLeet ? "text-amber-400" : "text-muted-foreground"}`}>
@@ -221,6 +221,139 @@ function ActiveSessionCard({ session, enrollment }) {
   )
 }
 
+// ── Per-class history card ────────────────────────────────────────────────────
+function ClassHistoryCard({ data, presentSessionIds, classNameMap }) {
+  const [expanded, setExpanded] = useState(false)
+  const { enrollment, sessions, subjectMap, totalSessions, totalPresent } = data
+  const overallPct = totalSessions > 0
+    ? Math.round((totalPresent / totalSessions) * 100) : 0
+
+  const pctColor = overallPct >= 75
+    ? "text-emerald-400"
+    : overallPct >= 50
+      ? "text-amber-400"
+      : totalSessions === 0
+        ? "text-muted-foreground"
+        : "text-destructive"
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/40 overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center justify-between px-4 py-3
+                   hover:bg-muted/20 transition-colors"
+      >
+        <div className="text-left min-w-0">
+          <p className="text-sm font-medium truncate">
+            {classNameMap[enrollment.classId] ?? enrollment.classId}
+          </p>
+          <p className="text-xs text-muted-foreground font-mono mt-0.5">
+            {enrollment.rollNumber}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0 ml-3">
+          <span className={`text-sm font-bold ${pctColor}`}>
+            {totalSessions === 0 ? "—" : `${overallPct}%`}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {totalPresent}/{totalSessions}
+          </span>
+          <ChevronDown size={13}
+            className={`text-muted-foreground transition-transform duration-200
+                        ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="border-t border-border/40"
+          >
+            {totalSessions === 0 ? (
+              <p className="text-xs text-muted-foreground/50 text-center py-4">
+                No sessions recorded yet
+              </p>
+            ) : (
+              <div className="p-3 space-y-3">
+                {/* Per-subject aggregate */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground
+                                 uppercase tracking-wide">
+                    By Subject
+                  </p>
+                  {Object.entries(subjectMap).map(([subject, stat]) => {
+                    const pct = stat.total > 0
+                      ? Math.round((stat.present / stat.total) * 100) : 0
+                    const c = pct >= 75
+                      ? "bg-emerald-500"
+                      : pct >= 50 ? "bg-amber-500" : "bg-destructive"
+                    return (
+                      <div key={subject} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-foreground">{subject}</span>
+                          <span className={`text-xs font-semibold ${pct >= 75 ? "text-emerald-400"
+                            : pct >= 50 ? "text-amber-400"
+                              : "text-destructive"
+                            }`}>
+                            {stat.present}/{stat.total} · {pct}%
+                          </span>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${c}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Session list */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground
+                                 uppercase tracking-wide">
+                    Sessions
+                  </p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {sessions.map(s => {
+                      const present = presentSessionIds.has(s.$id)
+                      return (
+                        <div key={s.$id}
+                          className="flex items-center justify-between px-3 py-1.5
+                                     rounded-lg border border-border/30 hover:bg-muted/10">
+                          <div className="min-w-0">
+                            <span className="text-xs text-foreground">{s.subjectName}</span>
+                            <span className="text-[10px] text-muted-foreground ml-2">
+                              {new Date(s.startTime).toLocaleDateString("en-IN", {
+                                day: "2-digit", month: "short", year: "numeric"
+                              })}
+                            </span>
+                          </div>
+                          <span className={`text-xs font-bold shrink-0 ml-2
+                            ${present ? "text-emerald-400" : "text-muted-foreground/40"}`}>
+                            {present ? "P" : "A"}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function StudentAttendance() {
   const { user } = useAuth()
@@ -228,6 +361,7 @@ export default function StudentAttendance() {
   const [showJoin, setShowJoin] = useState(false)
 
   const { enrollments, isLoading: enrollLoading } = useStudentClasses()
+
   const enrolledClassIds = enrollments.map(e => e.classId)
 
   const { data: activeSessions = [], isLoading: sessionsLoading } =
@@ -242,6 +376,9 @@ export default function StudentAttendance() {
   const classNameMap = Object.fromEntries(allClasses.map(c => [c.$id, c.name]))
 
   const isLoading = enrollLoading || sessionsLoading
+
+  const { byClass, presentSessionIds, isLoading: historyLoading } =
+    useStudentHistory(user.$id, enrollments)
 
   const refreshRoster = () => {
     qc.invalidateQueries({ queryKey: ["enrollments", "student", user.$id] })
@@ -357,6 +494,35 @@ export default function StudentAttendance() {
       <AnimatePresence>
         {showJoin && <JoinClassModal onClose={() => setShowJoin(false)} />}
       </AnimatePresence>
+
+      {/* Attendance History */}
+      {enrollments.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Attendance History
+          </p>
+          {historyLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map(i =>
+                <div key={i} className="h-14 animate-pulse rounded-xl bg-muted/30" />
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {enrollments.map(e => (
+                byClass[e.classId] ? (
+                  <ClassHistoryCard
+                    key={e.classId}
+                    data={byClass[e.classId]}
+                    presentSessionIds={presentSessionIds}
+                    classNameMap={classNameMap}
+                  />
+                ) : null
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

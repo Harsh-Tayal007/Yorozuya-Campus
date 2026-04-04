@@ -81,6 +81,7 @@ import UpdatesPage from "@/pages/updates/UpdatesPage"
 import VerifyEmail from "@/pages/auth/VerifyEmail"
 import AttendancePage from "@/pages/attendance/AttendancePage"
 import ClassAttendanceReport from "@/pages/attendance/ClassAttendanceReport"
+import AdminAttendance from "@/pages/admin/attendance/AdminAttendance"
 
 const AppRoutes = () => {
   return (
@@ -137,7 +138,11 @@ const AppRoutes = () => {
                 <Route path="timetable" element={<TimetableBuilder />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="attendance" element={<AttendancePage />} />
-                <Route path="attendance/class/:classId" element={<ClassAttendanceReport />} />
+                <Route path="attendance/class/:classId" element={
+                  <RequirePermissionRoute permission={PERMISSIONS.MANAGE_CLASSES}>
+                    <ClassAttendanceReport />
+                  </RequirePermissionRoute>
+                } />
 
                 <Route path="syllabus">
                   <Route index element={<DashboardSyllabus />} />
@@ -192,6 +197,11 @@ const AppRoutes = () => {
           <Route path="updates" element={
             <RequirePermissionRoute permission={PERMISSIONS.VIEW_ADMIN_DASHBOARD}>
               <AdminUpdates />
+            </RequirePermissionRoute>
+          } />
+          <Route path="attendance" element={
+            <RequirePermissionRoute permission={PERMISSIONS.VIEW_ATTENDANCE_REPORTS}>
+              <AdminAttendance />
             </RequirePermissionRoute>
           } />
         </Route>

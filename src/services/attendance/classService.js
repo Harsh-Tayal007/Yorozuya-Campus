@@ -124,7 +124,7 @@ export async function getEnrollmentsByClass(classId) {
   const res = await databases.listDocuments(
     DATABASE_ID,
     ENROLLMENTS_COLLECTION_ID,
-    [Query.equal("classId", classId), Query.equal("status", "active")],
+    [Query.equal("classId", classId), Query.equal("status", "active"), Query.limit(500)],
   );
   return res.documents;
 }
@@ -133,7 +133,7 @@ export async function getEnrollmentsByStudent(studentId) {
   const res = await databases.listDocuments(
     DATABASE_ID,
     ENROLLMENTS_COLLECTION_ID,
-    [Query.equal("studentId", studentId), Query.equal("status", "active")],
+    [Query.equal("studentId", studentId), Query.equal("status", "active"), Query.limit(500)],
   );
   return res.documents;
 }
@@ -168,7 +168,7 @@ export async function deleteClassAndAllData(classId) {
   // 1. Delete all enrollments
   const enrollRes = await databases.listDocuments(
     DATABASE_ID, ENROLLMENTS_COLLECTION_ID,
-    [Query.equal("classId", classId), Query.limit(200)]
+    [Query.equal("classId", classId), Query.limit(500)]
   )
   await Promise.all(enrollRes.documents.map(e =>
     databases.deleteDocument(DATABASE_ID, ENROLLMENTS_COLLECTION_ID, e.$id)
@@ -177,16 +177,16 @@ export async function deleteClassAndAllData(classId) {
   // 2. Get all sessions
   const sessionRes = await databases.listDocuments(
     DATABASE_ID, SESSIONS_COLLECTION_ID,
-    [Query.equal("classId", classId), Query.limit(200)]
+    [Query.equal("classId", classId), Query.limit(500)]
   )
 
   // 3. For each session delete records + tokens
   await Promise.all(sessionRes.documents.map(async s => {
     const [records, tokens] = await Promise.all([
       databases.listDocuments(DATABASE_ID, ATTENDANCE_RECORDS_COLLECTION_ID,
-        [Query.equal("sessionId", s.$id), Query.limit(200)]),
+        [Query.equal("sessionId", s.$id), Query.limit(500)]),
       databases.listDocuments(DATABASE_ID, SESSION_TOKENS_COLLECTION_ID,
-        [Query.equal("sessionId", s.$id), Query.limit(200)]),
+        [Query.equal("sessionId", s.$id), Query.limit(500)]),
     ])
     await Promise.all([
       ...records.documents.map(r =>

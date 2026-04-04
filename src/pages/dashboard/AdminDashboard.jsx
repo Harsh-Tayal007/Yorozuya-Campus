@@ -10,38 +10,40 @@ import {
   School, BookOpen, GitBranch, ClipboardList,
   Layers, Upload, FileText, ArrowUpRight,
   Activity, Clock,
+  ClipboardCheck,
 } from "lucide-react"
 
 const collections = {
   universities: import.meta.env.VITE_APPWRITE_UNIVERSITIES_COLLECTION_ID,
-  programs:     import.meta.env.VITE_APPWRITE_PROGRAMS_COLLECTION_ID,
-  branches:     import.meta.env.VITE_APPWRITE_BRANCHES_COLLECTION_ID,
-  syllabus:     import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID,
-  units:        import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID,
-  resources:    import.meta.env.VITE_APPWRITE_RESOURCES_COLLECTION_ID,
-  pyqs:         import.meta.env.VITE_APPWRITE_PYQS_COLLECTION_ID,
+  programs: import.meta.env.VITE_APPWRITE_PROGRAMS_COLLECTION_ID,
+  branches: import.meta.env.VITE_APPWRITE_BRANCHES_COLLECTION_ID,
+  syllabus: import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID,
+  units: import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID,
+  resources: import.meta.env.VITE_APPWRITE_RESOURCES_COLLECTION_ID,
+  pyqs: import.meta.env.VITE_APPWRITE_PYQS_COLLECTION_ID,
 }
 
 // Stat cards are display-only — no routes, no click navigation
 const STAT_CONFIG = [
-  { key: "universities", label: "Universities", icon: School,        permission: "manage:universities", accent: "#6366f1" },
-  { key: "programs",     label: "Programs",     icon: BookOpen,      permission: "manage:programs",     accent: "#8b5cf6" },
-  { key: "branches",     label: "Branches",     icon: GitBranch,     permission: "manage:programs",     accent: "#a78bfa" },
-  { key: "syllabus",     label: "Syllabus",     icon: ClipboardList, permission: "manage:syllabus",     accent: "#06b6d4" },
-  { key: "units",        label: "Units",        icon: Layers,        permission: "manage:units",        accent: "#10b981" },
-  { key: "resources",    label: "Resources",    icon: Upload,        permission: "manage:resources",    accent: "#f59e0b" },
-  { key: "pyqs",         label: "PYQs",         icon: FileText,      permission: "view:pyqs",           accent: "#ef4444" },
+  { key: "universities", label: "Universities", icon: School, permission: "manage:universities", accent: "#6366f1" },
+  { key: "programs", label: "Programs", icon: BookOpen, permission: "manage:programs", accent: "#8b5cf6" },
+  { key: "branches", label: "Branches", icon: GitBranch, permission: "manage:programs", accent: "#a78bfa" },
+  { key: "syllabus", label: "Syllabus", icon: ClipboardList, permission: "manage:syllabus", accent: "#06b6d4" },
+  { key: "units", label: "Units", icon: Layers, permission: "manage:units", accent: "#10b981" },
+  { key: "resources", label: "Resources", icon: Upload, permission: "manage:resources", accent: "#f59e0b" },
+  { key: "pyqs", label: "PYQs", icon: FileText, permission: "view:pyqs", accent: "#ef4444" },
 ]
 
 // Quick actions are the sole navigation entry points
 const ACTIONS = [
-  { title: "Universities", desc: "Manage institutions",            route: "/admin/universities",     icon: School,        permission: "manage:universities", accent: "#6366f1" },
-  { title: "Programs",     desc: "Manage academic programs",       route: "/admin/programs",         icon: BookOpen,      permission: "manage:programs",     accent: "#8b5cf6" },
-  { title: "Branches",     desc: "Add & manage branches",          route: "/admin/branches",         icon: GitBranch,     permission: "manage:programs",     accent: "#a78bfa" },
-  { title: "Syllabus",     desc: "Upload & manage syllabus",       route: "/admin/syllabus",         icon: ClipboardList, permission: "manage:syllabus",     accent: "#06b6d4" },
-  { title: "Units",        desc: "Create & manage units",          route: "/admin/units",            icon: Layers,        permission: "manage:units",        accent: "#10b981" },
-  { title: "Resources",    desc: "Upload study resources",         route: "/admin/resources/upload", icon: Upload,        permission: "manage:resources",    accent: "#f59e0b" },
-  { title: "PYQs",         desc: "Manage previous year questions", route: "/admin/pyq/upload",       icon: FileText,      permission: "manage:pyqs",         accent: "#ef4444" },
+  { title: "Universities", desc: "Manage institutions", route: "/admin/universities", icon: School, permission: "manage:universities", accent: "#6366f1" },
+  { title: "Programs", desc: "Manage academic programs", route: "/admin/programs", icon: BookOpen, permission: "manage:programs", accent: "#8b5cf6" },
+  { title: "Branches", desc: "Add & manage branches", route: "/admin/branches", icon: GitBranch, permission: "manage:programs", accent: "#a78bfa" },
+  { title: "Syllabus", desc: "Upload & manage syllabus", route: "/admin/syllabus", icon: ClipboardList, permission: "manage:syllabus", accent: "#06b6d4" },
+  { title: "Units", desc: "Create & manage units", route: "/admin/units", icon: Layers, permission: "manage:units", accent: "#10b981" },
+  { title: "Resources", desc: "Upload study resources", route: "/admin/resources/upload", icon: Upload, permission: "manage:resources", accent: "#f59e0b" },
+  { title: "PYQs", desc: "Manage previous year questions", route: "/admin/pyq/upload", icon: FileText, permission: "manage:pyqs", accent: "#ef4444" },
+  { title: "Attendance", desc: "View attendance across all classes", route: "/admin/attendance", icon: ClipboardCheck, permission: "view:attendance-reports", accent: "#10b981" },
 ]
 
 const containerVariants = {
@@ -50,7 +52,7 @@ const containerVariants = {
 }
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
 }
 
 function getGreeting() {
@@ -63,7 +65,7 @@ function getGreeting() {
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1)  return "just now"
+  if (m < 1) return "just now"
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
@@ -217,21 +219,21 @@ export default function AdminDashboard() {
       const [universities, programs, branches, syllabus, units, resources, pyqs] =
         await Promise.all([
           databases.listDocuments(DATABASE_ID, collections.universities, [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, collections.programs,     [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, collections.branches,     [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, collections.syllabus,     [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, collections.units,        [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, collections.resources,    [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, collections.pyqs,         [Query.limit(1)]),
+          databases.listDocuments(DATABASE_ID, collections.programs, [Query.limit(1)]),
+          databases.listDocuments(DATABASE_ID, collections.branches, [Query.limit(1)]),
+          databases.listDocuments(DATABASE_ID, collections.syllabus, [Query.limit(1)]),
+          databases.listDocuments(DATABASE_ID, collections.units, [Query.limit(1)]),
+          databases.listDocuments(DATABASE_ID, collections.resources, [Query.limit(1)]),
+          databases.listDocuments(DATABASE_ID, collections.pyqs, [Query.limit(1)]),
         ])
       return {
         universities: universities.total,
-        programs:     programs.total,
-        branches:     branches.total,
-        syllabus:     syllabus.total,
-        units:        units.total,
-        resources:    resources.total,
-        pyqs:         pyqs.total,
+        programs: programs.total,
+        branches: branches.total,
+        syllabus: syllabus.total,
+        units: units.total,
+        resources: resources.total,
+        pyqs: pyqs.total,
       }
     },
     staleTime: 1000 * 60 * 5,

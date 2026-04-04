@@ -1,13 +1,17 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
-import { ArrowLeft, Trash2 } from "lucide-react"
+import { ArrowLeft, Download, Trash2 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { getEnrollmentsByClass, getAllClasses } from "@/services/attendance/classService"
 import { getSessionsByClass, deleteSession } from "@/services/attendance/sessionService"
 import { getRecordsBySession, addRecordManually, removeRecord } from "@/services/attendance/recordService"
 import { toast } from "sonner"
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, Cell
+} from "recharts"
 
 // ── Format date with year ─────────────────────────────────────────────────────
 function formatDate(iso) {
@@ -68,6 +72,382 @@ function useClassReport(classId) {
     cls, roster, sessions, allRecords,
     isLoading: rosterLoading || sessionsLoading || recordsLoading,
   }
+}
+
+function exportCSV(cls, roster, sessions, recordMap) {
+  // Group sessions by date for a date sub-header row
+  const dateRow = ["", "", "", ...sessions.map(s =>
+    new Date(s.startTime).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric"
+    })
+  ), "", "", ""]
+
+  const subjectRow = ["Roll No", "Name", "LEET",
+    ...sessions.map(s => s.subjectName),
+    "Present", "Total", "%"
+  ]
+
+  const rows = roster.map(e => {
+    const cells = sessions.map(s =>
+      recordMap[`${e.studentId}_${s.$id}`] ? "P" : "A"
+    )
+    const presentCount = cells.filter(c => c === "P").length
+    const pct = sessions.length > 0
+      ? Math.round((presentCount / sessions.length) * 100) : 0
+    return [
+      // Prefix roll number with \t so Excel keeps it as text
+      "\t" + e.rollNumber,
+      e.studentName,
+      e.isLeet ? "Yes" : "No",
+      ...cells,
+      presentCount,
+      sessions.length,
+      `${pct}%`,
+    ]
+  })
+
+  // Title + blank + date row + subject row + data rows
+  const allRows = [
+    [`${cls?.name ?? "Class"} — Attendance Report`],
+    [`Exported: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`],
+    [],
+    dateRow,
+    subjectRow,
+    ...rows,
+  ]
+
+  const csv = allRows
+    .map(row => row.map(cell =>
+      `"${String(cell ?? "").replace(/"/g, '""')}"`
+    ).join(","))
+    .join("\n")
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${cls?.name ?? "attendance"}-report-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Scroll chart wrapper (same pattern as AdminStats) ─────────────────────────
+function ScrollChart({ data, minWidth = 600, height = 240, children }) {
+  const scrollRef = useRef(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+
+  const onMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.pageX - scrollRef.current.offsetLeft)
+    setScrollLeft(scrollRef.current.scrollLeft)
+  }
+  const onMouseMove = (e) => {
+    if (!isDragging) return
+    e.preventDefault()
+    const x = e.pageX - scrollRef.current.offsetLeft
+    const walk = (x - startX) * 1.2
+    scrollRef.current.scrollLeft = scrollLeft - walk
+  }
+  const onMouseUp = () => setIsDragging(false)
+
+  const actualWidth = Math.max(minWidth, data.length * 52)
+
+  return (
+    <div
+      ref={scrollRef}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      className="overflow-x-auto scrollbar-thin scrollbar-thumb-border
+                 scrollbar-track-transparent cursor-grab active:cursor-grabbing
+                 -mx-1 px-1"
+      style={{ WebkitOverflowScrolling: "touch" }}
+    >
+      <div style={{ width: actualWidth, height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {children}
+        </ResponsiveContainer>
+      </div>
+      {data.length > 8 && (
+        <p className="text-[10px] text-muted-foreground/50 text-center mt-2">
+          ← drag to scroll →
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ── Custom tooltip ────────────────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-popover border border-border/60 rounded-xl shadow-xl
+                    px-3 py-2 text-xs space-y-1 min-w-[140px]">
+      <p className="font-mono font-semibold text-foreground mb-1">{label}</p>
+      {payload.map(p => (
+        <div key={p.dataKey} className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: p.fill }} />
+            {p.dataKey}
+          </span>
+          <span className="font-bold text-foreground">{p.value}%</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Subject analytics ─────────────────────────────────────────────────────────
+// ── Date filter presets ───────────────────────────────────────────────────────
+const PRESETS = [
+  { label: "All time", days: null },
+  { label: "7d", days: 7 },
+  { label: "30d", days: 30 },
+  { label: "3mo", days: 90 },
+]
+
+function SubjectAnalytics({ sessions, roster, recordMap }) {
+  if (sessions.length === 0 || roster.length === 0) return null
+
+  // ── Filter state ────────────────────────────────────────────────────────────
+  const [preset, setPreset] = useState("All time")
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
+  const [showRange, setShowRange] = useState(false)
+
+  // ── Compute filtered sessions ───────────────────────────────────────────────
+  const filteredSessions = sessions.filter(s => {
+    const d = new Date(s.startTime)
+
+    // Custom range takes priority over preset
+    if (fromDate || toDate) {
+      const from = fromDate ? new Date(fromDate) : null
+      const to = toDate ? new Date(toDate) : null
+      if (to) to.setHours(23, 59, 59, 999) // include full end day
+      if (from && d < from) return false
+      if (to && d > to) return false
+      return true
+    }
+
+    // Preset
+    const p = PRESETS.find(p => p.label === preset)
+    if (!p || p.days === null) return true
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - p.days)
+    return d >= cutoff
+  })
+
+  const handlePreset = (label) => {
+    setPreset(label)
+    setFromDate("")
+    setToDate("")
+    setShowRange(false)
+  }
+
+  const isCustomActive = !!(fromDate || toDate)
+
+  // ── Chart data ──────────────────────────────────────────────────────────────
+  const subjects = [...new Set(filteredSessions.map(s => s.subjectName))]
+
+  const chartData = roster.map(e => {
+    const entry = { rollNumber: e.rollNumber, name: e.studentName }
+    for (const subject of subjects) {
+      const subSessions = filteredSessions.filter(s => s.subjectName === subject)
+      const present = subSessions.filter(s =>
+        recordMap[`${e.studentId}_${s.$id}`]
+      ).length
+      entry[subject] = subSessions.length > 0
+        ? Math.round((present / subSessions.length) * 100)
+        : 0
+    }
+    return entry
+  })
+
+  const subjectStats = subjects.map(subject => {
+    const subSessions = filteredSessions.filter(s => s.subjectName === subject)
+    const total = subSessions.length
+    const avgPct = roster.length > 0 && total > 0
+      ? Math.round(
+        roster.reduce((sum, e) => {
+          const present = subSessions.filter(s =>
+            recordMap[`${e.studentId}_${s.$id}`]
+          ).length
+          return sum + (present / total) * 100
+        }, 0) / roster.length
+      )
+      : 0
+    return { subject, total, avgPct }
+  })
+
+  const COLORS = [
+    "#6366f1", "#10b981", "#f59e0b", "#ef4444",
+    "#8b5cf6", "#06b6d4", "#f97316", "#84cc16",
+  ]
+
+  const minWidth = Math.max(500, roster.length * 60)
+
+  const inputCls = `h-8 px-2 rounded-lg border border-border/60 bg-card/60
+    text-xs text-foreground placeholder:text-muted-foreground/50
+    focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-500
+    hover:border-border transition-all duration-150`
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-4 space-y-4">
+
+      {/* ── Header row ── */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Subject Analytics
+        </p>
+
+        {/* Filter controls */}
+        <div className="flex flex-col gap-2 items-end">
+          {/* Preset buttons */}
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            {PRESETS.map(p => (
+              <button
+                key={p.label}
+                onClick={() => handlePreset(p.label)}
+                className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all font-medium
+                  ${preset === p.label && !isCustomActive
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+              >
+                {p.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setShowRange(v => !v)}
+              className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all font-medium
+                ${isCustomActive
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+            >
+              Custom
+            </button>
+          </div>
+
+          {/* Custom range inputs */}
+          {showRange && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="flex items-center gap-2 flex-wrap justify-end"
+            >
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => { setFromDate(e.target.value); setPreset("") }}
+                className={inputCls}
+              />
+              <span className="text-xs text-muted-foreground">→</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => { setToDate(e.target.value); setPreset("") }}
+                className={inputCls}
+              />
+              {isCustomActive && (
+                <button
+                  onClick={() => { setFromDate(""); setToDate(""); setPreset("All time"); setShowRange(false) }}
+                  className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Subject summary stats ── */}
+      {subjectStats.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {subjectStats.map(({ subject, total, avgPct }) => (
+            <div key={subject}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{subject}</span>
+              <span className="text-muted-foreground/60">
+                {total} session{total !== 1 ? "s" : ""}
+              </span>
+              <span className={`font-bold ${avgPct >= 75 ? "text-emerald-400"
+                : avgPct >= 50 ? "text-amber-400"
+                  : "text-destructive"
+                }`}>
+                {avgPct}% avg
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Chart or empty state ── */}
+      {filteredSessions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10
+                        rounded-xl border border-dashed border-border/50">
+          <p className="text-sm text-muted-foreground">No sessions in this range</p>
+          <button
+            onClick={() => { setPreset("All time"); setFromDate(""); setToDate(""); setShowRange(false) }}
+            className="text-xs text-indigo-400 hover:text-indigo-300 mt-1 transition-colors"
+          >
+            Reset to all time
+          </button>
+        </div>
+      ) : (
+        <>
+          <ScrollChart data={chartData} minWidth={minWidth} height={220}>
+            <BarChart data={chartData} barGap={2} barCategoryGap="30%">
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(128,128,128,0.1)"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="rollNumber"
+                tick={{ fontSize: 10, fill: "currentColor", opacity: 0.5 }}
+                axisLine={false} tickLine={false}
+                interval={0} tickMargin={6}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={v => `${v}%`}
+                tick={{ fontSize: 10, fill: "currentColor", opacity: 0.5 }}
+                axisLine={false} tickLine={false} width={36}
+              />
+              <CartesianGrid
+                horizontal vertical={false}
+                strokeDasharray="6 3"
+                stroke="rgba(239,68,68,0.25)"
+                horizontalValues={[75]}
+              />
+              <Tooltip content={<ChartTooltip />}
+                cursor={{ fill: "rgba(128,128,128,0.06)", radius: 4 }} />
+              <Legend
+                wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
+                iconType="circle" iconSize={8}
+              />
+              {subjects.map((subject, i) => (
+                <Bar key={subject} dataKey={subject}
+                  fill={COLORS[i % COLORS.length]}
+                  radius={[4, 4, 0, 0]} maxBarSize={14}
+                />
+              ))}
+            </BarChart>
+          </ScrollChart>
+          <p className="text-[10px] text-muted-foreground/50 text-center">
+            Dashed red line = 75% attendance threshold
+          </p>
+        </>
+      )}
+    </div>
+  )
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -159,7 +539,7 @@ export default function ClassAttendanceReport() {
                      text-muted-foreground hover:text-foreground transition-all">
           <ArrowLeft size={14} />
         </Link>
-        <div>
+        <div className="flex-1 min-w-0">
           <h2 className="text-base font-bold">
             {cls?.name ?? classId} — Attendance Report
           </h2>
@@ -168,7 +548,24 @@ export default function ClassAttendanceReport() {
             <span className="text-indigo-400">Click P/A to toggle · Click 🗑 to delete column</span>
           </p>
         </div>
+        {sessions.length > 0 && (
+          <button
+            onClick={() => exportCSV(cls, roster, sessions, recordMap)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+               border border-border/60 bg-card/60 hover:bg-muted
+               text-xs font-medium text-muted-foreground hover:text-foreground
+               transition-all active:scale-[0.97] shrink-0"
+          >
+            <Download size={13} /> Export CSV
+          </button>
+        )}
       </motion.div>
+
+      <SubjectAnalytics
+        sessions={sessions}
+        roster={roster}
+        recordMap={recordMap}
+      />
 
       {sessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 rounded-2xl

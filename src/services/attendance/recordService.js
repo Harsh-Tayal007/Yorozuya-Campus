@@ -86,7 +86,7 @@ export async function getRecordsBySession(sessionId) {
   const res = await databases.listDocuments(
     DATABASE_ID,
     ATTENDANCE_RECORDS_COLLECTION_ID,
-    [Query.equal("sessionId", sessionId), Query.orderAsc("rollNumber")]
+    [Query.equal("sessionId", sessionId), Query.orderAsc("rollNumber"), Query.limit(500)]
   )
   return res.documents
 }
@@ -95,7 +95,7 @@ export async function getRecordsByStudent(studentId) {
   const res = await databases.listDocuments(
     DATABASE_ID,
     ATTENDANCE_RECORDS_COLLECTION_ID,
-    [Query.equal("studentId", studentId), Query.orderDesc("markedAt")]
+    [Query.equal("studentId", studentId), Query.orderDesc("markedAt"), Query.limit(500)]
   )
   return res.documents
 }
@@ -107,6 +107,7 @@ export async function hasStudentMarked(sessionId, studentId) {
     [
       Query.equal("sessionId", sessionId),
       Query.equal("studentId", studentId),
+      Query.limit(1)
     ]
   )
   return res.documents.length > 0
@@ -116,7 +117,7 @@ export async function hasStudentMarked(sessionId, studentId) {
 export async function addRecordManually({ sessionId, classId, subjectName, studentId, rollNumber, teacherId }) {
   const existing = await databases.listDocuments(
     DATABASE_ID, ATTENDANCE_RECORDS_COLLECTION_ID,
-    [Query.equal("sessionId", sessionId), Query.equal("studentId", studentId)]
+    [Query.equal("sessionId", sessionId), Query.equal("studentId", studentId), Query.limit(1)]
   )
   if (existing.documents.length > 0) throw new Error("Already present")
 
