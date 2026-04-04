@@ -56,9 +56,11 @@ const PageTitleManager = () => {
 
     let title = formattedSegments.join(" / ")
 
-    if (!title) title = "Home"
-
-    document.title = `${title} | ${APP_NAME}`
+    if (!title) {
+      document.title = "Unizuya – Academic Platform for Students"
+    } else {
+      document.title = `${title} | ${APP_NAME}`
+    }
   }, [location])
 
   return null
