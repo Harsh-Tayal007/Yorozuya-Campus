@@ -81,19 +81,19 @@ export function useStartSession(classId) {
 }
 
 export function useCloseSession(classId) {
-  const { user } = useAuth()
-  const qc = useQueryClient()
+  const { user } = useAuth();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ sessionId, physicalCount }) =>
       closeSession(sessionId, physicalCount, user.$id),
     onSuccess: () => {
-      toast.success("Session closed")
-      qc.invalidateQueries({ queryKey: ["session", "active", classId] })
-      qc.invalidateQueries({ queryKey: ["sessions", classId] })
-      qc.invalidateQueries({ queryKey: ["all-records", classId] })
+      toast.success("Session closed");
+      qc.invalidateQueries({ queryKey: ["session", "active", classId] });
+      qc.invalidateQueries({ queryKey: ["sessions", classId] });
+      qc.invalidateQueries({ queryKey: ["all-records", classId] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 
 export function useRefreshToken(classId) {
@@ -243,17 +243,17 @@ export function useSessionTokens(sessionId) {
 }
 
 export function useSuspendSession(classId) {
-  const { user } = useAuth()
-  const qc = useQueryClient()
+  const { user } = useAuth();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (sessionId) => suspendSession(sessionId, user.$id),
     onSuccess: () => {
-      toast.success("Session suspended — no column in report")
-      qc.invalidateQueries({ queryKey: ["session", "active", classId] })
-      qc.invalidateQueries({ queryKey: ["sessions", classId] })
+      toast.success("Session suspended — no column in report");
+      qc.invalidateQueries({ queryKey: ["session", "active", classId] });
+      qc.invalidateQueries({ queryKey: ["sessions", classId] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 
 export function useAddRecord(sessionId, classId) {
@@ -339,12 +339,30 @@ export function useStudentHistory(studentId, enrollments) {
       }
     }
 
+    // new — filter sessions by joinedAt before counting
+    const joinedAt = new Date(enrollment.joinedAt);
+    const eligibleSessions = classSessions.filter(
+      (s) => new Date(s.startTime) >= joinedAt,
+    );
+
+    // Rebuild subjectMap using only eligible sessions
+    const eligibleSubjectMap = {};
+    for (const s of eligibleSessions) {
+      if (!eligibleSubjectMap[s.subjectName]) {
+        eligibleSubjectMap[s.subjectName] = { total: 0, present: 0 };
+      }
+      eligibleSubjectMap[s.subjectName].total++;
+      if (presentSessionIds.has(s.$id)) {
+        eligibleSubjectMap[s.subjectName].present++;
+      }
+    }
+
     byClass[cid] = {
       enrollment,
-      sessions: classSessions,
-      subjectMap,
-      totalSessions: classSessions.length,
-      totalPresent: classSessions.filter((s) => presentSessionIds.has(s.$id))
+      sessions: eligibleSessions,
+      subjectMap: eligibleSubjectMap,
+      totalSessions: eligibleSessions.length,
+      totalPresent: eligibleSessions.filter((s) => presentSessionIds.has(s.$id))
         .length,
     };
   }

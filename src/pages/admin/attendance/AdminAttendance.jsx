@@ -5,7 +5,8 @@ import { Link } from "react-router-dom"
 import {
     ClipboardCheck, Users, BookOpen,
     ChevronDown, ArrowUpRight, Search, UserPlus, UserMinus,
-    Power
+    Power, GraduationCap,
+    Zap
 } from "lucide-react"
 import { getAllClasses } from "@/services/attendance/classService"
 import { getSessionsByClass } from "@/services/attendance/sessionService"
@@ -15,6 +16,9 @@ import { databases } from "@/lib/appwrite"
 import { DATABASE_ID } from "@/config/appwrite"
 import { useUpdateClassTeachers, useToggleClassActive } from "@/hooks/attendance/useClasses"
 import { toast } from "sonner"
+import client from "@/lib/appwrite"
+import { SESSIONS_COLLECTION_ID } from "@/config/appwrite"
+import { useQueryClient } from "@tanstack/react-query"
 
 const USERS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
@@ -191,6 +195,7 @@ function AssignTeachersModal({ cls, teacherMap, allTeacherIds, onClose }) {
 function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
     const [expanded, setExpanded] = useState(false)
     const [showAssign, setShowAssign] = useState(false)
+    const [showStudents, setShowStudents] = useState(false)
 
     const toggleActive = useToggleClassActive()
 
@@ -441,6 +446,76 @@ function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
                         </div>
                     </div>
 
+                    {/* Enrolled students */}
+                    <div className="space-y-1.5">
+                        <button
+                            onClick={() => setShowStudents(v => !v)}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground
+               hover:text-foreground transition-colors w-full text-left"
+                        >
+                            <GraduationCap size={11} className="shrink-0" />
+                            <span className="font-semibold uppercase tracking-wide text-[10px]">
+                                Enrolled Students ({enrollments.length})
+                            </span>
+                            <ChevronDown size={11}
+                                className={`ml-auto transition-transform duration-200
+                  ${showStudents ? "rotate-180" : ""}`} />
+                        </button>
+
+                        <AnimatePresence>
+                            {showStudents && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="overflow-hidden"
+                                >
+                                    {enrollments.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground/50 text-center py-3">
+                                            No students enrolled
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-1 max-h-56 overflow-y-auto">
+                                            {enrollments
+                                                .slice()
+                                                .sort((a, b) => a.rollNumber.localeCompare(b.rollNumber))
+                                                .map(e => (
+                                                    <div key={e.$id}
+                                                        className="flex items-center justify-between px-3 py-2
+                             rounded-lg border border-border/30 bg-muted/10 text-xs">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className="font-mono text-muted-foreground shrink-0">
+                                                                {e.rollNumber}
+                                                            </span>
+                                                            <span
+                                                                className="text-foreground truncate"
+                                                                title={e.studentName}
+                                                            >
+                                                                {e.studentName}
+                                                            </span>
+                                                            {e.isLeet && (
+                                                                <span className="text-[8px] font-bold px-1 py-0.5 rounded
+                                       bg-amber-500/15 text-amber-400
+                                       border border-amber-500/20 uppercase shrink-0">
+                                                                    LEET
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-muted-foreground/50 shrink-0 ml-2 text-[10px]">
+                                                            {new Date(e.joinedAt).toLocaleDateString("en-IN", {
+                                                                day: "2-digit", month: "short", year: "numeric"
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
                     <AnimatePresence>
                         {showAssign && (
                             <AssignTeachersModal
@@ -524,6 +599,36 @@ function TeacherDropdown({ teacherIds, teacherMap, value, onChange }) {
     )
 }
 
+function useActiveSessions(classIds) {
+    const qc = useQueryClient()
+
+    useEffect(() => {
+        if (!classIds.length) return
+        const unsub = client.subscribe(
+            `databases.${import.meta.env.VITE_APPWRITE_DATABASE_ID}.collections.${SESSIONS_COLLECTION_ID}.documents`,
+            (response) => {
+                if (classIds.includes(response.payload.classId)) {
+                    qc.invalidateQueries({ queryKey: ["active-sessions-count"] })
+                }
+            }
+        )
+        return unsub
+    }, [JSON.stringify(classIds)])
+
+    return useQuery({
+        queryKey: ["active-sessions-count", classIds],
+        queryFn: async () => {
+            if (!classIds.length) return 0
+            const results = await Promise.all(
+                classIds.map(id => getSessionsByClass(id))
+            )
+            return results.flat().filter(s => s.isActive).length
+        },
+        enabled: classIds.length > 0,
+        staleTime: 0,
+    })
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminAttendance() {
     const [search, setSearch] = useState("")
@@ -554,7 +659,8 @@ export default function AdminAttendance() {
 
     const totalClasses = allClasses.length
     const totalStrength = allClasses.reduce((s, c) => s + (c.totalStrength ?? 0), 0)
-    const activeCount = 0 // realtime would be needed for live count — kept as placeholder
+    const allClassIds = allClasses.map(c => c.$id)
+    const { data: activeCount = 0 } = useActiveSessions(allClassIds)
 
     return (
         <div className="space-y-6 max-w-5xl">
@@ -574,12 +680,12 @@ export default function AdminAttendance() {
             </motion.div>
 
             {/* Summary stat cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatCard icon={BookOpen} label="Total Classes" value={totalClasses} accent="#6366f1" loading={isLoading} />
                 <StatCard icon={Users} label="Total Strength" value={totalStrength} accent="#10b981" loading={isLoading} />
                 <StatCard icon={ClipboardCheck} label="Teachers" value={teacherIds.length} accent="#f59e0b" loading={isLoading} />
+                <StatCard icon={Zap} label="Live Sessions" value={activeCount} accent="#10b981" loading={isLoading} />
             </div>
-
             {/* Filters */}
             <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative flex-1 min-w-[200px]">

@@ -487,10 +487,18 @@ function SessionPanel({ cls }) {
             ))}
           </div>
           {!cls.isActive ? (
-            <div className="w-full py-2 rounded-xl border border-destructive/20
-                  bg-destructive/5 text-center">
-              <p className="text-xs text-destructive">
-                Class is inactive, reactivate via Edit to start sessions
+            <div className="w-full px-4 py-3 rounded-xl border border-amber-500/20
+                  bg-amber-500/5 space-y-1">
+              <p className="text-xs font-semibold text-amber-400">
+                This class is inactive
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Students cannot join or mark attendance while a class is inactive.
+                To start a session, click the edit icon{" "}
+                <span className="inline-flex items-center gap-0.5 text-foreground font-medium">
+                  <Pencil size={10} /> Edit
+                </span>{" "}
+                above and turn the class back on.
               </p>
             </div>
           ) : (

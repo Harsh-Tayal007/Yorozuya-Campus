@@ -1,8 +1,8 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { motion } from "framer-motion"
-import { ArrowLeft, Download, Trash2 } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
+import { ArrowLeft, Download, Trash2, Printer, ChevronDown } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { getEnrollmentsByClass, getAllClasses } from "@/services/attendance/classService"
 import { getSessionsByClass, deleteSession } from "@/services/attendance/sessionService"
@@ -74,6 +74,12 @@ function useClassReport(classId) {
   }
 }
 
+// Returns only sessions that happened after the student joined
+function getEligibleSessions(sessions, enrollment) {
+  const joinedAt = new Date(enrollment.joinedAt)
+  return sessions.filter(s => new Date(s.startTime) >= joinedAt)
+}
+
 function exportCSV(cls, roster, sessions, recordMap) {
   // Group sessions by date for a date sub-header row
   const dateRow = ["", "", "", ...sessions.map(s =>
@@ -88,21 +94,23 @@ function exportCSV(cls, roster, sessions, recordMap) {
   ]
 
   const rows = roster.map(e => {
-    const cells = sessions.map(s =>
-      recordMap[`${e.studentId}_${s.$id}`] ? "P" : "A"
-    )
-    const presentCount = cells.filter(c => c === "P").length
-    const pct = sessions.length > 0
-      ? Math.round((presentCount / sessions.length) * 100) : 0
+    const cells = sessions.map(s => {
+      const notEnrolledYet = new Date(s.startTime) < new Date(e.joinedAt)
+      if (notEnrolledYet) return "—"
+      return recordMap[`${e.studentId}_${s.$id}`] ? "P" : "A"
+    })
+    const eligibleCells = cells.filter(c => c !== "—")
+    const presentCount = eligibleCells.filter(c => c === "P").length
+    const pct = eligibleCells.length > 0
+      ? Math.round((presentCount / eligibleCells.length) * 100) : 0
     return [
-      // Prefix roll number with \t so Excel keeps it as text
       "\t" + e.rollNumber,
       e.studentName,
       e.isLeet ? "Yes" : "No",
       ...cells,
       presentCount,
-      sessions.length,
-      `${pct}%`,
+      eligibleCells.length,
+      eligibleCells.length === 0 ? "—" : `${pct}%`,
     ]
   })
 
@@ -254,9 +262,13 @@ function SubjectAnalytics({ sessions, roster, recordMap }) {
   const subjects = [...new Set(filteredSessions.map(s => s.subjectName))]
 
   const chartData = roster.map(e => {
+    const joinedAt = new Date(e.joinedAt)
     const entry = { rollNumber: e.rollNumber, name: e.studentName }
     for (const subject of subjects) {
-      const subSessions = filteredSessions.filter(s => s.subjectName === subject)
+      const subSessions = filteredSessions.filter(s =>
+        s.subjectName === subject &&
+        new Date(s.startTime) >= joinedAt   // only sessions after enrollment
+      )
       const present = subSessions.filter(s =>
         recordMap[`${e.studentId}_${s.$id}`]
       ).length
@@ -270,22 +282,48 @@ function SubjectAnalytics({ sessions, roster, recordMap }) {
   const subjectStats = subjects.map(subject => {
     const subSessions = filteredSessions.filter(s => s.subjectName === subject)
     const total = subSessions.length
-    const avgPct = roster.length > 0 && total > 0
+    // For class avg, only count eligible sessions per student
+    const eligibleStudents = roster.filter(e =>
+      new Date(e.joinedAt) <= new Date(subSessions[subSessions.length - 1]?.startTime)
+    )
+    const avgPct = eligibleStudents.length > 0 && total > 0
       ? Math.round(
-        roster.reduce((sum, e) => {
-          const present = subSessions.filter(s =>
+        eligibleStudents.reduce((sum, e) => {
+          const joinedAt = new Date(e.joinedAt)
+          const eligible = subSessions.filter(s =>
+            new Date(s.startTime) >= joinedAt
+          )
+          const present = eligible.filter(s =>
             recordMap[`${e.studentId}_${s.$id}`]
           ).length
-          return sum + (present / total) * 100
-        }, 0) / roster.length
+          return sum + (eligible.length > 0 ? (present / eligible.length) * 100 : 0)
+        }, 0) / eligibleStudents.length
       )
       : 0
     return { subject, total, avgPct }
   })
 
   const COLORS = [
-    "#6366f1", "#10b981", "#f59e0b", "#ef4444",
-    "#8b5cf6", "#06b6d4", "#f97316", "#84cc16",
+    "#6366f1", // indigo
+    "#10b981", // emerald
+    "#f59e0b", // amber
+    "#ef4444", // red
+    "#8b5cf6", // violet
+    "#06b6d4", // cyan
+    "#f97316", // orange
+    "#84cc16", // lime
+    "#ec4899", // pink
+    "#14b8a6", // teal
+    "#a855f7", // purple
+    "#eab308", // yellow
+    "#3b82f6", // blue
+    "#f43f5e", // rose
+    "#22c55e", // green
+    "#64748b", // slate
+    "#0ea5e9", // sky
+    "#d946ef", // fuchsia
+    "#78716c", // stone
+    "#fb923c", // light orange
   ]
 
   const minWidth = Math.max(500, roster.length * 60)
@@ -450,6 +488,279 @@ function SubjectAnalytics({ sessions, roster, recordMap }) {
   )
 }
 
+function PrintRegisterModal({ cls, sessions, roster, recordMap, onClose }) {
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
+  const [perPage, setPerPage] = useState("10")
+
+  const inputCls = `w-full h-9 px-3 rounded-xl border border-border/60 bg-card/60
+    text-sm text-foreground placeholder:text-muted-foreground/50
+    focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-500
+    hover:border-border transition-all duration-150`
+
+  const handleGenerate = () => {
+    const from = fromDate ? new Date(fromDate) : null
+    const to = toDate ? new Date(toDate) : null
+    if (to) to.setHours(23, 59, 59, 999)
+
+    const filtered = sessions.filter(s => {
+      const d = new Date(s.startTime)
+      if (from && d < from) return false
+      if (to && d > to) return false
+      return true
+    })
+
+    if (filtered.length === 0) {
+      toast.error("No sessions in this date range")
+      return
+    }
+
+    const maxPerPage = Math.max(1, parseInt(perPage) || 10)
+    const chunks = []
+    for (let i = 0; i < filtered.length; i += maxPerPage) {
+      chunks.push(filtered.slice(i, i + maxPerPage))
+    }
+
+    const formatDate = (iso) => new Date(iso).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric"
+    })
+
+    const pagesHtml = chunks.map((chunk, pageIdx) => {
+      const pageFrom = formatDate(chunk[0].startTime)
+      const pageTo = formatDate(chunk[chunk.length - 1].startTime)
+
+      // Group sessions by date — preserving order
+      const dateGroups = {}
+      const dateOrder = []
+      chunk.forEach(s => {
+        const date = formatDate(s.startTime)
+        if (!dateGroups[date]) { dateGroups[date] = []; dateOrder.push(date) }
+        dateGroups[date].push(s)
+      })
+
+      // Top date row — one th per date spanning its sessions
+      const dateHeaderRow = dateOrder.map(date => `
+    <th colspan="${dateGroups[date].length}"
+        style="border:1px solid #ccc;padding:5px 8px;font-size:11px;
+               font-weight:700;text-align:center;background:#efefef">
+      ${date}
+    </th>
+  `).join("")
+
+      // Sub-header row — subject name per session
+      const subjectHeaderRow = chunk.map(s => `
+    <th style="border:1px solid #ccc;padding:5px 8px;font-size:11px;
+               text-align:center;background:#f5f5f5;min-width:52px;font-weight:600">
+      ${s.subjectName}
+    </th>
+  `).join("")
+
+      const dataRows = roster
+        .slice()
+        .sort((a, b) => a.rollNumber.localeCompare(b.rollNumber))
+        .map((e, ri) => {
+          const cells = chunk.map(s => {
+            const notEnrolled = new Date(s.startTime) < new Date(e.joinedAt)
+            if (notEnrolled) return `
+          <td style="border:1px solid #ccc;text-align:center;
+              padding:5px;color:#bbb;font-size:12px">—</td>`
+            const present = !!recordMap[`${e.studentId}_${s.$id}`]
+            return `
+          <td style="border:1px solid #ccc;text-align:center;padding:5px;
+              font-weight:700;font-size:12px;
+              color:${present ? "#16a34a" : "#dc2626"}">
+            ${present ? "P" : "A"}
+          </td>`
+          }).join("")
+
+          const eligibleSessions = chunk.filter(s =>
+            new Date(s.startTime) >= new Date(e.joinedAt)
+          )
+          const presentCount = eligibleSessions.filter(s =>
+            recordMap[`${e.studentId}_${s.$id}`]
+          ).length
+          const pct = eligibleSessions.length > 0
+            ? Math.round((presentCount / eligibleSessions.length) * 100) : null
+
+          return `
+        <tr style="background:${ri % 2 === 0 ? "#fff" : "#fafafa"}">
+          <td style="border:1px solid #ccc;padding:5px 8px;font-family:monospace;
+              font-size:11px;white-space:nowrap">${e.rollNumber}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;font-size:12px">
+            ${e.studentName}
+            ${e.isLeet
+              ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;margin-left:4px">LEET</span>'
+              : ""}
+          </td>
+          ${cells}
+          <td style="border:1px solid #ccc;text-align:center;padding:5px;
+              font-weight:700;font-size:12px;
+              color:${pct === null ? "#999" : pct >= 75 ? "#16a34a" : pct >= 50 ? "#d97706" : "#dc2626"}">
+            ${pct === null ? "—" : pct + "%"}
+          </td>
+        </tr>`
+        }).join("")
+
+      return `
+    <div class="page" ${pageIdx > 0 ? 'style="page-break-before:always"' : ""}>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                  margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #333">
+        <div style="display:flex;align-items:center;gap:12px">
+          <img src="/pwa-192.png" width="36" height="36"
+               style="border-radius:8px" alt="Unizuya" />
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#111">${cls?.name ?? "Class"}</div>
+            <div style="font-size:11px;color:#666;margin-top:2px">
+              ${cls?.branch ?? ""} · Semester ${cls?.semester ?? ""} · ${roster.length} students
+            </div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#666">Attendance Register</div>
+          <div style="font-size:11px;color:#333;font-weight:600;margin-top:2px">
+            ${pageFrom}${pageFrom !== pageTo ? " to " + pageTo : ""}
+          </div>
+          <div style="font-size:10px;color:#999;margin-top:2px">
+            Page ${pageIdx + 1} of ${chunks.length}
+          </div>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
+        <thead>
+          <!-- Date spanning row -->
+          <tr>
+            <th rowspan="2" style="border:1px solid #ccc;padding:6px 8px;font-size:11px;
+                text-align:left;background:#f0f0f0;white-space:nowrap;vertical-align:middle">
+              Roll No
+            </th>
+            <th rowspan="2" style="border:1px solid #ccc;padding:6px 8px;font-size:11px;
+                text-align:left;background:#f0f0f0;min-width:140px;vertical-align:middle">
+              Student Name
+            </th>
+            ${dateHeaderRow}
+            <th rowspan="2" style="border:1px solid #ccc;padding:6px 8px;font-size:11px;
+                text-align:center;background:#f0f0f0;min-width:48px;vertical-align:middle">
+              %
+            </th>
+          </tr>
+          <!-- Subject sub-header row -->
+          <tr>
+            ${subjectHeaderRow}
+          </tr>
+        </thead>
+        <tbody>${dataRows}</tbody>
+      </table>
+
+      <div style="margin-top:32px;display:flex;justify-content:space-between;align-items:flex-end">
+        <div style="font-size:10px;color:#999">
+          Generated by Unizuya · ${new Date().toLocaleDateString("en-IN", {
+        day: "2-digit", month: "short", year: "numeric"
+      })} · P = Present, A = Absent, — = Not enrolled yet
+        </div>
+        <div style="text-align:center">
+          <div style="width:180px;border-top:1px solid #333;
+                      padding-top:4px;font-size:11px;color:#555">
+            Teacher Signature
+          </div>
+        </div>
+      </div>
+    </div>`
+    }).join("")
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${cls?.name ?? "Attendance"} Register</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; color: #111; background: #fff; padding: 24px; }
+    .page { max-width: 100%; }
+    @media print {
+      body { padding: 12px; }
+      @page { margin: 1cm; size: landscape; }
+    }
+  </style>
+</head>
+<body>${pagesHtml}</body>
+</html>`
+
+    const win = window.open("", "_blank")
+    win.document.write(html)
+    win.document.close()
+    // Auto-trigger print dialog
+    win.onload = () => win.print()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4
+                    bg-black/50 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-card border border-border/60 rounded-2xl shadow-2xl
+                   w-full max-w-sm p-6 space-y-4"
+      >
+        <div>
+          <h2 className="text-base font-bold">Print Attendance Register</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Generates a printable register grouped by date range. Each page fits the sessions you choose.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              From date
+            </label>
+            <input type="date" value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              className={inputCls} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              To date
+            </label>
+            <input type="date" value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              className={inputCls} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Max sessions per page
+            </label>
+            <input type="number" min="1" max="20"
+              value={perPage}
+              onChange={e => setPerPage(e.target.value)}
+              placeholder="e.g. 6 for weekly, 10 for bi-weekly"
+              className={inputCls} />
+            <p className="text-[10px] text-muted-foreground/60">
+              Leave date range empty to include all sessions
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm
+                       text-muted-foreground hover:bg-muted transition-all">
+            Cancel
+          </button>
+          <button onClick={handleGenerate}
+            className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500
+                       text-white text-sm font-medium transition-all
+                       flex items-center justify-center gap-1.5">
+            <Printer size={13} /> Generate
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ClassAttendanceReport() {
   const { classId } = useParams()
@@ -462,6 +773,20 @@ export default function ClassAttendanceReport() {
   const [confirmDel, setConfirmDel] = useState(null) // sessionId pending confirm
 
   const [tooltip, setTooltip] = useState(null) // { x, y, student }
+
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
+  const exportMenuRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setShowExportMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
 
   // "studentId_sessionId" → record doc
   const recordMap = Object.fromEntries(
@@ -497,19 +822,19 @@ export default function ClassAttendanceReport() {
 
   // ── Delete session column ───────────────────────────────────────────────────
   const handleDeleteSession = async (sessionId) => {
-  setDeleting(d => ({ ...d, [sessionId]: true }))
-  try {
-    await deleteSession(sessionId, user.$id)
-    qc.invalidateQueries({ queryKey: ["sessions", classId] })
-    qc.invalidateQueries({ queryKey: ["all-records", classId] })
-    toast.success("Session deleted")
-  } catch (err) {
-    toast.error(err.message)
-  } finally {
-    setDeleting(d => ({ ...d, [sessionId]: false }))
-    setConfirmDel(null)
+    setDeleting(d => ({ ...d, [sessionId]: true }))
+    try {
+      await deleteSession(sessionId, user.$id)
+      qc.invalidateQueries({ queryKey: ["sessions", classId] })
+      qc.invalidateQueries({ queryKey: ["all-records", classId] })
+      toast.success("Session deleted")
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDeleting(d => ({ ...d, [sessionId]: false }))
+      setConfirmDel(null)
+    }
   }
-}
 
   // Group sessions by date, preserving sort order
   const sessionsByDate = sessions.reduce((acc, s) => {
@@ -549,15 +874,57 @@ export default function ClassAttendanceReport() {
           </p>
         </div>
         {sessions.length > 0 && (
-          <button
-            onClick={() => exportCSV(cls, roster, sessions, recordMap)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
-               border border-border/60 bg-card/60 hover:bg-muted
-               text-xs font-medium text-muted-foreground hover:text-foreground
-               transition-all active:scale-[0.97] shrink-0"
-          >
-            <Download size={13} /> Export CSV
-          </button>
+          <div ref={exportMenuRef} className="relative shrink-0">
+            <button
+              onClick={() => setShowExportMenu(v => !v)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+                 border border-border/60 bg-card/60 hover:bg-muted
+                 text-xs font-medium text-muted-foreground hover:text-foreground
+                 transition-all active:scale-[0.97]"
+            >
+              <Download size={13} />
+              Export
+              <ChevronDown size={11}
+                className={`transition-transform duration-200 ${showExportMenu ? "rotate-180" : ""}`} />
+            </button>
+
+            <AnimatePresence>
+              {showExportMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-[calc(100%+6px)] z-50
+                     bg-card border border-border/60 rounded-xl shadow-xl
+                     overflow-hidden backdrop-blur-sm min-w-[160px]"
+                >
+                  <button
+                    onClick={() => {
+                      exportCSV(cls, roster, sessions, recordMap)
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm
+                       text-foreground hover:bg-muted/60 transition-colors text-left"
+                  >
+                    <Download size={13} className="text-muted-foreground" />
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPrintModal(true)
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm
+                       text-foreground hover:bg-muted/60 transition-colors text-left"
+                  >
+                    <Printer size={13} className="text-muted-foreground" />
+                    Print Register
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
       </motion.div>
 
@@ -653,23 +1020,24 @@ export default function ClassAttendanceReport() {
 
             <tbody>
               {roster.map((e, i) => {
-                const presentCount = sessions.filter(s =>
+                const eligibleSessions = getEligibleSessions(sessions, e)
+                const presentCount = eligibleSessions.filter(s =>
                   recordMap[`${e.studentId}_${s.$id}`]
                 ).length
-                const pct = sessions.length > 0
-                  ? Math.round((presentCount / sessions.length) * 100) : 0
+                const pct = eligibleSessions.length > 0
+                  ? Math.round((presentCount / eligibleSessions.length) * 100) : 0
 
                 return (
                   <tr key={e.$id}
                     className={`border-b border-border/30 last:border-0
-                      ${i % 2 === 0 ? "bg-transparent" : "bg-muted/10"}`}>
+        ${i % 2 === 0 ? "bg-transparent" : "bg-muted/10"}`}>
 
                     {/* Student name — sticky */}
                     <td className="px-4 py-2.5 sticky left-0 bg-card/95 backdrop-blur-sm z-10
-               border-r border-border/30">
+             border-r border-border/30">
                       <span
                         className="font-mono text-foreground text-[11px] cursor-default
-               underline decoration-dotted decoration-muted-foreground/40"
+             underline decoration-dotted decoration-muted-foreground/40"
                         onMouseEnter={(ev) => {
                           const rect = ev.currentTarget.getBoundingClientRect()
                           setTooltip({
@@ -690,21 +1058,27 @@ export default function ClassAttendanceReport() {
                       const key = `${e.studentId}_${s.$id}`
                       const present = !!recordMap[key]
                       const busy = toggling[key]
+                      const notEnrolledYet = new Date(s.startTime) < new Date(e.joinedAt)
+
                       return (
                         <td key={s.$id}
                           className="text-center px-1 py-2.5 border-l border-border/20">
-                          <button
-                            onClick={() => handleToggle(e, s)}
-                            disabled={busy}
-                            title={present ? "Click to mark Absent" : "Click to mark Present"}
-                            className={`w-7 h-7 rounded-lg font-bold transition-all
-                                       hover:scale-110 active:scale-95 disabled:opacity-40
-                                       ${present
-                                ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                                : "bg-muted/40 text-muted-foreground/40 hover:bg-red-500/10 hover:text-red-400"
-                              }`}>
-                            {busy ? "…" : present ? "P" : "A"}
-                          </button>
+                          {notEnrolledYet ? (
+                            <span className="text-muted-foreground/20 text-xs font-mono">—</span>
+                          ) : (
+                            <button
+                              onClick={() => handleToggle(e, s)}
+                              disabled={busy}
+                              title={present ? "Click to mark Absent" : "Click to mark Present"}
+                              className={`w-7 h-7 rounded-lg font-bold transition-all
+                           hover:scale-110 active:scale-95 disabled:opacity-40
+                           ${present
+                                  ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                                  : "bg-muted/40 text-muted-foreground/40 hover:bg-red-500/10 hover:text-red-400"
+                                }`}>
+                              {busy ? "…" : present ? "P" : "A"}
+                            </button>
+                          )}
                         </td>
                       )
                     })}
@@ -715,7 +1089,7 @@ export default function ClassAttendanceReport() {
                         : pct >= 50 ? "text-amber-400"
                           : "text-destructive"
                         }`}>
-                        {pct}%
+                        {eligibleSessions.length === 0 ? "—" : `${pct}%`}
                       </span>
                     </td>
                   </tr>
@@ -725,6 +1099,19 @@ export default function ClassAttendanceReport() {
           </table>
         </div>
       )}
+
+      <AnimatePresence>
+        {showPrintModal && (
+          <PrintRegisterModal
+            cls={cls}
+            sessions={sessions}
+            roster={roster}
+            recordMap={recordMap}
+            onClose={() => setShowPrintModal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {tooltip && (
         <div
           className="fixed z-[9999] pointer-events-none"

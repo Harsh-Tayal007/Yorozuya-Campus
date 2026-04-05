@@ -36,7 +36,7 @@ export function useClasses() {
         ? getAllClasses()
         : getClassesByTeacher(user.$id),
     enabled: !!user && isTeacherOrAdmin,
-    staleTime: 1000 * 60,
+    staleTime: 0,
   });
 
   return { classes, isLoading };
@@ -111,41 +111,43 @@ export function useRemoveStudent() {
 }
 
 export function useUpdateClass() {
-  const { user } = useAuth()
-  const qc = useQueryClient()
+  const { user } = useAuth();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ classId, updates }) => updateClass(classId, updates, user.$id),
+    mutationFn: ({ classId, updates }) =>
+      updateClass(classId, updates, user.$id),
     onSuccess: () => {
-      toast.success("Class updated")
-      qc.invalidateQueries({ queryKey: ["classes"] })
+      toast.success("Class updated");
+      qc.invalidateQueries({ queryKey: ["classes"] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 
 export function useDeleteClass() {
-  const { user } = useAuth()
-  const qc = useQueryClient()
+  const { user } = useAuth();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (classId) => deleteClassAndAllData(classId, user.$id),
     onSuccess: () => {
-      toast.success("Class and all associated data deleted")
-      qc.invalidateQueries({ queryKey: ["classes"] })
+      toast.success("Class and all associated data deleted");
+      qc.invalidateQueries({ queryKey: ["classes"] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 export function useUpdateClassTeachers() {
-  const qc = useQueryClient()
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ classId, teacherIds }) => updateClassTeachers(classId, teacherIds),
+    mutationFn: ({ classId, teacherIds }) =>
+      updateClassTeachers(classId, teacherIds),
     onSuccess: () => {
-      toast.success("Teachers updated")
-      qc.invalidateQueries({ queryKey: ["classes"] })
-      qc.invalidateQueries({ queryKey: ["classes-all"] })
+      toast.success("Teachers updated");
+      qc.invalidateQueries({ queryKey: ["classes"] });
+      qc.invalidateQueries({ queryKey: ["classes-all"] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 
 export function useRemovedStudents(classId) {
@@ -154,46 +156,48 @@ export function useRemovedStudents(classId) {
     queryFn: () => getRemovedStudents(classId),
     enabled: !!classId,
     staleTime: 1000 * 30,
-  })
+  });
 }
 
 export function useReEnrollStudent() {
-  const qc = useQueryClient()
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ enrollmentId, classId }) =>
       reEnrollStudent(enrollmentId).then(() => classId),
     onSuccess: (classId) => {
-      toast.success("Student re-enrolled")
-      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId] })
-      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId, "removed"] })
+      toast.success("Student re-enrolled");
+      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId] });
+      qc.invalidateQueries({
+        queryKey: ["enrollments", "class", classId, "removed"],
+      });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 
 export function useLeaveClass() {
-  const { user } = useAuth()
-  const qc = useQueryClient()
+  const { user } = useAuth();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ enrollmentId }) => removeStudent(enrollmentId),
     onSuccess: () => {
-      toast.success("Left class")
-      qc.invalidateQueries({ queryKey: ["enrollments", "student", user.$id] })
-      qc.invalidateQueries({ queryKey: ["student-history-records"] })
-      qc.invalidateQueries({ queryKey: ["student-history-sessions"] })
+      toast.success("Left class");
+      qc.invalidateQueries({ queryKey: ["enrollments", "student", user.$id] });
+      qc.invalidateQueries({ queryKey: ["student-history-records"] });
+      qc.invalidateQueries({ queryKey: ["student-history-sessions"] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }
 
 export function useToggleClassActive() {
-  const qc = useQueryClient()
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ classId, isActive }) => toggleClassActive(classId, isActive),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["classes-all"] })
-      qc.invalidateQueries({ queryKey: ["classes"] })
+      qc.invalidateQueries({ queryKey: ["classes-all"] });
+      qc.invalidateQueries({ queryKey: ["classes"] });
     },
     onError: (err) => toast.error(err.message),
-  })
+  });
 }

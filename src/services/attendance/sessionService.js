@@ -18,6 +18,46 @@ function generateToken() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+const PUSH_WORKER = import.meta.env.VITE_PUSH_WORKER_URL;
+const PUSH_SUBSCRIPTIONS_COLLECTION_ID = import.meta.env
+  .VITE_APPWRITE_PUSH_SUBSCRIPTIONS_COLLECTION_ID;
+
+async function sendAttendancePush(studentIds, subjectName, className) {
+  if (!studentIds.length || !PUSH_WORKER) return;
+
+  try {
+    // Fetch all push subscriptions for enrolled students
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      PUSH_SUBSCRIPTIONS_COLLECTION_ID,
+      [Query.equal("userId", studentIds), Query.limit(500)],
+    );
+
+    if (res.documents.length === 0) return;
+
+    const subscriptions = res.documents.map((doc) => ({
+      endpoint: doc.endpoint,
+      keys: { p256dh: doc.p256dh, auth: doc.auth },
+    }));
+
+    // Fire and forget — don't block session start
+    fetch(`${PUSH_WORKER}/send-bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscriptions,
+        title: "Attendance started",
+        body: `${subjectName} in ${className}. Open Unizuya to mark your attendance.`,
+        url: "/dashboard/attendance",
+        tag: "attendance-session",
+        type: "attendance",
+      }),
+    }).catch(() => {}); // silent fail — push is best-effort
+  } catch {
+    // Silent fail — never block session start for push errors
+  }
+}
+
 // ── Sessions ──────────────────────────────────────────────────────────────────
 
 export async function startSession({
@@ -76,27 +116,40 @@ export async function startSession({
     throw new Error("You are not assigned to this class.");
   }
 
- // ── Generate tokens with rollback on failure ──────────────────────────────
-if (mode === "token") {
-  try {
-    await generateStudentTokens(session.$id, classId, enrollments)
-  } catch {
-    await databases.deleteDocument(DATABASE_ID, SESSIONS_COLLECTION_ID, session.$id)
-    throw new Error("Failed to generate tokens. Please try starting the session again.")
+  // ── Generate tokens with rollback on failure ──────────────────────────────
+  if (mode === "token") {
+    try {
+      await generateStudentTokens(session.$id, classId, enrollments);
+    } catch {
+      await databases.deleteDocument(
+        DATABASE_ID,
+        SESSIONS_COLLECTION_ID,
+        session.$id,
+      );
+      throw new Error(
+        "Failed to generate tokens. Please try starting the session again.",
+      );
+    }
   }
-}
 
-  // ── Fire notifications in background — don't block session start ──────────
+  /// ── Fire notifications in background — don't block session start ──────────
   Promise.allSettled(
     enrollments.map((e) =>
       createNotification({
         recipientId: e.studentId,
         type: "attendance",
         actorId: teacherId,
-        actorName: cls.name, // class name as actor label — readable in notif
+        actorName: cls.name,
         message: `Attendance started for ${subjectName} in ${cls.name}`,
       }),
     ),
+  );
+
+  // ── Fire push notifications in background ─────────────────────────────────
+  sendAttendancePush(
+    enrollments.map((e) => e.studentId),
+    subjectName,
+    cls.name,
   );
 
   return session;
@@ -119,21 +172,25 @@ export async function refreshToken(sessionId) {
 
 export async function closeSession(sessionId, physicalCount, teacherId) {
   const session = await databases.getDocument(
-    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId
-  )
+    DATABASE_ID,
+    SESSIONS_COLLECTION_ID,
+    sessionId,
+  );
   if (session.teacherId !== teacherId) {
-    throw new Error("You are not authorized to close this session.")
+    throw new Error("You are not authorized to close this session.");
   }
-  await deleteSessionTokens(sessionId)
+  await deleteSessionTokens(sessionId);
   return databases.updateDocument(
-    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId,
+    DATABASE_ID,
+    SESSIONS_COLLECTION_ID,
+    sessionId,
     {
       isActive: false,
       suspended: false,
       endTime: new Date().toISOString(),
       presentCount: physicalCount,
-    }
-  )
+    },
+  );
 }
 
 export async function incrementPresentCount(sessionId, currentCount) {
@@ -186,31 +243,45 @@ export async function getActiveSessionsForStudent(enrolledClassIds) {
 
 export async function suspendSession(sessionId, teacherId) {
   const session = await databases.getDocument(
-    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId
-  )
+    DATABASE_ID,
+    SESSIONS_COLLECTION_ID,
+    sessionId,
+  );
   if (session.teacherId !== teacherId) {
-    throw new Error("You are not authorized to suspend this session.")
+    throw new Error("You are not authorized to suspend this session.");
   }
-  await deleteSessionTokens(sessionId)
+  await deleteSessionTokens(sessionId);
   return databases.updateDocument(
-    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId,
-    { isActive: false, suspended: true, endTime: new Date().toISOString() }
-  )
+    DATABASE_ID,
+    SESSIONS_COLLECTION_ID,
+    sessionId,
+    { isActive: false, suspended: true, endTime: new Date().toISOString() },
+  );
 }
 
 export async function deleteSession(sessionId, teacherId) {
   const session = await databases.getDocument(
-    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId
-  )
+    DATABASE_ID,
+    SESSIONS_COLLECTION_ID,
+    sessionId,
+  );
   if (teacherId && session.teacherId !== teacherId) {
-    throw new Error("You are not authorized to delete this session.")
+    throw new Error("You are not authorized to delete this session.");
   }
-  const records = await getRecordsBySession(sessionId)
+  const records = await getRecordsBySession(sessionId);
   await Promise.all(
-    records.map(r =>
-      databases.deleteDocument(DATABASE_ID, ATTENDANCE_RECORDS_COLLECTION_ID, r.$id)
-    )
-  )
-  await deleteSessionTokens(sessionId)
-  await databases.deleteDocument(DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId)
+    records.map((r) =>
+      databases.deleteDocument(
+        DATABASE_ID,
+        ATTENDANCE_RECORDS_COLLECTION_ID,
+        r.$id,
+      ),
+    ),
+  );
+  await deleteSessionTokens(sessionId);
+  await databases.deleteDocument(
+    DATABASE_ID,
+    SESSIONS_COLLECTION_ID,
+    sessionId,
+  );
 }
