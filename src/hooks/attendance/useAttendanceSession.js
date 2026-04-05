@@ -81,18 +81,19 @@ export function useStartSession(classId) {
 }
 
 export function useCloseSession(classId) {
-  const qc = useQueryClient();
+  const { user } = useAuth()
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ sessionId, physicalCount }) =>
-      closeSession(sessionId, physicalCount),
+      closeSession(sessionId, physicalCount, user.$id),
     onSuccess: () => {
-      toast.success("Session closed");
-      qc.invalidateQueries({ queryKey: ["session", "active", classId] });
-      qc.invalidateQueries({ queryKey: ["sessions", classId] });
-      qc.invalidateQueries({ queryKey: ["all-records", classId] });
+      toast.success("Session closed")
+      qc.invalidateQueries({ queryKey: ["session", "active", classId] })
+      qc.invalidateQueries({ queryKey: ["sessions", classId] })
+      qc.invalidateQueries({ queryKey: ["all-records", classId] })
     },
     onError: (err) => toast.error(err.message),
-  });
+  })
 }
 
 export function useRefreshToken(classId) {
@@ -242,16 +243,17 @@ export function useSessionTokens(sessionId) {
 }
 
 export function useSuspendSession(classId) {
-  const qc = useQueryClient();
+  const { user } = useAuth()
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: (sessionId) => suspendSession(sessionId),
+    mutationFn: (sessionId) => suspendSession(sessionId, user.$id),
     onSuccess: () => {
-      toast.success("Session suspended — no column in report");
-      qc.invalidateQueries({ queryKey: ["session", "active", classId] });
-      qc.invalidateQueries({ queryKey: ["sessions", classId] });
+      toast.success("Session suspended — no column in report")
+      qc.invalidateQueries({ queryKey: ["session", "active", classId] })
+      qc.invalidateQueries({ queryKey: ["sessions", classId] })
     },
     onError: (err) => toast.error(err.message),
-  });
+  })
 }
 
 export function useAddRecord(sessionId, classId) {

@@ -497,19 +497,19 @@ export default function ClassAttendanceReport() {
 
   // ── Delete session column ───────────────────────────────────────────────────
   const handleDeleteSession = async (sessionId) => {
-    setDeleting(d => ({ ...d, [sessionId]: true }))
-    try {
-      await deleteSession(sessionId)
-      qc.invalidateQueries({ queryKey: ["sessions", classId] })
-      qc.invalidateQueries({ queryKey: ["all-records", classId] })
-      toast.success("Session deleted")
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setDeleting(d => ({ ...d, [sessionId]: false }))
-      setConfirmDel(null)
-    }
+  setDeleting(d => ({ ...d, [sessionId]: true }))
+  try {
+    await deleteSession(sessionId, user.$id)
+    qc.invalidateQueries({ queryKey: ["sessions", classId] })
+    qc.invalidateQueries({ queryKey: ["all-records", classId] })
+    toast.success("Session deleted")
+  } catch (err) {
+    toast.error(err.message)
+  } finally {
+    setDeleting(d => ({ ...d, [sessionId]: false }))
+    setConfirmDel(null)
   }
+}
 
   // Group sessions by date, preserving sort order
   const sessionsByDate = sessions.reduce((acc, s) => {

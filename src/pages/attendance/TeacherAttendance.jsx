@@ -3,18 +3,18 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   Plus, ChevronRight, Users, BookOpen, Hash,
   Copy, Check, RefreshCw, UserMinus, BarChart2,
-  Pencil, Trash2, ChevronDown
+  Pencil, Trash2, ChevronDown, UserCheck
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useClasses, useCreateClass, useUpdateClass,
-  useDeleteClass, useRemoveStudent, useClassRoster
+  useDeleteClass, useRemoveStudent, useClassRoster, useRemovedStudents, useReEnrollStudent
 } from "@/hooks/attendance/useClasses"
 import {
   useActiveSession, useStartSession, useCloseSession,
   useSessionRecords, useManualMark, useSessionTokens,
-  useSuspendSession
+  useSuspendSession, useSessionHistory
 } from "@/hooks/attendance/useAttendanceSession"
 
 // ── Shared input style ────────────────────────────────────────────────────────
@@ -96,8 +96,8 @@ function SubjectDropdown({ subjects, value, onChange }) {
                 className={`w-full text-left px-3 py-2.5 text-sm transition-colors duration-100
                             hover:bg-muted/60
                             ${value === s
-                              ? "text-indigo-400 bg-indigo-500/10"
-                              : "text-foreground"}`}
+                    ? "text-indigo-400 bg-indigo-500/10"
+                    : "text-foreground"}`}
               >
                 {s}
               </button>
@@ -213,6 +213,7 @@ function EditClassModal({ cls, onClose }) {
     totalStrength: String(cls.totalStrength),
   })
   const [subjects, setSubjects] = useState([...cls.subjects])
+  const [isActive, setIsActive] = useState(cls.isActive ?? true)
   const updateClass = useUpdateClass()
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -228,7 +229,9 @@ function EditClassModal({ cls, onClose }) {
         semester: parseInt(form.semester),
         subjects: validSubjects,
         totalStrength: parseInt(form.totalStrength),
+        isActive,
       }
+
     })
     onClose()
   }
@@ -260,6 +263,34 @@ function EditClassModal({ cls, onClose }) {
             className={inputCls} />
           <SubjectListEditor subjects={subjects} setSubjects={setSubjects} />
         </div>
+        {/* Active toggle */}
+        <button
+          onClick={() => setIsActive(v => !v)}
+          className={`w-full flex items-center justify-between px-3 py-2.5
+              rounded-xl border transition-all duration-150
+              ${isActive
+              ? "border-emerald-500/30 bg-emerald-500/5"
+              : "border-destructive/30 bg-destructive/5"
+            }`}
+        >
+          <div className="text-left">
+            <p className={`text-xs font-semibold
+                   ${isActive ? "text-emerald-400" : "text-destructive"}`}>
+              {isActive ? "Class is Active" : "Class is Inactive"}
+            </p>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+              {isActive
+                ? "Students can join and attend sessions"
+                : "Students cannot join or mark attendance"}
+            </p>
+          </div>
+          <div className={`w-8 h-4 rounded-full transition-all duration-200 relative shrink-0
+                   ${isActive ? "bg-emerald-500" : "bg-destructive/50"}`}>
+            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white
+                     transition-all duration-200 shadow-sm
+                     ${isActive ? "left-4" : "left-0.5"}`} />
+          </div>
+        </button>
         <div className="flex gap-2 pt-2">
           <button onClick={onClose}
             className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm
@@ -336,14 +367,14 @@ function DeleteClassModal({ cls, onClose }) {
 // ── End session modal ─────────────────────────────────────────────────────────
 function EndSessionModal({ session, cls, onClose }) {
   const [physicalCount, setPhysicalCount] = useState("")
-  const closeSession   = useCloseSession(cls.$id)
+  const closeSession = useCloseSession(cls.$id)
   const suspendSession = useSuspendSession(cls.$id)
   const { data: records = [] } = useSessionRecords(session.$id)
 
   const markedCount = records.length
-  const physical    = parseInt(physicalCount)
-  const mismatch    = !isNaN(physical) && physical !== markedCount
-  const canClose    = !isNaN(physical) && physical > 0
+  const physical = parseInt(physicalCount)
+  const mismatch = !isNaN(physical) && physical !== markedCount
+  const canClose = !isNaN(physical) && physical > 0
 
   const handleEnd = async () => {
     if (!canClose) return
@@ -417,18 +448,18 @@ function EndSessionModal({ session, cls, onClose }) {
 
 // ── Session panel ─────────────────────────────────────────────────────────────
 function SessionPanel({ cls }) {
-  const [mode, setMode]         = useState("token")
-  const [subject, setSubject]   = useState(cls.subjects?.[0] ?? "")
+  const [mode, setMode] = useState("token")
+  const [subject, setSubject] = useState(cls.subjects?.[0] ?? "")
   const [showEndModal, setShowEndModal] = useState(false)
 
   const { data: session, isLoading: sessionLoading } = useActiveSession(cls.$id)
-  const startSession  = useStartSession(cls.$id)
-  const { data: records = [] }       = useSessionRecords(session?.$id)
-  const { data: roster = [] }        = useClassRoster(cls.$id)
+  const startSession = useStartSession(cls.$id)
+  const { data: records = [] } = useSessionRecords(session?.$id)
+  const { data: roster = [] } = useClassRoster(cls.$id)
   const { data: sessionTokens = [] } = useSessionTokens(session?.$id)
   const manualMark = useManualMark(session, cls.$id)
 
-  const tokenMap   = Object.fromEntries(sessionTokens.map(t => [t.studentId, t]))
+  const tokenMap = Object.fromEntries(sessionTokens.map(t => [t.studentId, t]))
   const presentIds = new Set(records.map(r => r.studentId))
   const absentRoster = roster.filter(e => !presentIds.has(e.studentId))
 
@@ -455,12 +486,21 @@ function SessionPanel({ cls }) {
               </button>
             ))}
           </div>
-          <button onClick={() => startSession.mutate({ subjectName: subject, mode })}
-            disabled={startSession.isPending}
-            className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500
-                       text-white text-sm font-medium transition-all disabled:opacity-50">
-            {startSession.isPending ? "Starting…" : "Start Session"}
-          </button>
+          {!cls.isActive ? (
+            <div className="w-full py-2 rounded-xl border border-destructive/20
+                  bg-destructive/5 text-center">
+              <p className="text-xs text-destructive">
+                Class is inactive, reactivate via Edit to start sessions
+              </p>
+            </div>
+          ) : (
+            <button onClick={() => startSession.mutate({ subjectName: subject, mode })}
+              disabled={startSession.isPending}
+              className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500
+               text-white text-sm font-medium transition-all disabled:opacity-50">
+              {startSession.isPending ? "Starting…" : "Start Session"}
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -574,11 +614,153 @@ function SessionPanel({ cls }) {
   )
 }
 
+function RemovedStudentsSection({ classId }) {
+  const [expanded, setExpanded] = useState(false)
+  const { data: removed = [] } = useRemovedStudents(classId)
+  const reEnroll = useReEnrollStudent()
+
+  if (removed.length === 0) return null
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground
+                   hover:text-foreground transition-colors"
+      >
+        <ChevronDown size={11}
+          className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+        Removed Students ({removed.length})
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-1 overflow-hidden"
+          >
+            {removed.map(e => (
+              <div key={e.$id}
+                className="flex items-center justify-between px-3 py-2 rounded-lg
+                           border border-border/30 bg-muted/10 group">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    title={e.studentName}
+                    className="text-xs font-mono text-muted-foreground/60 shrink-0"
+                  >
+                    {e.rollNumber}
+                  </span>
+                  {e.isLeet && <LeetBadge />}
+                </div>
+                <button
+                  onClick={() => reEnroll.mutate({ enrollmentId: e.$id, classId })}
+                  disabled={reEnroll.isPending}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity
+                             text-xs px-2 py-1 rounded-lg text-emerald-400/70
+                             hover:text-emerald-400 hover:bg-emerald-500/10
+                             border border-transparent hover:border-emerald-500/20
+                             disabled:opacity-30 shrink-0 ml-2 flex items-center gap-1">
+                  <UserCheck size={11} /> Re-enroll
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function PastSessionsSection({ classId, totalStrength }) {
+  const [expanded, setExpanded] = useState(false)
+  const { data: allSessions = [], isLoading } = useSessionHistory(classId)
+
+  const pastSessions = allSessions
+    .filter(s => !s.isActive && !s.suspended)
+    .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+    .slice(0, 8)
+
+  if (!isLoading && pastSessions.length === 0) return null
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground
+                   hover:text-foreground transition-colors w-full text-left"
+      >
+        <ChevronDown size={11}
+          className={`transition-transform duration-200 shrink-0
+                      ${expanded ? "rotate-180" : ""}`} />
+        <span>Past Sessions ({pastSessions.length})</span>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            {isLoading ? (
+              <div className="space-y-1">
+                {[1, 2, 3].map(i =>
+                  <div key={i} className="h-8 animate-pulse rounded-lg bg-muted/30" />
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1 max-h-52 overflow-y-auto">
+                {pastSessions.map(s => {
+                  const pct = totalStrength > 0
+                    ? Math.round((s.presentCount / totalStrength) * 100) : 0
+                  const pctColor = pct >= 75
+                    ? "text-emerald-400"
+                    : pct >= 50 ? "text-amber-400"
+                      : "text-destructive"
+
+                  return (
+                    <div key={s.$id}
+                      className="flex items-center justify-between px-3 py-2
+                                 rounded-lg border border-border/30 bg-muted/10 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-foreground truncate">
+                          {s.subjectName}
+                        </span>
+                        <span className="text-muted-foreground shrink-0">
+                          {new Date(s.startTime).toLocaleDateString("en-IN", {
+                            day: "2-digit", month: "short", year: "numeric"
+                          })}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded
+                                         bg-muted/40 text-muted-foreground/60 shrink-0">
+                          {s.mode === "token" ? "Token" : "Manual"}
+                        </span>
+                      </div>
+                      <span className={`font-bold shrink-0 ml-2 ${pctColor}`}>
+                        {s.presentCount}/{totalStrength}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ── Class card ────────────────────────────────────────────────────────────────
 function ClassCard({ cls }) {
-  const [expanded, setExpanded]       = useState(false)
-  const [showEdit, setShowEdit]       = useState(false)
-  const [showDelete, setShowDelete]   = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
   const qc = useQueryClient()
   const { data: roster = [] } = useClassRoster(cls.$id)
   const removeStudent = useRemoveStudent()
@@ -597,7 +779,16 @@ function ClassCard({ cls }) {
               <BookOpen size={14} className="text-indigo-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{cls.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold truncate">{cls.name}</p>
+                {!cls.isActive && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded
+                       bg-destructive/10 text-destructive border border-destructive/20
+                       uppercase tracking-wide shrink-0">
+                    Inactive
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {cls.branch} · Sem {cls.semester} · {roster.length}/{cls.totalStrength} enrolled
               </p>
@@ -636,6 +827,8 @@ function ClassCard({ cls }) {
               exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
               className="border-t border-border/40 px-4 py-4 space-y-5">
               <SessionPanel cls={cls} />
+
+              <PastSessionsSection classId={cls.$id} totalStrength={cls.totalStrength} />
 
               {/* Roster */}
               <div className="space-y-2">
@@ -694,6 +887,7 @@ function ClassCard({ cls }) {
                     ))}
                   </div>
                 )}
+                <RemovedStudentsSection classId={cls.$id} />
               </div>
             </motion.div>
           )}

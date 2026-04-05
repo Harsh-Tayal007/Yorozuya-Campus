@@ -15,6 +15,8 @@ import {
   updateClass,
   deleteClassAndAllData,
   updateClassTeachers,
+  reEnrollStudent,
+  getRemovedStudents,
 } from "@/services/attendance/classService";
 import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS } from "@/config/permissions";
@@ -109,9 +111,10 @@ export function useRemoveStudent() {
 }
 
 export function useUpdateClass() {
+  const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ classId, updates }) => updateClass(classId, updates),
+    mutationFn: ({ classId, updates }) => updateClass(classId, updates, user.$id),
     onSuccess: () => {
       toast.success("Class updated")
       qc.invalidateQueries({ queryKey: ["classes"] })
@@ -121,9 +124,10 @@ export function useUpdateClass() {
 }
 
 export function useDeleteClass() {
+  const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (classId) => deleteClassAndAllData(classId),
+    mutationFn: (classId) => deleteClassAndAllData(classId, user.$id),
     onSuccess: () => {
       toast.success("Class and all associated data deleted")
       qc.invalidateQueries({ queryKey: ["classes"] })
@@ -131,7 +135,6 @@ export function useDeleteClass() {
     onError: (err) => toast.error(err.message),
   })
 }
-
 export function useUpdateClassTeachers() {
   const qc = useQueryClient()
   return useMutation({
@@ -140,6 +143,56 @@ export function useUpdateClassTeachers() {
       toast.success("Teachers updated")
       qc.invalidateQueries({ queryKey: ["classes"] })
       qc.invalidateQueries({ queryKey: ["classes-all"] })
+    },
+    onError: (err) => toast.error(err.message),
+  })
+}
+
+export function useRemovedStudents(classId) {
+  return useQuery({
+    queryKey: ["enrollments", "class", classId, "removed"],
+    queryFn: () => getRemovedStudents(classId),
+    enabled: !!classId,
+    staleTime: 1000 * 30,
+  })
+}
+
+export function useReEnrollStudent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ enrollmentId, classId }) =>
+      reEnrollStudent(enrollmentId).then(() => classId),
+    onSuccess: (classId) => {
+      toast.success("Student re-enrolled")
+      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId] })
+      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId, "removed"] })
+    },
+    onError: (err) => toast.error(err.message),
+  })
+}
+
+export function useLeaveClass() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ enrollmentId }) => removeStudent(enrollmentId),
+    onSuccess: () => {
+      toast.success("Left class")
+      qc.invalidateQueries({ queryKey: ["enrollments", "student", user.$id] })
+      qc.invalidateQueries({ queryKey: ["student-history-records"] })
+      qc.invalidateQueries({ queryKey: ["student-history-sessions"] })
+    },
+    onError: (err) => toast.error(err.message),
+  })
+}
+
+export function useToggleClassActive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ classId, isActive }) => toggleClassActive(classId, isActive),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["classes-all"] })
+      qc.invalidateQueries({ queryKey: ["classes"] })
     },
     onError: (err) => toast.error(err.message),
   })

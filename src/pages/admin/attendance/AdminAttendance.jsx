@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Link } from "react-router-dom"
 import {
     ClipboardCheck, Users, BookOpen,
-    ChevronDown, ArrowUpRight, Search, UserPlus, UserMinus
+    ChevronDown, ArrowUpRight, Search, UserPlus, UserMinus,
+    Power
 } from "lucide-react"
 import { getAllClasses } from "@/services/attendance/classService"
 import { getSessionsByClass } from "@/services/attendance/sessionService"
@@ -12,7 +13,7 @@ import { getEnrollmentsByClass } from "@/services/attendance/classService"
 import { Query } from "appwrite"
 import { databases } from "@/lib/appwrite"
 import { DATABASE_ID } from "@/config/appwrite"
-import { useUpdateClassTeachers } from "@/hooks/attendance/useClasses"
+import { useUpdateClassTeachers, useToggleClassActive } from "@/hooks/attendance/useClasses"
 import { toast } from "sonner"
 
 const USERS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
@@ -191,6 +192,8 @@ function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
     const [expanded, setExpanded] = useState(false)
     const [showAssign, setShowAssign] = useState(false)
 
+    const toggleActive = useToggleClassActive()
+
     const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
         queryKey: ["sessions", cls.$id],
         queryFn: () => getSessionsByClass(cls.$id),
@@ -235,7 +238,16 @@ function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-foreground truncate">{cls.name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground truncate">{cls.name}</p>
+                            {!cls.isActive && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded
+                     bg-destructive/10 text-destructive border border-destructive/20
+                     uppercase tracking-wide shrink-0">
+                                    Inactive
+                                </span>
+                            )}
+                        </div>
                         {activeSessions.length > 0 && (
                             <span className="flex items-center gap-1 text-[9px] font-bold uppercase
                                tracking-wide px-1.5 py-0.5 rounded-lg
@@ -276,6 +288,24 @@ function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
                 >
                     Report <ArrowUpRight size={11} />
                 </Link>
+
+                <button
+                    onClick={e => {
+                        e.stopPropagation()
+                        toggleActive.mutate({ classId: cls.$id, isActive: !cls.isActive })
+                    }}
+                    disabled={toggleActive.isPending}
+                    title={cls.isActive ? "Deactivate class" : "Activate class"}
+                    className={`hidden sm:flex items-center gap-1 text-xs px-2 py-1 rounded-lg
+              border transition-all shrink-0 disabled:opacity-40
+              ${cls.isActive
+                            ? "text-muted-foreground border-border/40 hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5"
+                            : "text-emerald-400 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10"
+                        }`}
+                >
+                    <Power size={11} />
+                    {cls.isActive ? "Deactivate" : "Activate"}
+                </button>
 
                 <ChevronDown size={14}
                     className={`text-muted-foreground transition-transform duration-200 shrink-0

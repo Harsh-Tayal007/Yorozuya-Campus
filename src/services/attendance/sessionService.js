@@ -117,19 +117,23 @@ export async function refreshToken(sessionId) {
   );
 }
 
-export async function closeSession(sessionId, physicalCount) {
-  await deleteSessionTokens(sessionId);
+export async function closeSession(sessionId, physicalCount, teacherId) {
+  const session = await databases.getDocument(
+    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId
+  )
+  if (session.teacherId !== teacherId) {
+    throw new Error("You are not authorized to close this session.")
+  }
+  await deleteSessionTokens(sessionId)
   return databases.updateDocument(
-    DATABASE_ID,
-    SESSIONS_COLLECTION_ID,
-    sessionId,
+    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId,
     {
       isActive: false,
       suspended: false,
       endTime: new Date().toISOString(),
-      presentCount: physicalCount, // override with teacher's physical count
-    },
-  );
+      presentCount: physicalCount,
+    }
+  )
 }
 
 export async function incrementPresentCount(sessionId, currentCount) {
@@ -180,36 +184,33 @@ export async function getActiveSessionsForStudent(enrolledClassIds) {
   return results.flatMap((r) => r.documents);
 }
 
-export async function suspendSession(sessionId) {
-  await deleteSessionTokens(sessionId);
+export async function suspendSession(sessionId, teacherId) {
+  const session = await databases.getDocument(
+    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId
+  )
+  if (session.teacherId !== teacherId) {
+    throw new Error("You are not authorized to suspend this session.")
+  }
+  await deleteSessionTokens(sessionId)
   return databases.updateDocument(
-    DATABASE_ID,
-    SESSIONS_COLLECTION_ID,
-    sessionId,
-    { isActive: false, suspended: true, endTime: new Date().toISOString() },
-  );
+    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId,
+    { isActive: false, suspended: true, endTime: new Date().toISOString() }
+  )
 }
 
-export async function deleteSession(sessionId) {
-  // 1. Delete all attendance records for this session
-  const records = await getRecordsBySession(sessionId);
+export async function deleteSession(sessionId, teacherId) {
+  const session = await databases.getDocument(
+    DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId
+  )
+  if (teacherId && session.teacherId !== teacherId) {
+    throw new Error("You are not authorized to delete this session.")
+  }
+  const records = await getRecordsBySession(sessionId)
   await Promise.all(
-    records.map((r) =>
-      databases.deleteDocument(
-        DATABASE_ID,
-        ATTENDANCE_RECORDS_COLLECTION_ID,
-        r.$id,
-      ),
-    ),
-  );
-
-  // 2. Delete session tokens (reuse existing helper)
-  await deleteSessionTokens(sessionId);
-
-  // 3. Delete the session doc itself
-  await databases.deleteDocument(
-    DATABASE_ID,
-    SESSIONS_COLLECTION_ID,
-    sessionId,
-  );
+    records.map(r =>
+      databases.deleteDocument(DATABASE_ID, ATTENDANCE_RECORDS_COLLECTION_ID, r.$id)
+    )
+  )
+  await deleteSessionTokens(sessionId)
+  await databases.deleteDocument(DATABASE_ID, SESSIONS_COLLECTION_ID, sessionId)
 }

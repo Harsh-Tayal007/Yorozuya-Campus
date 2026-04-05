@@ -2,9 +2,10 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ClipboardCheck, Hash, BookOpen, Clock,
-  CheckCircle2, AlertCircle, RefreshCw, ChevronDown
+  CheckCircle2, AlertCircle, RefreshCw, ChevronDown, LogOut,
+  Users
 } from "lucide-react"
-import { useStudentClasses } from "@/hooks/attendance/useClasses"
+import { useStudentClasses, useLeaveClass } from "@/hooks/attendance/useClasses"
 import {
   useStudentActiveSessions, useMarkAttendance,
   useMySessionToken, useStudentHistory
@@ -151,6 +152,13 @@ function ActiveSessionCard({ session, enrollment }) {
                 hour: "2-digit", minute: "2-digit"
               })}
             </p>
+            {/* after the Clock/Started line */}
+            {session.presentCount > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                <Users size={10} />
+                {session.presentCount} student{session.presentCount !== 1 ? "s" : ""} marked so far
+              </p>
+            )}
           </div>
         </div>
         <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide
@@ -245,9 +253,13 @@ function ClassHistoryCard({ data, presentSessionIds, classNameMap }) {
                    hover:bg-muted/20 transition-colors"
       >
         <div className="text-left min-w-0">
-          <p className="text-sm font-medium truncate">
-            {classNameMap[enrollment.classId] ?? enrollment.classId}
-          </p>
+          {classNameMap[enrollment.classId] ? (
+            <p className="text-sm font-medium truncate">
+              {classNameMap[enrollment.classId]}
+            </p>
+          ) : (
+            <div className="h-4 w-32 rounded-lg bg-muted/50 animate-pulse" />
+          )}
           <p className="text-xs text-muted-foreground font-mono mt-0.5">
             {enrollment.rollNumber}
           </p>
@@ -350,6 +362,106 @@ function ClassHistoryCard({ data, presentSessionIds, classNameMap }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function EnrolledClassRow({ enrollment: e, className }) {
+  const [showLeave, setShowLeave] = useState(false)
+
+  return (
+    <>
+      <div
+        className="flex items-center justify-between px-4 py-3 rounded-xl
+                   border border-border/50 bg-card/40 group"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium truncate">{className}</p>
+            {e.isLeet && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded
+                               bg-amber-500/15 text-amber-400 border border-amber-500/20
+                               uppercase tracking-wide shrink-0">
+                LEET
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground font-mono mt-0.5">
+            {e.rollNumber}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <span className="text-[10px] px-2 py-1 rounded-lg border border-border/50
+                           text-muted-foreground bg-muted/30">
+            {e.status}
+          </span>
+          <button
+            onClick={() => setShowLeave(true)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity
+                       p-1.5 rounded-lg text-muted-foreground/60
+                       hover:text-destructive hover:bg-destructive/10
+                       border border-transparent hover:border-destructive/20"
+            title="Leave class"
+          >
+            <LogOut size={12} />
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showLeave && (
+          <LeaveClassModal
+            enrollment={e}
+            className={className}
+            onClose={() => setShowLeave(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+function LeaveClassModal({ enrollment, className, onClose }) {
+  const leaveClass = useLeaveClass()
+
+  const handle = async () => {
+    await leaveClass.mutateAsync({ enrollmentId: enrollment.$id })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4
+                    bg-black/50 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-card border border-border/60 rounded-2xl shadow-2xl
+                   w-full max-w-sm p-6 space-y-4"
+      >
+        <div className="space-y-1">
+          <h2 className="text-base font-bold">Leave Class</h2>
+          <p className="text-xs text-muted-foreground">
+            Are you sure you want to leave{" "}
+            <span className="text-foreground font-semibold">{className}</span>?
+            Your attendance history will be preserved. Your teacher can re-enroll
+            you if needed.
+          </p>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm
+                       text-muted-foreground hover:bg-muted transition-all">
+            Cancel
+          </button>
+          <button onClick={handle} disabled={leaveClass.isPending}
+            className="flex-1 px-4 py-2 rounded-xl bg-destructive hover:bg-destructive/80
+                       text-white text-sm font-medium transition-all disabled:opacity-50">
+            {leaveClass.isPending ? "Leaving…" : "Leave Class"}
+          </button>
+        </div>
+      </motion.div>
     </div>
   )
 }
@@ -460,33 +572,16 @@ export default function StudentAttendance() {
           </div>
         ) : (
           <div className="space-y-2">
-            {enrollments.map(e => (
-              <div key={e.$id}
-                className="flex items-center justify-between px-4 py-3 rounded-xl
-                           border border-border/50 bg-card/40">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">
-                      {classNameMap[e.classId] ?? e.classId}
-                    </p>
-                    {e.isLeet && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded
-                                       bg-amber-500/15 text-amber-400 border border-amber-500/20
-                                       uppercase tracking-wide">
-                        LEET
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                    {e.rollNumber}
-                  </p>
-                </div>
-                <span className="text-[10px] px-2 py-1 rounded-lg border border-border/50
-                                 text-muted-foreground bg-muted/30">
-                  {e.status}
-                </span>
-              </div>
-            ))}
+            {enrollments.map(e => {
+              const className = classNameMap[e.classId] ?? e.classId
+              return (
+                <EnrolledClassRow
+                  key={e.$id}
+                  enrollment={e}
+                  className={className}
+                />
+              )
+            })}
           </div>
         )}
       </div>
