@@ -13,13 +13,5 @@
   - Update frontend to call Worker endpoint instead of Appwrite directly
   - Appwrite API key must be added as a Worker secret via Cloudflare dashboard
 
-### Minor Polish
-- [ ] Improve error message when teacher starts session on inactive class
-  - Current: generic toast from service error
-  - Target: friendly inline message explaining how to reactivate
-- [ ] Show live active session count in Admin Attendance overview
-  - Currently hardcoded to 0
-  - Needs Appwrite Realtime subscription on sessions collection in AdminAttendance
-
 ## Other Features
 <!-- Add future feature TODOs here -->

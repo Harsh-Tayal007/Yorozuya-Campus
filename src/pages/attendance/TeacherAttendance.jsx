@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Plus, ChevronRight, Users, BookOpen, Hash,
@@ -16,6 +16,7 @@ import {
   useSessionRecords, useManualMark, useSessionTokens,
   useSuspendSession, useSessionHistory
 } from "@/hooks/attendance/useAttendanceSession"
+import { createPortal } from "react-dom"
 
 // ── Shared input style ────────────────────────────────────────────────────────
 const inputCls = `w-full h-9 px-3 rounded-xl border border-border/60 bg-card/60
@@ -53,21 +54,45 @@ function InviteCodeBadge({ code }) {
 }
 
 // ── Custom subject dropdown ───────────────────────────────────────────────────
+
 function SubjectDropdown({ subjects, value, onChange }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 })
+  const btnRef = useRef(null)
+  const dropRef = useRef(null)
 
-  // Close on outside click
-  useState(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => {
+      const inBtn = btnRef.current?.contains(e.target)
+      const inDrop = dropRef.current?.contains(e.target)
+      if (inBtn || inDrop) return
+      setOpen(false)
+    }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
-  })
+  }, [open])
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      const newCoords = {
+        top: rect.bottom + window.scrollY + 6,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      }
+      setCoords(newCoords)
+    }
+    setOpen(o => {
+      return !o
+    })
+  }
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={handleOpen}
         className={`${inputCls} flex items-center justify-between text-left`}
       >
         <span className={value ? "text-foreground" : "text-muted-foreground/50"}>
@@ -78,37 +103,50 @@ function SubjectDropdown({ subjects, value, onChange }) {
                       ${open ? "rotate-180" : ""}`} />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 top-[calc(100%+6px)] left-0 right-0
-                       bg-card border border-border/60 rounded-xl shadow-xl
-                       overflow-hidden backdrop-blur-sm"
-          >
-            {subjects.map(s => (
-              <button
-                key={s}
-                onClick={() => { onChange(s); setOpen(false) }}
-                className={`w-full text-left px-3 py-2.5 text-sm transition-colors duration-100
-                            hover:bg-muted/60
-                            ${value === s
-                    ? "text-indigo-400 bg-indigo-500/10"
-                    : "text-foreground"}`}
-              >
-                {s}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {open && createPortal(
+        <motion.div
+          ref={dropRef}
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -4, scale: 0.98 }}
+          transition={{ duration: 0.15 }}
+          style={{
+            position: "absolute",
+            top: coords.top,
+            left: coords.left,
+            width: coords.width,
+            zIndex: 9999,
+          }}
+          className="bg-card border border-border/60 rounded-xl shadow-xl
+           overflow-y-auto backdrop-blur-sm max-h-64
+           [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          {subjects.map(s => (
+            <button
+              key={s}
+              onMouseDown={e => {
+                console.log("[SubjectDropdown] option mousedown:", s)
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+              onClick={() => {
+                console.log("[SubjectDropdown] option clicked:", s)
+                onChange(s)
+                setOpen(false)
+              }}
+              className={`w-full text-left px-3 py-2.5 text-sm transition-colors duration-100
+                          hover:bg-muted/60
+                          ${value === s ? "text-indigo-400 bg-indigo-500/10" : "text-foreground"}`}
+            >
+              {s}
+            </button>
+          ))}
+        </motion.div>,
+        document.body
+      )}
     </div>
   )
 }
-
 // ── Subject list editor (used in create + edit modals) ────────────────────────
 function SubjectListEditor({ subjects, setSubjects }) {
   return (
