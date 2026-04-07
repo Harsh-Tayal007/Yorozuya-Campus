@@ -17,6 +17,9 @@ import {
   useSuspendSession, useSessionHistory
 } from "@/hooks/attendance/useAttendanceSession"
 import { createPortal } from "react-dom"
+import { useAuth } from "@/context/AuthContext"
+import { ROLE_PERMISSIONS, PERMISSIONS } from "@/config/permissions"
+import { toast } from "sonner"
 
 // ── Shared input style ────────────────────────────────────────────────────────
 const inputCls = `w-full h-9 px-3 rounded-xl border border-border/60 bg-card/60
@@ -414,16 +417,18 @@ function EndSessionModal({ session, cls, onClose }) {
   const mismatch = !isNaN(physical) && physical !== markedCount
   const canClose = !isNaN(physical) && physical > 0
 
-  const handleEnd = async () => {
-    if (!canClose) return
-    await closeSession.mutateAsync({ sessionId: session.$id, physicalCount: physical })
-    onClose()
-  }
+ const handleEnd = async () => {
+  if (!canClose) return
+  if (!session?.$id) { toast.error("Session no longer active"); onClose(); return }
+  await closeSession.mutateAsync({ sessionId: session.$id, physicalCount: physical })
+  onClose()
+}
 
-  const handleSuspend = async () => {
-    await suspendSession.mutateAsync(session.$id)
-    onClose()
-  }
+const handleSuspend = async () => {
+  if (!session?.$id) { toast.error("Session no longer active"); onClose(); return }
+  await suspendSession.mutateAsync(session.$id)
+  onClose()
+}
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -490,6 +495,9 @@ function SessionPanel({ cls }) {
   const [subject, setSubject] = useState(cls.subjects?.[0] ?? "")
   const [showEndModal, setShowEndModal] = useState(false)
 
+  const { role, user } = useAuth()
+  const isAssignedTeacher = cls.teacherIds?.includes(user?.$id)
+
   const { data: session, isLoading: sessionLoading } = useActiveSession(cls.$id)
   const startSession = useStartSession(cls.$id)
   const { data: records = [] } = useSessionRecords(session?.$id)
@@ -506,48 +514,56 @@ function SessionPanel({ cls }) {
   return (
     <div className="space-y-4">
       {!session ? (
-        <div className="space-y-3 p-4 rounded-xl border border-border/50 bg-muted/20">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Start Attendance Session
-          </p>
-          <SubjectDropdown
-            subjects={cls.subjects ?? []}
-            value={subject}
-            onChange={setSubject}
-          />
-          <div className="flex gap-2">
-            {["token", "manual"].map(m => (
-              <button key={m} onClick={() => setMode(m)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all
-                  ${mode === m ? "bg-indigo-600 text-white" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
-                {m === "token" ? "Unique Token" : "Manual"}
-              </button>
-            ))}
+        !isAssignedTeacher ? (
+          <div className="px-4 py-3 rounded-xl border border-border/40 bg-muted/10">
+            <p className="text-xs text-muted-foreground">
+              Only assigned teachers can start sessions for this class.
+            </p>
           </div>
-          {!cls.isActive ? (
-            <div className="w-full px-4 py-3 rounded-xl border border-amber-500/20
-                  bg-amber-500/5 space-y-1">
-              <p className="text-xs font-semibold text-amber-400">
-                This class is inactive
-              </p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Students cannot join or mark attendance while a class is inactive.
-                To start a session, click the edit icon{" "}
-                <span className="inline-flex items-center gap-0.5 text-foreground font-medium">
-                  <Pencil size={10} /> Edit
-                </span>{" "}
-                above and turn the class back on.
-              </p>
+        ) : (
+          <div className="space-y-3 p-4 rounded-xl border border-border/50 bg-muted/20">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Start Attendance Session
+            </p>
+            <SubjectDropdown
+              subjects={cls.subjects ?? []}
+              value={subject}
+              onChange={setSubject}
+            />
+            <div className="flex gap-2">
+              {["token", "manual"].map(m => (
+                <button key={m} onClick={() => setMode(m)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all
+                  ${mode === m ? "bg-indigo-600 text-white" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
+                  {m === "token" ? "Unique Token" : "Manual"}
+                </button>
+              ))}
             </div>
-          ) : (
-            <button onClick={() => startSession.mutate({ subjectName: subject, mode })}
-              disabled={startSession.isPending}
-              className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500
+            {!cls.isActive ? (
+              <div className="w-full px-4 py-3 rounded-xl border border-amber-500/20
+                  bg-amber-500/5 space-y-1">
+                <p className="text-xs font-semibold text-amber-400">
+                  This class is inactive
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Students cannot join or mark attendance while a class is inactive.
+                  To start a session, click the edit icon{" "}
+                  <span className="inline-flex items-center gap-0.5 text-foreground font-medium">
+                    <Pencil size={10} /> Edit
+                  </span>{" "}
+                  above and turn the class back on.
+                </p>
+              </div>
+            ) : (
+              <button onClick={() => startSession.mutate({ subjectName: subject, mode })}
+                disabled={startSession.isPending}
+                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500
                text-white text-sm font-medium transition-all disabled:opacity-50">
-              {startSession.isPending ? "Starting…" : "Start Session"}
-            </button>
-          )}
-        </div>
+                {startSession.isPending ? "Starting…" : "Start Session"}
+              </button>
+            )}
+          </div>
+        )
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between p-4 rounded-xl
@@ -560,7 +576,10 @@ function SessionPanel({ cls }) {
                 {records.length} / {cls.totalStrength} present
               </p>
             </div>
-            <button onClick={() => setShowEndModal(true)}
+            <button onClick={() => {
+              if (!session?.$id) return
+              setShowEndModal(true)
+            }}
               className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive
                          border border-destructive/20 text-xs font-medium
                          hover:bg-destructive/20 transition-all">
