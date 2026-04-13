@@ -44,7 +44,7 @@
 }
 
 :root {
-  color-scheme: light;         /* ← tells browser this is a light page */
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
@@ -80,7 +80,7 @@
 }
 
 .dark {
-  color-scheme: dark;          /* ← tells browser this is a dark page */
+  color-scheme: dark;
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -122,6 +122,10 @@
 
   html {
     scrollbar-gutter: stable;
+    /* CHANGE 1: background moved from body to html so body can be transparent,
+       allowing fixed z-index:-10 blobs to show through */
+    background-color: var(--background);
+    transition: background-color 180ms ease;
   }
 
   html, body {
@@ -129,9 +133,11 @@
   }
 
   body {
-    background-color: var(--background);
+    /* CHANGE 1 (continued): background-color removed from body — now transparent.
+       html carries the page color; body sits above the fixed blobs but doesn't
+       cover them since it has no opaque background of its own. */
     color: var(--foreground);
-    transition: background-color 180ms ease, color 180ms ease;
+    transition: color 180ms ease;
   }
 }
 
@@ -187,10 +193,7 @@
   to { transform: scale(1); opacity: 1; }
 }
 
-/* ── View Transition (dark mode cross-fade) ──────────────────────────────────
-   The browser composites old/new page states as textures on the GPU.
-   No main-thread style recalculation — smooth regardless of DOM size.
-──────────────────────────────────────────────────────────────────────────── */
+/* ── View Transition (dark mode cross-fade) ── */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 200ms;
@@ -217,7 +220,6 @@
 }
 
 /* Prevent Radix scroll lock padding injection */
-/* Prevent Radix scroll-lock body padding */
 body[data-scroll-locked] {
   padding-right: 0 !important;
   margin-right: 0 !important;
@@ -228,7 +230,7 @@ body[data-scroll-locked] {
   display: none;
 }
 
-/* ── Tiptap rendered output (UpdatesPage, AdminUpdates card, anywhere with dangerouslySetInnerHTML) ── */
+/* ── Tiptap rendered output ── */
 .tiptap-render ol,
 .tiptap-render ul {
   padding-left: 1.4rem;

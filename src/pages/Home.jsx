@@ -41,10 +41,7 @@ const inputCls = `w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:bor
   outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition`
 
 // ─────────────────────────────────────────────
-// Custom Select — no Radix, no body scroll lock
-// Renders its dropdown in-flow (no portal) so it
-// never triggers body overflow changes. Shows 4
-// items at a time, scrollable, scrollbar hidden.
+// Custom Select
 // ─────────────────────────────────────────────
 function NativeSelect({ value, onChange, options, placeholder, disabled }) {
   const [open, setOpen] = useState(false)
@@ -52,18 +49,15 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
 
   const selected = options.find(o => o.value === value)
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
-    // Use capture so clicks on other dropdowns also close this one
     document.addEventListener("mousedown", handler, true)
     return () => document.removeEventListener("mousedown", handler, true)
   }, [open])
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return
     const handler = (e) => { if (e.key === "Escape") setOpen(false) }
@@ -71,12 +65,11 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
     return () => document.removeEventListener("keydown", handler)
   }, [open])
 
-  const ITEM_H = 36   // px per item
-  const VISIBLE = 4   // items visible at once
+  const ITEM_H = 36
+  const VISIBLE = 4
 
   return (
     <div ref={ref} className="relative w-full">
-      {/* Trigger */}
       <button
         type="button"
         disabled={disabled}
@@ -100,7 +93,6 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
         />
       </button>
 
-      {/* Dropdown — in-flow, absolutely positioned relative to trigger */}
       {open && (
         <div
           className="absolute left-0 right-0 top-[calc(100%+4px)]
@@ -110,17 +102,13 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
             overflow-hidden"
           style={{
             zIndex: 99999,
-            // Show exactly VISIBLE items, then scroll for the rest
             maxHeight: `${ITEM_H * VISIBLE}px`,
             overflowY: options.length > VISIBLE ? "scroll" : "hidden",
-            scrollbarWidth: "none",        // Firefox
-            msOverflowStyle: "none",       // IE/Edge
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
         >
-          <style>{`
-            /* Hide webkit scrollbar inside this dropdown */
-            .nsel-list::-webkit-scrollbar { display: none; }
-          `}</style>
+          <style>{`.nsel-list::-webkit-scrollbar { display: none; }`}</style>
           <div className="nsel-list">
             {options.map(opt => (
               <button
@@ -147,56 +135,100 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
 }
 
 // ─────────────────────────────────────────────
-// Animated background blobs
+// Animated background blobs — enhanced
+// Full-page coverage, grain overlay, 8 blobs
+// with independent motion cycles. aria-hidden
+// so crawlers ignore completely.
 // ─────────────────────────────────────────────
 function AnimatedBlobs() {
+ const blobs = [
+  {
+    style: { width: 600, height: 600, top: "-12%", left: "-10%",
+      background: "radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(99,102,241,0.10) 55%, transparent 80%)",
+      filter: "blur(50px)" },
+    animate: { x: [0, 35, -10, 0], y: [0, 20, 35, 0], scale: [1, 1.06, 0.97, 1] },
+    transition: { duration: 7, repeat: Infinity, ease: "easeInOut" },
+  },
+  {
+    style: { width: 480, height: 480, top: "8%", right: "-8%",
+      background: "radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(139,92,246,0.09) 55%, transparent 80%)",
+      filter: "blur(45px)" },
+    animate: { x: [0, -30, 10, 0], y: [0, 25, -15, 0], scale: [1, 1.08, 1.02, 1] },
+    transition: { duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 },
+  },
+  {
+    style: { width: 380, height: 380, top: "30%", left: "-5%",
+      background: "radial-gradient(circle, rgba(59,130,246,0.14) 0%, rgba(99,102,241,0.08) 60%, transparent 80%)",
+      filter: "blur(55px)" },
+    animate: { x: [0, 20, -8, 0], y: [0, -25, 20, 0], scale: [1, 1.05, 0.98, 1] },
+    transition: { duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 },
+  },
+  {
+    style: { width: 420, height: 420, top: "45%", left: "35%",
+      background: "radial-gradient(circle, rgba(139,92,246,0.14) 0%, rgba(59,130,246,0.07) 60%, transparent 80%)",
+      filter: "blur(60px)" },
+    animate: { x: [0, 25, -20, 0], y: [0, -20, 15, 0], scale: [1, 1.07, 0.96, 1] },
+    transition: { duration: 9, repeat: Infinity, ease: "easeInOut", delay: 0.5 },
+  },
+  {
+    style: { width: 320, height: 320, top: "55%", right: "-4%",
+      background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.08) 60%, transparent 80%)",
+      filter: "blur(45px)" },
+    animate: { x: [0, -18, 8, 0], y: [0, 22, -12, 0], scale: [1, 1.06, 0.99, 1] },
+    transition: { duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1.5 },
+  },
+  {
+    style: { width: 360, height: 360, bottom: "22%", left: "8%",
+      background: "radial-gradient(circle, rgba(59,130,246,0.13) 0%, rgba(99,102,241,0.07) 60%, transparent 80%)",
+      filter: "blur(50px)" },
+    animate: { x: [0, 15, -20, 0], y: [0, -18, 10, 0], scale: [1, 1.04, 0.97, 1] },
+    transition: { duration: 8, repeat: Infinity, ease: "easeInOut", delay: 3 },
+  },
+  {
+    style: { width: 300, height: 300, bottom: "10%", right: "5%",
+      background: "radial-gradient(circle, rgba(139,92,246,0.13) 0%, rgba(59,130,246,0.07) 60%, transparent 80%)",
+      filter: "blur(40px)" },
+    animate: { x: [0, -22, 12, 0], y: [0, 18, -25, 0], scale: [1, 1.05, 0.98, 1] },
+    transition: { duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2.5 },
+  },
+  {
+    style: { width: 500, height: 260, bottom: "-5%", left: "20%",
+      background: "radial-gradient(ellipse, rgba(59,130,246,0.11) 0%, rgba(99,102,241,0.05) 60%, transparent 80%)",
+      filter: "blur(55px)" },
+    animate: { x: [0, 20, -15, 0], y: [0, -12, 8, 0], scale: [1, 1.04, 0.99, 1] },
+    transition: { duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 },
+  },
+]
+
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-      <motion.div
-        className="absolute rounded-full"
+    <>
+      {/* Blob layer */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-10 overflow-hidden pointer-events-none"
+      >
+        {blobs.map((blob, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full"
+            style={blob.style}
+            animate={blob.animate}
+            transition={blob.transition}
+          />
+        ))}
+      </div>
+
+      {/* Grain overlay — SVG turbulence, fixed, very subtle */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[-9] pointer-events-none opacity-[0.025] dark:opacity-[0.04]"
         style={{
-          width: 520, height: 520,
-          top: "-10%", left: "-8%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.06) 60%, transparent 80%)",
-          filter: "blur(40px)",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "128px 128px",
         }}
-        animate={{ x: [0, 30, 0], y: [0, 20, 0], scale: [1, 1.05, 1] }}
-        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       />
-      <motion.div
-        className="absolute rounded-full"
-        style={{
-          width: 420, height: 420,
-          top: "20%", right: "-6%",
-          background: "radial-gradient(circle, rgba(99,102,241,0.10) 0%, rgba(139,92,246,0.05) 60%, transparent 80%)",
-          filter: "blur(40px)",
-        }}
-        animate={{ x: [0, -25, 0], y: [0, 30, 0], scale: [1, 1.08, 1] }}
-        transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-      />
-      <motion.div
-        className="absolute rounded-full"
-        style={{
-          width: 340, height: 340,
-          top: "55%", left: "38%",
-          background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 60%, transparent 80%)",
-          filter: "blur(50px)",
-        }}
-        animate={{ x: [0, 20, 0], y: [0, -20, 0], scale: [1, 1.06, 1] }}
-        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 6 }}
-      />
-      <motion.div
-        className="absolute rounded-full"
-        style={{
-          width: 260, height: 260,
-          bottom: "8%", left: "10%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)",
-          filter: "blur(35px)",
-        }}
-        animate={{ x: [0, 15, 0], y: [0, -15, 0] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 9 }}
-      />
-    </div>
+    </>
   )
 }
 
@@ -351,8 +383,6 @@ function AcademicStep({ data, setData, onNext, onBack }) {
     getBranchesByProgram(data.programId).then(res => setBranches(res || [])).catch(() => {})
     setData(prev => ({ ...prev, branchId: "" }))
   }, [data.programId]) // eslint-disable-line
-
-  const selCls = "h-10 text-sm bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
 
   return (
     <div className="space-y-4">
@@ -803,7 +833,7 @@ const FEATURES = [
 ]
 
 // ─────────────────────────────────────────────
-// Redesigned Footer — matches HTML artifact
+// Site Footer
 // ─────────────────────────────────────────────
 function SiteFooter({ onOpenAuth }) {
   const { currentUser } = useAuth()
@@ -817,9 +847,9 @@ function SiteFooter({ onOpenAuth }) {
   ]
 
   return (
-    <footer className="relative mt-16">
-      {/* Gradient fade */}
-      <div className="h-16 bg-gradient-to-b from-transparent via-slate-100/80 to-slate-100 dark:via-[#0a1120]/80 dark:to-[#0a1120] pointer-events-none" />
+    <footer className="relative mt-8">
+      {/* Gradient fade — reduced height to tighten gap */}
+      <div className="h-8 bg-gradient-to-b from-transparent via-slate-100/80 to-slate-100 dark:via-[#0a1120]/80 dark:to-[#0a1120] pointer-events-none" />
 
       <div className="bg-slate-100 dark:bg-[#0a1120] border-t border-slate-200/70 dark:border-white/[0.05]">
         <div className="max-w-5xl mx-auto px-6 py-12">
@@ -956,7 +986,7 @@ export default function Home() {
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 space-y-16">
 
-        {/* ── HERO — matching HTML artifact layout ── */}
+        {/* ── HERO ── */}
         <section className="pt-10 text-center space-y-6">
           <motion.div {...fadeUp(0)} className="flex justify-center">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full
@@ -1032,11 +1062,9 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {/* ── WHAT IS UNIZUYA — matching HTML artifact: left text + right visual card ── */}
+        {/* ── WHAT IS UNIZUYA ── */}
         <motion.section {...fadeUp(0.22)} id="about">
           <div className="grid sm:grid-cols-2 gap-8 sm:gap-12 items-start">
-
-            {/* Left: label + big heading + text */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-3">
                 What is Unizuya?
@@ -1061,7 +1089,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right: visual checklist card */}
             <div className="rounded-2xl p-6 sm:p-7"
               style={{
                 background: "linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(99,102,241,0.11) 100%)",
@@ -1088,7 +1115,7 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {/* ── FEATURES — matching HTML artifact: centered label + big heading + 3-col grid ── */}
+        {/* ── FEATURES ── */}
         <section ref={featuresRef}>
           <motion.div {...fadeUp(0.26)} className="text-center mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">
@@ -1132,12 +1159,11 @@ export default function Home() {
           </button>
         </motion.div>
 
-        {/* ── CTA — only shown to guests ── */}
+        {/* ── CTA — guests only ── */}
         {!authLoading && !currentUser && (
           <motion.section {...fadeUp(0.46)}>
             <div className="rounded-2xl overflow-hidden relative"
               style={{ background: "linear-gradient(135deg, #1e3a6e 0%, #312e81 100%)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              {/* Inner blobs */}
               <div className="absolute top-[-50px] right-[-50px] w-[180px] h-[180px] rounded-full bg-white/[0.04] blur-2xl pointer-events-none" />
               <div className="absolute bottom-[-40px] left-[-40px] w-[150px] h-[150px] rounded-full bg-white/[0.03] blur-xl pointer-events-none" />
 

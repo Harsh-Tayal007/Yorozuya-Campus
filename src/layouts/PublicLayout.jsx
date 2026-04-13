@@ -15,11 +15,9 @@ const PublicLayout = () => {
 
   return (
     <div
-      onMouseMove={handleEdgeHover}
-      className="min-h-screen bg-gradient-to-b
-                 from-slate-50 to-slate-100
-                 dark:from-[#0f172a] dark:to-[#020617]"
-    >
+  onMouseMove={handleEdgeHover}
+  className="min-h-screen"
+>
       <Navbar />
       <UserSidebar />
 
