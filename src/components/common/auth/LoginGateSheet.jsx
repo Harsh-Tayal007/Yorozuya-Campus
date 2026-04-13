@@ -1,14 +1,19 @@
 // src/components/common/auth/LoginGateSheet.jsx
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { BookOpen, FileText, Calculator, Bell, Zap } from "lucide-react"
+import { 
+  BookOpen, FileText, Calculator, Bell, MessageSquare, 
+  ClipboardCheck, Calendar, Sparkles 
+} from "lucide-react"
 
 const BENEFITS = [
-  { icon: BookOpen,   text: "Personalised syllabus & resources for your branch" },
-  { icon: FileText,   text: "Access PYQs organised by semester and subject" },
-  { icon: Calculator, text: "CGPA calculator, task tracker & timetable builder" },
-  { icon: Bell,       text: "University notices and academic event updates" },
-  { icon: Zap,        text: "Student forum — ask, answer, earn karma" },
+  { icon: BookOpen,       text: "Personalized syllabus and resources for your branch" },
+  { icon: FileText,       text: "Access PYQs organized by semester and subject" },
+  { icon: Calculator,     text: "CGPA calculator and timetable builder" },
+  { icon: ClipboardCheck, text: "Task tracker with reminders and progress tracking" },
+  { icon: Calendar,       text: "Attendance management and session tracking" },
+  { icon: Bell,           text: "University notices and academic event updates" },
+  { icon: MessageSquare,  text: "Student forum to ask, answer, and earn karma" },
 ]
 
 const SWIPE_CLOSE_THRESHOLD  = 80    // px dragged down before snap-close
@@ -138,7 +143,7 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
           <div className="mb-5">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center">
-                <Zap size={13} className="text-indigo-500" />
+                <Sparkles size={13} className="text-indigo-500" />
               </div>
               <h2 className="text-base font-bold text-foreground">
                 {featureName
@@ -147,7 +152,7 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
               </h2>
             </div>
             <p className="text-xs text-muted-foreground ml-9">
-              Free to join — takes less than a minute.
+              Free to join, takes less than a minute.
             </p>
           </div>
 
@@ -165,7 +170,7 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
           </ul>
 
           {/* CTAs */}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             <button
               onClick={handleSignup}
               className="w-full py-2.5 rounded-xl text-sm font-semibold
@@ -177,16 +182,21 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
               Create free account
             </button>
 
-            <button
-              onClick={handleLogin}
-              className="w-full py-2.5 rounded-xl text-sm font-medium
-                         border border-border bg-background/60
-                         text-foreground
-                         hover:bg-muted active:scale-[0.98]
-                         transition-all duration-150"
-            >
-              Already have an account? Sign in
-            </button>
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-xs text-muted-foreground">
+                Already have an account?
+              </p>
+              <button
+                onClick={handleLogin}
+                className="w-full py-2.5 rounded-xl text-sm font-medium
+                           border border-border bg-background/60
+                           text-foreground
+                           hover:bg-muted active:scale-[0.98]
+                           transition-all duration-150"
+              >
+                Sign in
+              </button>
+            </div>
           </div>
 
         </div>
