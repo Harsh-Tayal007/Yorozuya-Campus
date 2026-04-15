@@ -1,6 +1,6 @@
 // src/pages/dashboard/NotificationsPage.jsx
 import { useNavigate } from "react-router-dom"
-import { Bell, ShieldX, Check, CheckCheck, Trash2, ExternalLink } from "lucide-react"
+import { Bell, ShieldX, Check, CheckCheck, Trash2 } from "lucide-react"
 import useNotifications from "@/hooks/useNotifications"
 import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
@@ -15,7 +15,11 @@ const TYPE_CONFIG = {
     ban: { color: "bg-red-500", label: "Ban" },
     ban_lifted: { color: "bg-green-500", label: "Ban Lifted" },
     task: { color: "bg-amber-500", label: "Task" },
+    attendance: { color: "bg-emerald-500", label: "Attendance" },
 }
+
+const stripHtml = (html = "") =>
+    html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
 
 function fmtDate(iso) {
     const d = new Date(iso)
@@ -50,6 +54,11 @@ export default function NotificationsPage() {
             }
             // Fallback: use stored actorUsername if live lookup fails
             if (notif.actorUsername) navigate(`/profile/${notif.actorUsername}`)
+            return
+        }
+
+        if (notif.type === "attendance") {
+            navigate("/dashboard/attendance")
             return
         }
 
@@ -123,7 +132,9 @@ export default function NotificationsPage() {
                                                 <div className={`w-9 h-9 rounded-full ${cfg.color} flex items-center justify-center`}>
                                                     {isBan
                                                         ? <ShieldX size={16} className="text-white" />
-                                                        : <Bell size={16} className="text-white" />
+                                                        : (notif.actorName
+                                                            ? <span className="text-sm font-bold text-white">{notif.actorName.charAt(0).toUpperCase()}</span>
+                                                            : <Bell size={16} className="text-white" />)
                                                     }
                                                 </div>
                                             )
@@ -141,10 +152,24 @@ export default function NotificationsPage() {
                                             </span>
                                             <span className="text-xs text-muted-foreground/60">{fmtDate(notif.$createdAt)}</span>
                                         </div>
-                                        <p className="text-sm text-foreground mt-1 leading-snug">{notif.message}</p>
-                                        {notif.replyContent && (
+                                        <p className="text-sm text-foreground mt-1 leading-snug">
+                                            {notif.type === "task" ? (
+                                                notif.title || "Task Reminder"
+                                            ) : (
+                                                <>
+                                                    <span className="font-semibold">{notif.actorName}</span>{" "}
+                                                    {notif.message}
+                                                </>
+                                            )}
+                                        </p>
+                                        {(notif.type === "reply" || notif.type === "mention") && notif.replyContent && (
                                             <p className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
-                                                "{notif.replyContent}"
+                                                "{stripHtml(notif.replyContent)}"
+                                            </p>
+                                        )}
+                                        {notif.type === "task" && notif.message && (
+                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                                {notif.message}
                                             </p>
                                         )}
                                     </div>

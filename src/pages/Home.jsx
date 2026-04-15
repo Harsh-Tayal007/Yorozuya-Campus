@@ -775,7 +775,8 @@ function RoadmapModal({ open, onClose }) {
           onClick={(e) => e.target === e.currentTarget && onClose()}>
           <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.22 }}
-            className="w-full max-w-md max-h-[85vh] overflow-y-auto bg-white dark:bg-[#0f1b2e] rounded-2xl
+            className="w-full max-w-md max-h-[85vh] overflow-y-auto [&::-webkit-scrollbar]:hidden
+                       [-ms-overflow-style:none] [scrollbar-width:none] bg-white dark:bg-[#0f1b2e] rounded-2xl
                        border border-slate-200 dark:border-white/[0.07] shadow-2xl p-6 relative">
             <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center
               justify-center border border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700
@@ -797,7 +798,7 @@ function RoadmapModal({ open, onClose }) {
                   <div className="w-4 h-4 rounded-full border-2 border-indigo-500 bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                   </div>
-                  <span className="text-xs text-slate-400 dark:text-slate-500 line-through opacity-70">{item}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 opacity-70">{item}</span>
                 </div>
               ))}
             </div>
@@ -965,6 +966,19 @@ export default function Home() {
   const [authModal, setAuthModal] = useState({ open: false, mode: "signup" })
   const [roadmapOpen, setRoadmapOpen] = useState(false)
   const featuresRef = useRef(null)
+
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow
+    const originalHtmlOverflow = document.documentElement.style.overflow
+    if (roadmapOpen) {
+      document.body.style.overflow = "hidden"
+      document.documentElement.style.overflow = "hidden"
+    }
+    return () => {
+      document.body.style.overflow = originalBodyOverflow
+      document.documentElement.style.overflow = originalHtmlOverflow
+    }
+  }, [roadmapOpen])
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["public-stats"],
