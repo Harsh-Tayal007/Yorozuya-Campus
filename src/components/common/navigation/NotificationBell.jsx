@@ -85,13 +85,20 @@ const NotifItem = ({ notif, onRead, onDelete, onNavigate, large = false }) => {
       : ""
   const preview = rawPreview.length > 100 ? rawPreview.slice(0, 100) + "…" : rawPreview
 
+  const Row = large ? motion.div : "div"
+  const rowMotionProps = large
+    ? {
+      layout: true,
+      initial: { opacity: 0, y: -4 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, x: 20 },
+      transition: { duration: 0.15 },
+    }
+    : {}
+
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.15 }}
+    <Row
+      {...rowMotionProps}
       onClick={handleClick}
       className={`relative flex items-start gap-3 cursor-pointer
                   transition-colors duration-150 group
@@ -137,7 +144,7 @@ const NotifItem = ({ notif, onRead, onDelete, onNavigate, large = false }) => {
       >
         <X size={13} />
       </button>
-    </motion.div>
+    </Row>
   )
 }
 
@@ -209,20 +216,29 @@ const NotifContent = ({ notifications, unreadCount, isLoading, markRead,
       </div>
     </div>
 
-    <div className={`divide-y divide-border/30
-                     ${large ? "flex-1 overflow-y-auto overscroll-contain" : "max-h-[440px] overflow-y-auto"}`}>
+    <style>{`.notif-scroll::-webkit-scrollbar { display: none; }`}</style>
+    <div
+      className={`notif-scroll divide-y divide-border/30
+                  ${large ? "flex-1 overflow-y-auto overscroll-contain" : "max-h-[440px] overflow-y-auto overscroll-contain"}`}
+      style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
+    >
       {isLoading
         ? <LoadingSkeleton count={large ? 5 : 3} large={large} />
         : notifications.length === 0
           ? <EmptyState large={large} />
-          : (
-            <AnimatePresence initial={false}>
-              {notifications.map(notif => (
-                <NotifItem key={notif.$id} notif={notif} large={large}
-                  onRead={markRead} onDelete={remove} onNavigate={onNavigate} />
-              ))}
-            </AnimatePresence>
-          )
+          : large
+            ? (
+              <AnimatePresence initial={false}>
+                {notifications.map(notif => (
+                  <NotifItem key={notif.$id} notif={notif} large={large}
+                    onRead={markRead} onDelete={remove} onNavigate={onNavigate} />
+                ))}
+              </AnimatePresence>
+            )
+            : notifications.map(notif => (
+              <NotifItem key={notif.$id} notif={notif}
+                onRead={markRead} onDelete={remove} onNavigate={onNavigate} />
+            ))
       }
     </div>
 
@@ -402,12 +418,21 @@ export default function NotificationBell() {
   }, [open, isMobile])
 
   useEffect(() => {
-    if (open && isMobile) document.body.style.overflow = "hidden"
-    else document.body.style.overflow = ""
-    return () => { document.body.style.overflow = "" }
-  }, [open, isMobile])
+    const originalBodyOverflow = document.body.style.overflow
+    const originalHtmlOverflow = document.documentElement.style.overflow
 
-  const handleOpen = () => { updatePos(); setOpen(v => !v) }
+    if (open) {
+      document.body.style.overflow = "hidden"
+      document.documentElement.style.overflow = "hidden"
+    }
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow
+      document.documentElement.style.overflow = originalHtmlOverflow
+    }
+  }, [open])
+
+  const handleOpen = () => setOpen(v => !v)
   const close = () => setOpen(false)
 
   const handleNavigate = (notif) => {
