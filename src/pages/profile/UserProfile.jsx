@@ -455,7 +455,7 @@ const UserProfile = () => {
                   <h1 className="text-sm sm:text-base font-bold text-foreground truncate leading-tight">
                     {profile.name}
                   </h1>
-                  <p className="text-xs text-muted-foreground truncate">@{profile.username}</p>
+                  <p className="text-xs pb-1 text-muted-foreground truncate">@{profile.username}</p>
                 </div>
                 <div className="shrink-0 flex items-center gap-2">
                   {/* Share profile — always visible */}

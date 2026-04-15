@@ -9,7 +9,8 @@ import {
   User, GraduationCap, BookOpen, GitBranch, Calendar,
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
   KeyRound, AlertCircle,
-  Trash2,
+  Trash2, AtSign, RefreshCw,
+  X
 } from "lucide-react"
 
 import { getUniversities } from "@/services/university/universityService"
@@ -21,6 +22,10 @@ import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { usePush } from "@/context/PushNotificationContext"
 import DeleteAccountModal from "@/components/modals/DeleteAccountModal"
 import { deleteAccountPermanently } from "@/services/user/deleteAccountService"
+
+import { changeUsername } from "@/services/user/changeUsernameService"
+import { generateUsernameCandidate, isUsernameAvailable } from "@/services/admin/authService"
+import { upsertSavedAccount } from "@/lib/savedAccounts"
 
 const YEAR_OPTIONS = [
   { value: "1", label: "1st Year" }, { value: "2", label: "2nd Year" },
@@ -308,34 +313,117 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
 // =============================================================================
 // TAB: ACCOUNT  (OAuth detection + set/change password + forgot password)
 // =============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// New additions vs original:
+//   1. changeUsername service call + Worker cascade
+//   2. Username AccountRow with availability check + re-roll
+//   3. Pulls refreshUser from AuthContext + upsertSavedAccount from vault
+// ─────────────────────────────────────────────────────────────────────────────
+
 const AccountTab = ({ user }) => {
   const navigate = useNavigate()
-  const { logout } = useAuth()
- 
+  const { logout, refreshUser } = useAuth()
+  const queryClient = useQueryClient()
+
   const [activeForm, setActiveForm] = useState(null)
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+
+  // ── Email / password form state ───────────────────────────────────────────
+  const [email, setEmail]           = useState("")
+  const [password, setPassword]     = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPass, setConfirmPass] = useState("")
-  const [showPass, setShowPass] = useState(false)
-  const [showNew, setShowNew] = useState(false)
+  const [showPass, setShowPass]     = useState(false)
+  const [showNew, setShowNew]       = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]         = useState(false)
+
+  // ── Username change state ─────────────────────────────────────────────────
+  const [newUsername, setNewUsername]       = useState("")
+  const [usernameStatus, setUsernameStatus] = useState("idle") // idle|checking|available|taken
+  const checkTimerRef                       = useRef(null)
+
+  const handleUsernameInput = (val) => {
+    const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "")
+    setNewUsername(clean)
+    setUsernameStatus("idle")
+    clearTimeout(checkTimerRef.current)
+    if (clean.length < 3) return
+    setUsernameStatus("checking")
+    checkTimerRef.current = setTimeout(async () => {
+      try {
+        const ok = await isUsernameAvailable(clean)
+        setUsernameStatus(ok ? "available" : "taken")
+      } catch {
+        setUsernameStatus("idle")
+      }
+    }, 500)
+  }
+
+  const rollUsername = () => {
+    const candidate = generateUsernameCandidate()
+    handleUsernameInput(candidate)
+  }
+
+  const handleUsernameSubmit = async (e) => {
+  e.preventDefault()
+  if (!newUsername || newUsername.length < 3) { toast.error("Username must be at least 3 characters"); return }
+  if (usernameStatus === "taken")     { toast.error("That username is already taken"); return }
+  if (usernameStatus === "checking")  { toast.error("Still checking availability, please wait"); return }
+  if (usernameStatus !== "available") { toast.error("Enter a valid available username"); return }
  
+  try {
+    setSaving(true)
+    const result = await changeUsername(newUsername)
+ 
+    // Wait 600ms for Appwrite write to propagate before re-fetching
+    await new Promise(resolve => setTimeout(resolve, 600))
+ 
+    // Re-fetch full profile — navbar username updates from this
+    await refreshUser()
+ 
+    // Bust the user-avatar query cache so ThreadCard/ThreadDetail
+    // re-fetch the new username on next render
+    queryClient.invalidateQueries({ queryKey: ["user-avatar", user.$id] })
+ 
+    // Sync saved accounts vault
+    upsertSavedAccount({
+      userId:    user.$id,
+      name:      user.name,
+      username:  newUsername,
+      email:     user.email,
+      avatarUrl: user.avatarUrl ?? null,
+      provider:  null,
+    })
+ 
+    toast.success(`Username changed to @${result.newUsername}`, {
+      description: `Updated across reports and ban records.`,
+      duration: 5000,
+    })
+ 
+    setActiveForm(null)
+    setNewUsername("")
+    setUsernameStatus("idle")
+  } catch (err) {
+    toast.error(err.message ?? "Failed to change username")
+  } finally {
+    setSaving(false)
+  }
+}
+
+  // ── Delete modal state ────────────────────────────────────────────────────
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
- 
-  // ── Detect OAuth provider ─────────────────────────────────────────────────
+
+  // ── OAuth detection ───────────────────────────────────────────────────────
   const [oauthProvider, setOauthProvider] = useState(null)
-  const [hasPassword, setHasPassword] = useState(false)
+  const [hasPassword, setHasPassword]     = useState(false)
   const [identityLoading, setIdentityLoading] = useState(true)
- 
+
   useEffect(() => {
-    const detectProvider = async () => {
+    const detect = async () => {
       try {
         const identities = await account.listIdentities()
-        if (identities.total > 0) {
-          setOauthProvider(identities.identities[0].provider)
-        }
+        if (identities.total > 0) setOauthProvider(identities.identities[0].provider)
         const me = await account.get()
         setHasPassword(!!me.passwordUpdate)
       } catch {
@@ -345,24 +433,25 @@ const AccountTab = ({ user }) => {
         setIdentityLoading(false)
       }
     }
-    detectProvider()
+    detect()
   }, [])
- 
+
   const isOAuth = !!oauthProvider
- 
+
   const resetForms = () => {
     setEmail(""); setPassword(""); setNewPassword(""); setConfirmPass("")
     setShowPass(false); setShowNew(false); setShowConfirm(false)
   }
   const setForm = (form) => { resetForms(); setActiveForm(prev => prev === form ? null : form) }
- 
+
   const showHideBtn = (visible, toggle) => (
     <button type="button" onClick={() => toggle(v => !v)}
       className="text-muted-foreground hover:text-foreground transition-colors">
       {visible ? <EyeOff size={14} /> : <Eye size={14} />}
     </button>
   )
- 
+
+  // ── Email submit ──────────────────────────────────────────────────────────
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
     if (!email.trim() || !password) { toast.error("All fields required"); return }
@@ -375,7 +464,8 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to update email")
     } finally { setSaving(false) }
   }
- 
+
+  // ── Password submit ───────────────────────────────────────────────────────
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
     if (!password || !newPassword || !confirmPass) { toast.error("All fields required"); return }
@@ -391,7 +481,8 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to update password")
     } finally { setSaving(false) }
   }
- 
+
+  // ── Set password (OAuth users) ────────────────────────────────────────────
   const handleSetPasswordSubmit = async (e) => {
     e.preventDefault()
     if (!newPassword || !confirmPass) { toast.error("All fields required"); return }
@@ -407,7 +498,8 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to set password")
     } finally { setSaving(false) }
   }
- 
+
+  // ── Forgot password ───────────────────────────────────────────────────────
   const handleForgotPassword = async () => {
     if (!user?.email) { toast.error("No email found on your account"); return }
     try {
@@ -428,21 +520,14 @@ const AccountTab = ({ user }) => {
       toast.error(err?.message ?? "Failed to send recovery email")
     } finally { setSaving(false) }
   }
- 
-  // ── Account deletion ───────────────────────────────────────────────────────
+
+  // ── Delete account ────────────────────────────────────────────────────────
   const handleDeleteAccount = async () => {
     await deleteAccountPermanently()
-    // Worker already deleted the Appwrite auth account, so logout() would
-    // throw "session not found". Instead, directly clear local auth state
-    // and force a full page reload to flush all React Query caches,
-    // context state, and service worker subscriptions cleanly.
     toast.success("Your account has been permanently deleted.")
-    // Small delay so toast is visible before reload
-    setTimeout(() => {
-      window.location.replace("/")
-    }, 800)
+    setTimeout(() => { window.location.replace("/") }, 800)
   }
- 
+
   if (identityLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -450,14 +535,13 @@ const AccountTab = ({ user }) => {
       </div>
     )
   }
- 
+
   return (
     <div>
-      {/* ── OAuth notice ── */}
+      {/* ── OAuth notice ──────────────────────────────────────────────────── */}
       {isOAuth && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
           className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-500/20
                      bg-blue-50 dark:bg-blue-500/10 px-4 py-3.5"
         >
@@ -475,18 +559,15 @@ const AccountTab = ({ user }) => {
           <OAuthBadge provider={oauthProvider} />
         </motion.div>
       )}
- 
-      {/* ── General section (email + password) ── */}
+
+      {/* ── General section ───────────────────────────────────────────────── */}
       <Section title="General">
+
+        {/* Email */}
         <AccountRow
-          icon={Mail}
-          label="Email address"
-          value={user?.email}
-          formKey="email"
-          activeForm={activeForm}
-          setActiveForm={setForm}
-          disabled={isOAuth}
-          disabledReason={`Managed by ${oauthProvider}`}
+          icon={Mail} label="Email address" value={user?.email}
+          formKey="email" activeForm={activeForm} setActiveForm={setForm}
+          disabled={isOAuth} disabledReason={`Managed by ${oauthProvider}`}
         >
           <form onSubmit={handleEmailSubmit} className="space-y-3">
             <Field label="New Email">
@@ -504,21 +585,19 @@ const AccountTab = ({ user }) => {
             </div>
           </form>
         </AccountRow>
- 
+
+        {/* Password */}
         <AccountRow
           icon={Lock}
           label={isOAuth && !hasPassword ? "Set a password" : "Password"}
           value={hasPassword ? "••••••••" : undefined}
-          formKey="password"
-          activeForm={activeForm}
-          setActiveForm={setForm}
-          disabled={false}
-          disabledReason={null}
+          formKey="password" activeForm={activeForm} setActiveForm={setForm}
         >
           {isOAuth && !hasPassword && (
             <form onSubmit={handleSetPasswordSubmit} className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Set a password so you can also log in with <span className="font-medium text-foreground">{user?.email}</span> + password.
+                Set a password so you can also log in with{" "}
+                <span className="font-medium text-foreground">{user?.email}</span> + password.
               </p>
               <Field label="New Password">
                 <Input value={newPassword} onChange={e => setNewPassword(e.target.value)}
@@ -542,7 +621,6 @@ const AccountTab = ({ user }) => {
               </div>
             </form>
           )}
- 
           {hasPassword && (
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
               <Field label="Current Password">
@@ -573,9 +651,92 @@ const AccountTab = ({ user }) => {
             </form>
           )}
         </AccountRow>
+
+        {/* ── Username ──────────────────────────────────────────────────────── */}
+        <AccountRow
+          icon={AtSign}
+          label="Username"
+          value={`@${user?.username}`}
+          formKey="username"
+          activeForm={activeForm}
+          setActiveForm={setForm}
+        >
+          <form onSubmit={handleUsernameSubmit} className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Changing your username will update it across all your posts and replies.
+              Your current handle is{" "}
+              <span className="font-medium text-foreground">@{user?.username}</span>.
+            </p>
+
+            <Field label="New Username">
+              <div className="relative">
+                <input
+                  value={newUsername}
+                  onChange={e => handleUsernameInput(e.target.value)}
+                  placeholder="your_new_username"
+                  spellCheck={false}
+                  maxLength={36}
+                  className={`w-full rounded-xl border bg-background px-3.5 py-2.5
+                              text-sm font-mono text-foreground placeholder:text-muted-foreground/60
+                              focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                              hover:border-primary/40 transition-all duration-150 pr-16
+                              ${usernameStatus === "available" ? "border-green-500/50 focus:border-green-500" :
+                                usernameStatus === "taken"     ? "border-red-500/50 focus:border-red-500"    :
+                                "border-border"}`}
+                />
+                {/* Status icon */}
+                <div className="absolute right-9 top-1/2 -translate-y-1/2">
+                  {usernameStatus === "checking"  && <Loader2 size={13} className="animate-spin text-muted-foreground" />}
+                  {usernameStatus === "available" && <Check   size={13} className="text-green-500" />}
+                  {usernameStatus === "taken"     && <X       size={13} className="text-red-500" />}
+                </div>
+                {/* Re-roll button */}
+                <button
+                  type="button"
+                  onClick={rollUsername}
+                  title="Generate a random username"
+                  className="absolute right-3 top-1/2 -translate-y-1/2
+                             text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <RefreshCw size={13} />
+                </button>
+              </div>
+
+              {usernameStatus === "available" && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <Check size={11} /> Username available
+                </p>
+              )}
+              {usernameStatus === "taken" && (
+                <p className="text-xs text-red-500 mt-1">
+                  Username taken — try another or hit the re-roll button
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground/60 mt-1">
+                Lowercase letters, numbers, and underscores only. 3 to 36 characters.
+              </p>
+            </Field>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => { setActiveForm(null); setNewUsername(""); setUsernameStatus("idle") }}
+                className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <SaveBtn
+                saving={saving}
+                disabled={usernameStatus !== "available"}
+                label="Change Username"
+              />
+            </div>
+          </form>
+        </AccountRow>
+
       </Section>
- 
-      {/* ── Password Recovery ── */}
+
+      {/* ── Password Recovery ─────────────────────────────────────────────── */}
       {hasPassword && (
         <Section title="Password Recovery">
           <div className="py-3.5">
@@ -585,30 +746,27 @@ const AccountTab = ({ user }) => {
                 <div>
                   <p className="text-sm font-medium text-foreground">Forgot your password?</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    We'll send a recovery link to <span className="font-medium text-foreground">{user?.email}</span>
+                    We'll send a recovery link to{" "}
+                    <span className="font-medium text-foreground">{user?.email}</span>
                   </p>
                 </div>
               </div>
               <motion.button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={saving}
-                whileHover={{ scale: saving ? 1 : 1.01 }}
-                whileTap={{ scale: saving ? 1 : 0.98 }}
+                type="button" onClick={handleForgotPassword} disabled={saving}
+                whileHover={{ scale: saving ? 1 : 1.01 }} whileTap={{ scale: saving ? 1 : 0.98 }}
                 className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-border
                            text-sm font-medium text-foreground hover:bg-muted hover:border-primary/30
                            disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
               >
                 {saving
                   ? <><Loader2 size={13} className="animate-spin" /> Sending…</>
-                  : <><Mail size={13} /> Send reset link</>
-                }
+                  : <><Mail size={13} /> Send reset link</>}
               </motion.button>
             </div>
           </div>
         </Section>
       )}
- 
+
       {/* ── Danger Zone ───────────────────────────────────────────────────── */}
       <div className="mt-8">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
@@ -626,10 +784,8 @@ const AccountTab = ({ user }) => {
               </div>
             </div>
             <motion.button
-              type="button"
-              onClick={() => setDeleteModalOpen(true)}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
+              type="button" onClick={() => setDeleteModalOpen(true)}
+              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
               className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl
                          border border-red-200 dark:border-red-500/30
@@ -638,14 +794,12 @@ const AccountTab = ({ user }) => {
                          hover:border-red-400 dark:hover:border-red-400/50
                          transition-all duration-150"
             >
-              <Trash2 size={13} />
-              Delete account
+              <Trash2 size={13} /> Delete account
             </motion.button>
           </div>
         </div>
       </div>
- 
-      {/* ── Confirmation modal ── */}
+
       <DeleteAccountModal
         open={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}

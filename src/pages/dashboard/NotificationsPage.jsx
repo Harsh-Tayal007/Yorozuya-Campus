@@ -2,6 +2,11 @@
 import { useNavigate } from "react-router-dom"
 import { Bell, ShieldX, Check, CheckCheck, Trash2, ExternalLink } from "lucide-react"
 import useNotifications from "@/hooks/useNotifications"
+import { databases } from "@/lib/appwrite"
+import { Query } from "appwrite"
+
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
+const USERS_COL = import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID
 
 const TYPE_CONFIG = {
     reply: { color: "bg-blue-500", label: "Reply" },
@@ -25,14 +30,35 @@ export default function NotificationsPage() {
     const navigate = useNavigate()
     const { notifications, unreadCount, isLoading, markRead, markAllRead, remove } = useNotifications()
 
-    const handleClick = (notif) => {
+    const handleClick = async (notif) => {
         if (!notif.read) markRead(notif.$id)
 
-        if (notif.type === "ban" || notif.type === "ban_lifted") return // stay on page
-        if (notif.type === "follow" && notif.actorUsername) {
-            navigate(`/profile/${notif.actorUsername}`)
-        } else if (notif.threadId) {
-            navigate(notif.replyId ? `/forum/${notif.threadId}#reply-${notif.replyId}` : `/forum/${notif.threadId}`)
+        if (notif.type === "ban" || notif.type === "ban_lifted") return
+
+        if (notif.type === "follow") {
+            // Resolve current username from actorId — immune to username changes
+            if (notif.actorId) {
+                try {
+                    const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [
+                        Query.equal("userId", notif.actorId),
+                        Query.select(["username"]),
+                        Query.limit(1),
+                    ])
+                    const username = res.documents[0]?.username
+                    if (username) { navigate(`/profile/${username}`); return }
+                } catch { /* fall through to actorUsername fallback */ }
+            }
+            // Fallback: use stored actorUsername if live lookup fails
+            if (notif.actorUsername) navigate(`/profile/${notif.actorUsername}`)
+            return
+        }
+
+        if (notif.threadId) {
+            navigate(
+                notif.replyId
+                    ? `/forum/${notif.threadId}#reply-${notif.replyId}`
+                    : `/forum/${notif.threadId}`
+            )
         }
     }
 

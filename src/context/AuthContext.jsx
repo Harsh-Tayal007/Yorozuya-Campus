@@ -211,7 +211,7 @@ export const AuthProvider = ({ children }) => {
     const authUser = await account.create(ID.unique(), email, password, name)
 
     // 2. Generate username
-    const username = await generateAvailableUsername(name)
+    const username = data.username?.trim() || await generateAvailableUsername(name)
 
     // 3. Create user profile doc — emailVerified: false
     await databases.createDocument(DATABASE_ID, USERS_TABLE_ID, ID.unique(), {
