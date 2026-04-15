@@ -112,6 +112,7 @@ const ThreadDetail = () => {
   const branchLabel = branchDoc?.name ?? thread?.branchId
   const avatarUrl = authorData?.avatarUrl ?? null
   const authorUsername = authorData?.username ?? null
+  const authorDisplayName = authorUsername ?? thread?.authorName
   const profileHref = authorUsername ? `/profile/${authorUsername}` : null
 
   const handleBack = () => {
@@ -143,10 +144,10 @@ const ThreadDetail = () => {
       <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10
                        border border-primary/20 flex items-center justify-center
                        ${textSize} font-bold text-primary`}>
-        {thread.authorName?.charAt(0).toUpperCase()}
+        {authorDisplayName?.charAt(0).toUpperCase()}
       </div>
       {avatarUrl && (
-        <img src={avatarUrl} alt={thread.authorName}
+        <img src={avatarUrl} alt={authorDisplayName}
           className="absolute inset-0 w-full h-full rounded-full object-cover border border-border" />
       )}
     </div>
@@ -232,10 +233,10 @@ const ThreadDetail = () => {
               <Link to={profileHref}
                 className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
                 onClick={e => e.stopPropagation()}>
-                {thread.authorName}
+                {authorDisplayName}
               </Link>
             ) : (
-              <span className="text-sm font-medium text-foreground/80">{thread.authorName}</span>
+              <span className="text-sm font-medium text-foreground/80">{authorDisplayName}</span>
             )}
 
             <span className="text-muted-foreground/40 text-xs">·</span>

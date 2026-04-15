@@ -178,6 +178,7 @@ const Reply = ({
   const authorRole = authorInfo?.role ?? null
   const authorAvatar = authorInfo?.avatarUrl ?? null
   const authorUsername = authorInfo?.username ?? null
+  const authorDisplayName = authorUsername ?? reply?.authorName
   const showFlair = authorRole && authorRole !== "user"
 
   const maxDepth = isMobile ? MAX_DEPTH_MOBILE : MAX_DEPTH_DESKTOP
@@ -210,11 +211,11 @@ const Reply = ({
       targetType: "reply",
       targetId: reply.$id,
       targetAuthorId: reply.authorId,
-      targetAuthorUsername: reply.authorName,
+      targetAuthorUsername: authorDisplayName,
       contentPreview: reply.content?.replace(/<[^>]+>/g, " ").slice(0, 200),
       threadId,
     })
-  }, [reply, threadId])
+  }, [reply, authorDisplayName, threadId])
 
   const handleSubmit = useCallback((text, gifUrl, imageUrl) => {
     if (!text.trim() && !gifUrl && !imageUrl) return
@@ -248,13 +249,13 @@ const Reply = ({
     if (canAdminDelete && user) {
       logReplyDeleted({
         actor: { $id: user.$id, username: user.username },
-        targetUsername: reply.authorName,
+        targetUsername: authorDisplayName,
         replyId: id,
         threadId,
       }).catch(() => { })
     }
     setShowOptions(false)
-  }, [reply, deleteReply, replies.children, canAdminDelete, user, threadId])
+  }, [reply, deleteReply, replies.children, canAdminDelete, user, authorDisplayName, threadId])
 
   const handleEditSave = useCallback(() => {
     if (!editText.trim()) return
@@ -285,7 +286,7 @@ const Reply = ({
 
       {showReplyBox && isMobile && (
         <MobileReplyModal
-          replyingTo={reply}
+          replyingTo={{ ...reply, authorName: authorDisplayName }}
           onSubmit={handleSubmit}
           onClose={() => setShowReplyBox(false)}
         />
@@ -299,7 +300,7 @@ const Reply = ({
           {/* AVATAR COLUMN */}
           <div className="relative shrink-0 flex flex-col items-center" style={{ width: AV }}>
             <ReplyAvatar
-              authorName={reply.authorName}
+              authorName={authorDisplayName}
               avatarUrl={authorAvatar}
               username={authorUsername}
               size={AV}
@@ -334,10 +335,10 @@ const Reply = ({
                   className="font-semibold text-sm leading-snug hover:text-primary
                              hover:underline transition-colors"
                 >
-                  {reply.authorName}
+                  {authorDisplayName}
                 </Link>
               ) : (
-                <span className="font-semibold text-sm leading-snug">{reply.authorName}</span>
+                <span className="font-semibold text-sm leading-snug">{authorDisplayName}</span>
               )}
 
               {showFlair && <RoleFlair role={authorRole} />}
@@ -415,6 +416,7 @@ const Reply = ({
                 {showOptions && (
                   <OptionsMenu
                     reply={reply}
+                    authorName={authorDisplayName}
                     isOwn={isOwn}
                     canPin={canPin}
                     canAdminDelete={canAdminDelete}   // ← ADD THIS LINE

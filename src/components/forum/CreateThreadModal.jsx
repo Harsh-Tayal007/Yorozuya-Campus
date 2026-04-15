@@ -110,7 +110,7 @@ export default function CreateThreadModal({
       {
         title: title.trim(), content: content.trim(),
         universityId: localUniversity, courseId: localCourse, branchId: localBranch,
-        authorId: currentUser.$id, authorName: currentUser.name,
+        authorId: currentUser.$id, authorName: currentUser.username ?? currentUser.name,
       },
       { onSuccess: () => { setTitle(""); setContent(""); onClose() } }
     )

@@ -2,8 +2,8 @@
 // OPTIONS MENU
 // Desktop: small positioned dropdown (like Reddit web, Image 1)
 // Mobile:  bottom sheet (like Reddit app)
-// Props: reply, isOwn, canPin, canAdminDelete, onPin, anchorRef, onCollapse,
-//        onDelete, onEdit, onClose, onReport, threadId
+// Props: reply, authorName, isOwn, canPin, canAdminDelete, onPin, anchorRef,
+//        onCollapse, onDelete, onEdit, onClose, onReport, threadId
 // =============================================================================
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -16,6 +16,7 @@ import { createPortal } from "react-dom"
 
 export function OptionsMenu({
   reply,
+  authorName,
   isOwn,
   canPin,
   canAdminDelete,   // ← NEW: true when viewer is admin/mod but not the author
@@ -32,6 +33,7 @@ export function OptionsMenu({
   const colors  = useResolvedColors()
   const isMobile = useIsMobile()
   const menuRef  = useRef(null)
+  const displayAuthorName = authorName ?? reply?.authorName
 
   // Lock body scroll on mobile sheet
   useEffect(() => {
@@ -204,7 +206,7 @@ export function OptionsMenu({
 
         {/* Author + content preview */}
         <div style={{ padding: "8px 20px 12px", borderBottom: `1px solid ${colors.border}` }}>
-          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{reply.authorName}</p>
+          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{displayAuthorName}</p>
           <p style={{
             fontSize: 13, color: colors.muted, opacity: 0.75,
             display: "-webkit-box", WebkitLineClamp: 2,

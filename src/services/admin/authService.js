@@ -3,6 +3,7 @@ import { ID, Query } from "appwrite";
 
 const DATABASE_ID  = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const USERS_TABLE_ID = "users";
+const RESERVED_USERNAMES_TABLE_ID = "reserved_usernames"
 
 /**
  * Login user
@@ -65,12 +66,20 @@ export const resolveUsername = (acc) => {
  * Check whether a username is available in the DB.
  */
 export const isUsernameAvailable = async (username) => {
-  const res = await databases.listDocuments(DATABASE_ID, USERS_TABLE_ID, [
-    Query.equal("username", username),
+  const [usersRes, reservedRes] = await Promise.all([
+    databases.listDocuments(DATABASE_ID, USERS_TABLE_ID, [
+      Query.equal("username", username),
+      Query.limit(1),
+    ]),
+    databases.listDocuments(DATABASE_ID, RESERVED_USERNAMES_TABLE_ID, [
+      Query.equal("username", username),
+      Query.limit(1),
+    ]),
   ])
-  return res.total === 0
+ 
+  return usersRes.total === 0 && reservedRes.total === 0
 }
-
+ 
 // ── Reddit-style username generator ──────────────────────────────────────────
 
 const adjectives = [

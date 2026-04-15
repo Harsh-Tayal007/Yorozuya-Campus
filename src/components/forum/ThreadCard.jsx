@@ -156,7 +156,9 @@ const ThreadCard = ({ thread, searchQuery }) => {
     staleTime: 1000 * 60 * 10,
     retry: false,
   })
-  const profileHref = authorData?.username ? `/profile/${authorData.username}` : null
+  const authorUsername = authorData?.username ?? null
+  const authorDisplayName = authorUsername ?? thread.authorName
+  const profileHref = authorUsername ? `/profile/${authorUsername}` : null
 
   useEffect(() => {
     if (!menuOpen) return
@@ -209,10 +211,10 @@ const ThreadCard = ({ thread, searchQuery }) => {
         <div className="flex items-start gap-3">
           {profileHref ? (
             <Link to={profileHref} onClick={e => e.stopPropagation()}>
-              <ThreadAuthorAvatar authorId={thread.authorId} authorName={thread.authorName} />
+              <ThreadAuthorAvatar authorId={thread.authorId} authorName={authorDisplayName} />
             </Link>
           ) : (
-            <ThreadAuthorAvatar authorId={thread.authorId} authorName={thread.authorName} />
+            <ThreadAuthorAvatar authorId={thread.authorId} authorName={authorDisplayName} />
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1">
@@ -220,10 +222,10 @@ const ThreadCard = ({ thread, searchQuery }) => {
                 {profileHref ? (
                   <Link to={profileHref} onClick={e => e.stopPropagation()}
                     className="font-medium text-foreground/80 hover:text-primary transition-colors truncate">
-                    {thread.authorName}
+                    {authorDisplayName}
                   </Link>
                 ) : (
-                  <span className="font-medium text-foreground/80 truncate">{thread.authorName}</span>
+                  <span className="font-medium text-foreground/80 truncate">{authorDisplayName}</span>
                 )}
                 <span className="shrink-0 opacity-40">·</span>
                 <Clock size={10} className="opacity-40 shrink-0" />
