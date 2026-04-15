@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button"
 import useUpdateLogs from "@/hooks/useUpdateLogs"
 import TiptapEditor from "@/components/forum/TiptapEditor"
+import { sortUpdateLogs } from "@/services/updates/updateLogsService"
 
 const TAGS = ["feature", "fix", "improvement", "breaking"]
 const TAG_CLR = {
@@ -167,6 +168,7 @@ function Toggle({ checked, onChange, label }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminUpdates() {
   const { logs, loading, saving, error, save, remove } = useUpdateLogs()
+  const sortedLogs = sortUpdateLogs(logs)
   const [form, setForm]           = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm]   = useState(false)
@@ -334,15 +336,15 @@ export default function AdminUpdates() {
         <div className="flex items-center gap-2 py-12 justify-center text-muted-foreground">
           <Loader2 size={14} className="animate-spin" /> Loading…
         </div>
-      ) : logs.length === 0 ? (
+      ) : sortedLogs.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground py-12">No update logs yet.</p>
       ) : (
         <div className="relative">
-          {logs.map((log, i) => (
+          {sortedLogs.map((log, i) => (
             <LogCard
               key={log.$id}
               log={log}
-              isLast={i === logs.length - 1}
+              isLast={i === sortedLogs.length - 1}
               onEdit={handleEdit}
               onDelete={remove}
               onTogglePublish={handleTogglePublish}

@@ -1,7 +1,7 @@
 // src/pages/updates/UpdatesPage.jsx
 import { useState, useEffect } from "react"
 import { Megaphone, Pin, Loader2, Tag } from "lucide-react"
-import { updateLogsService } from "@/services/updates/updateLogsService"
+import { sortUpdateLogs, updateLogsService } from "@/services/updates/updateLogsService"
 
 const TAG_CLR = {
   feature:     "bg-blue-500/15 text-blue-400 border-blue-500/30",
@@ -91,11 +91,7 @@ export default function UpdatesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const sorted = [...logs].sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-    return new Date(b.publishedAt) - new Date(a.publishedAt)
-  })
+  const sorted = sortUpdateLogs(logs)
 
   const filtered = activeTag
     ? sorted.filter(l => l.tags?.includes(activeTag))
