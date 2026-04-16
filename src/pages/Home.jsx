@@ -1,10 +1,10 @@
-// src/pages/Home.jsx
+﻿// src/pages/Home.jsx
 import { useState, useEffect, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   FileText, BookOpen, MessageSquare, Layers,
-  GraduationCap, Zap, ChevronRight, ChevronDown, Construction,
+  GraduationCap, Zap, ChevronRight, ChevronDown,
   Check, X, Eye, EyeOff, ArrowRight, Users,
   ClipboardList, BarChart2, Bell, Shield,
   RefreshCw, Loader2,
@@ -22,10 +22,11 @@ import {
 import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram } from "@/services/university/branchService"
+import useSeoMeta from "@/hooks/useSeoMeta"
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Google icon
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const GoogleIcon = () => (
   <svg width="17" height="17" viewBox="0 0 48 48">
     <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.7 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
@@ -40,9 +41,9 @@ const inputCls = `w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:bor
   placeholder:text-slate-400 dark:placeholder:text-slate-600
   outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition`
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Custom Select
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NativeSelect({ value, onChange, options, placeholder, disabled }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -134,12 +135,12 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
   )
 }
 
-// ─────────────────────────────────────────────
-// Animated background blobs — enhanced
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Animated background blobs â€” enhanced
 // Full-page coverage, grain overlay, 8 blobs
 // with independent motion cycles. aria-hidden
 // so crawlers ignore completely.
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AnimatedBlobs() {
  const blobs = [
   {
@@ -218,7 +219,7 @@ function AnimatedBlobs() {
         ))}
       </div>
 
-      {/* Grain overlay — SVG turbulence, fixed, very subtle */}
+      {/* Grain overlay â€” SVG turbulence, fixed, very subtle */}
       <div
         aria-hidden="true"
         className="fixed inset-0 z-[-9] pointer-events-none opacity-[0.025] dark:opacity-[0.04]"
@@ -232,9 +233,9 @@ function AnimatedBlobs() {
   )
 }
 
-// ─────────────────────────────────────────────
-// Step 1 — Account
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Step 1 â€” Account
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AccountStep({ data, setData, onNext }) {
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
@@ -289,7 +290,7 @@ function AccountStep({ data, setData, onNext }) {
     <div className="space-y-3">
       <div className="mb-4">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Create your account</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 1 of 3 — Basic info</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 1 of 3 - Basic info</p>
       </div>
       <div className="space-y-1">
         <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Full name</label>
@@ -363,9 +364,9 @@ function AccountStep({ data, setData, onNext }) {
   )
 }
 
-// ─────────────────────────────────────────────
-// Step 2 — Academic
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Step 2 â€” Academic
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AcademicStep({ data, setData, onNext, onBack }) {
   const [universities, setUniversities] = useState([])
   const [programs, setPrograms] = useState([])
@@ -388,7 +389,7 @@ function AcademicStep({ data, setData, onNext, onBack }) {
     <div className="space-y-4">
       <div className="mb-2">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Academic details</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 2 of 3 — Help us personalise your experience</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 2 of 3 - Help us personalise your experience</p>
       </div>
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-slate-600 dark:text-slate-300">University</label>
@@ -436,9 +437,9 @@ function AcademicStep({ data, setData, onNext, onBack }) {
   )
 }
 
-// ─────────────────────────────────────────────
-// Step 3 — Confirm
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Step 3 â€” Confirm
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ConfirmStep({ data, universityName, programName, branchName, onBack, onSubmit, loading, error }) {
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [privacyError, setPrivacyError] = useState(false)
@@ -446,7 +447,7 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
   const rows = [
     { label: "Name", value: data.name },
     { label: "Email", value: data.email },
-    { label: "Password", value: "••••••••" },
+    { label: "Password", value: "********" },
     { label: "Username", value: `@${data.username}` },
     universityName && { label: "University", value: universityName },
     programName && { label: "Program", value: programName },
@@ -457,7 +458,7 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
     <div className="space-y-4">
       <div className="mb-2">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Almost there!</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 — Confirm and create</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 - Confirm and create</p>
       </div>
       <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3.5 space-y-2">
         {rows.map(({ label, value }) => (
@@ -507,9 +508,9 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Step indicator
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STEP_LABELS = ["Account", "Academic", "Confirm"]
 function StepIndicator({ step }) {
   return (
@@ -542,9 +543,9 @@ function StepIndicator({ step }) {
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Auth Modal
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AuthModal({ open, mode, onClose, onSwitch }) {
   const { login, completeSignup } = useAuth()
   const navigate = useNavigate()
@@ -753,9 +754,9 @@ function AuthModal({ open, mode, onClose, onSwitch }) {
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Roadmap Modal
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROADMAP_DONE = [
   "University, program and branch management", "Syllabus and unit uploads", "PYQ uploads and browsing",
   "Study resource uploads", "Student forum with threaded replies", "User profiles, karma and followers",
@@ -821,9 +822,9 @@ function RoadmapModal({ open, onClose }) {
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Features data
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const FEATURES = [
   { icon: FileText,      color: "bg-orange-500/10 text-orange-500", title: "Past year questions",         desc: "Browse PYQs sorted by university, course and subject. Stop digging through old drives and group chats." },
   { icon: BookOpen,      color: "bg-blue-500/10 text-blue-500",     title: "Syllabus and notes",          desc: "View your course syllabus, upload notes and download what others have shared, all in one spot." },
@@ -833,139 +834,25 @@ const FEATURES = [
   { icon: BarChart2,     color: "bg-amber-500/10 text-amber-500",   title: "Academic tools",              desc: "CGPA calculator, timetable builder and a task tracker. The essentials that actually save time every semester." },
 ]
 
-// ─────────────────────────────────────────────
-// Site Footer
-// ─────────────────────────────────────────────
-function SiteFooter({ onOpenAuth }) {
-  const { currentUser } = useAuth()
-
-  const PLATFORM_LINKS = [
-    { label: "Home", to: "/" },
-    { label: "Forum", to: "/forum" },
-    { label: "Universities", to: "/universities" },
-    { label: "Resources", to: "/universities" },
-    { label: "PYQs", to: "/universities" },
-  ]
-
-  return (
-    <footer className="relative mt-8">
-      {/* Gradient fade — reduced height to tighten gap */}
-      <div className="h-8 bg-gradient-to-b from-transparent via-slate-100/80 to-slate-100 dark:via-[#0a1120]/80 dark:to-[#0a1120] pointer-events-none" />
-
-      <div className="bg-slate-100 dark:bg-[#0a1120] border-t border-slate-200/70 dark:border-white/[0.05]">
-        <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-10">
-
-            {/* Brand */}
-            <div className="col-span-2">
-              <Link to="/" className="inline-block mb-3">
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
-                  Unizuya
-                </span>
-              </Link>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
-                An academic platform for students to access syllabus, past year questions, study resources and a
-                student forum. Includes attendance management and productivity tools to simplify academic life.
-              </p>
-              <div className="mt-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
-                bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20">
-                <Construction size={11} className="text-amber-500" />
-                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Active development</span>
-              </div>
-            </div>
-
-            {/* Platform */}
-            <div>
-              <h4 className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
-                Platform
-              </h4>
-              <ul className="space-y-2.5">
-                {PLATFORM_LINKS.map(link => (
-                  <li key={link.label}>
-                    <Link to={link.to} className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Account */}
-            <div>
-              <h4 className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
-                Account
-              </h4>
-              <ul className="space-y-2.5">
-                {currentUser ? (
-                  <>
-                    {[
-                      { label: "Dashboard", to: "/dashboard" },
-                      { label: "Profile", to: `/profile/${currentUser.username}` },
-                      { label: "Settings", to: "/dashboard/settings" },
-                    ].map(link => (
-                      <li key={link.label}>
-                        <Link to={link.to} className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150">
-                          {link.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <li>
-                      <button onClick={() => onOpenAuth("login")} className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150">
-                        Login
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => onOpenAuth("signup")} className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150">
-                        Sign up
-                      </button>
-                    </li>
-                    <li>
-                      <Link to="/privacy" className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150">
-                        Privacy Policy
-                      </Link>
-                    </li>
-                  </>
-                )}
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="mt-10 pt-6 border-t border-slate-200/60 dark:border-white/[0.05] flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              © {new Date().getFullYear()} Unizuya. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4">
-              <Link to="/privacy" className="text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-150">
-                Privacy Policy
-              </Link>
-              <span className="text-slate-300 dark:text-slate-600">·</span>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Built for students, by students</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 22 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.52, delay, ease: "easeOut" },
 })
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Main Home
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Home() {
   const { currentUser, isLoading: authLoading } = useAuth()
   const [authModal, setAuthModal] = useState({ open: false, mode: "signup" })
   const [roadmapOpen, setRoadmapOpen] = useState(false)
   const featuresRef = useRef(null)
+
+  useSeoMeta({
+    title: "Unizuya - Academic Platform for Students",
+    description: "Unizuya brings syllabus, PYQs, study resources, student forum, attendance tools, and productivity workflows into one academic platform.",
+  })
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow
@@ -1000,13 +887,13 @@ export default function Home() {
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 space-y-16">
 
-        {/* ── HERO ── */}
+        {/* â”€â”€ HERO â”€â”€ */}
         <section className="pt-10 text-center space-y-6">
           <motion.div {...fadeUp(0)} className="flex justify-center">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full
                             border border-amber-400/35 bg-amber-400/8 text-amber-500 text-xs font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              Work in progress — more coming soon
+              Work in progress - more coming soon
             </div>
           </motion.div>
 
@@ -1054,7 +941,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        {/* ── STATS ── */}
+        {/* â”€â”€ STATS â”€â”€ */}
         <motion.section {...fadeUp(0.18)}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -1076,7 +963,7 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {/* ── WHAT IS UNIZUYA ── */}
+        {/* â”€â”€ WHAT IS UNIZUYA â”€â”€ */}
         <motion.section {...fadeUp(0.22)} id="about">
           <div className="grid sm:grid-cols-2 gap-8 sm:gap-12 items-start">
             <div>
@@ -1129,7 +1016,7 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {/* ── FEATURES ── */}
+        {/* â”€â”€ FEATURES â”€â”€ */}
         <section ref={featuresRef}>
           <motion.div {...fadeUp(0.26)} className="text-center mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">
@@ -1160,7 +1047,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── ROADMAP TRIGGER ── */}
+        {/* â”€â”€ ROADMAP TRIGGER â”€â”€ */}
         <motion.div {...fadeUp(0.44)} className="flex justify-center">
           <button onClick={() => setRoadmapOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full
@@ -1168,12 +1055,12 @@ export default function Home() {
                        text-sm text-muted-foreground hover:text-foreground
                        hover:border-indigo-400/50 hover:shadow-md transition-all duration-200">
             <Zap size={13} className="text-indigo-500" />
-            View roadmap — see what's done and what's next
+            View roadmap - see what's done and what's next
             <ChevronRight size={13} />
           </button>
         </motion.div>
 
-        {/* ── CTA — guests only ── */}
+        {/* â”€â”€ CTA â€” guests only â”€â”€ */}
         {!authLoading && !currentUser && (
           <motion.section {...fadeUp(0.46)}>
             <div className="rounded-2xl overflow-hidden relative"
@@ -1222,8 +1109,6 @@ export default function Home() {
         )}
 
       </div>
-
-      <SiteFooter onOpenAuth={openAuth} />
 
       <AuthModal open={authModal.open} mode={authModal.mode} onClose={closeAuth} onSwitch={switchAuth} />
       <RoadmapModal open={roadmapOpen} onClose={() => setRoadmapOpen(false)} />

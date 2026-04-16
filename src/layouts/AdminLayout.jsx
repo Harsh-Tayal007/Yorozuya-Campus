@@ -8,7 +8,7 @@ import {
   Activity, Menu, Users, GitBranch, Upload, ClipboardList,
   ChevronDown, LogOut, User as UserIcon, BarChart2, ShieldX,
   Megaphone,
-  ClipboardCheck
+  ClipboardCheck, Mail
 } from "lucide-react"
 import { useTrackActivity } from "@/hooks/useTrackActivity"
 
@@ -31,6 +31,7 @@ const adminNav = [
   { label: "Moderation", to: "/admin/moderation", icon: ShieldX, permission: PERMISSIONS.VIEW_REPORTS },
   { label: "Updates", to: "/admin/updates", icon: Megaphone, permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
   { label: "Attendance", to: "/admin/attendance", icon: ClipboardCheck, permission: PERMISSIONS.VIEW_ATTENDANCE_REPORTS },
+  { label: "Contact Messages", to: "/admin/contact-messages", icon: Mail, permission: PERMISSIONS.VIEW_CONTACT_MESSAGES },
 ]
 
 function AdminTopBar({ sidebarOpen, setSidebarOpen }) {

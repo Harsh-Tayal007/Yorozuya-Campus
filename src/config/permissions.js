@@ -62,6 +62,9 @@ export const PERMISSIONS = {
 
   // ─── Owner-only gates ────────────────────────────────────────────────────
   OWNER_ACTIONS:             "owner:actions",
+
+  // ───Contact Messages ────────────────────────────────────────────────────
+  VIEW_CONTACT_MESSAGES: "view_contact_messages",
 }
 
 
@@ -96,6 +99,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.MANAGE_CLASSES,
     PERMISSIONS.CREATE_ATTENDANCE_SESSION,
     PERMISSIONS.VIEW_ATTENDANCE_REPORTS,
+    PERMISSIONS.VIEW_CONTACT_MESSAGES,
   ],
 
   moderator: [

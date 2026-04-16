@@ -1,6 +1,7 @@
 // src/layouts/PublicLayout.jsx
 import { Outlet } from "react-router-dom"
 import { Navbar } from "@/components"
+import Footer from "@/components/common/layout/Footer"
 import { SIDEBAR_W, NAVBAR_H } from "@/components/common/layout/UserSidebar"
 import { UserSidebar } from "@/components"
 import { useSidebar } from "@/context/SidebarContext"
@@ -15,9 +16,9 @@ const PublicLayout = () => {
 
   return (
     <div
-  onMouseMove={handleEdgeHover}
-  className="min-h-screen"
->
+      onMouseMove={handleEdgeHover}
+      className="min-h-screen"
+    >
       <Navbar />
       <UserSidebar />
 
@@ -32,6 +33,7 @@ const PublicLayout = () => {
         <main className="flex-1">
           <Outlet />
         </main>
+        <Footer />
       </div>
     </div>
   )
