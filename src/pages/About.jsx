@@ -33,8 +33,25 @@ import {
   ScanLine,
   TableProperties,
   Activity,
+  Github,
+  Linkedin,
+  Instagram,
 } from "lucide-react"
 import useSeoMeta from "@/hooks/useSeoMeta"
+
+function DiscordIcon({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+    </svg>
+  )
+}
 
 // ─── Shared card ──────────────────────────────────────────────────────────────
 function Card({ children, className = "" }) {
@@ -49,15 +66,15 @@ function Card({ children, className = "" }) {
 
 // ─── Section heading with coloured number badge ───────────────────────────────
 const BADGE_COLORS = {
-  indigo:  "bg-indigo-500/10 text-indigo-500",
-  blue:    "bg-blue-500/10 text-blue-500",
-  violet:  "bg-violet-500/10 text-violet-500",
+  indigo: "bg-indigo-500/10 text-indigo-500",
+  blue: "bg-blue-500/10 text-blue-500",
+  violet: "bg-violet-500/10 text-violet-500",
   emerald: "bg-emerald-500/10 text-emerald-500",
-  amber:   "bg-amber-500/10 text-amber-500",
-  rose:    "bg-rose-500/10 text-rose-500",
-  sky:     "bg-sky-500/10 text-sky-500",
-  teal:    "bg-teal-500/10 text-teal-500",
-  orange:  "bg-orange-500/10 text-orange-500",
+  amber: "bg-amber-500/10 text-amber-500",
+  rose: "bg-rose-500/10 text-rose-500",
+  sky: "bg-sky-500/10 text-sky-500",
+  teal: "bg-teal-500/10 text-teal-500",
+  orange: "bg-orange-500/10 text-orange-500",
 }
 
 function SectionHeading({ number, title, subtitle, color = "indigo" }) {
@@ -169,10 +186,10 @@ const FEATURE_CARDS = [
 // ─── Academic hierarchy ───────────────────────────────────────────────────────
 const HIERARCHY = [
   { step: "01", label: "University", desc: "Top-level institution context" },
-  { step: "02", label: "Program",    desc: "e.g. B.Tech, MCA, MBA" },
-  { step: "03", label: "Branch",     desc: "e.g. Computer Engineering" },
-  { step: "04", label: "Semester",   desc: "Academic term selection" },
-  { step: "05", label: "Subject",    desc: "Course-level learning material" },
+  { step: "02", label: "Program", desc: "e.g. B.Tech, MCA, MBA" },
+  { step: "03", label: "Branch", desc: "e.g. Computer Engineering" },
+  { step: "04", label: "Semester", desc: "Academic term selection" },
+  { step: "05", label: "Subject", desc: "Course-level learning material" },
 ]
 
 // ─── Tech stack ───────────────────────────────────────────────────────────────
@@ -228,11 +245,11 @@ function ArrowDown() {
 
 // ─── Diagram box ─────────────────────────────────────────────────────────────
 const DIAG_COLORS = {
-  blue:    { border: "border-blue-200 dark:border-blue-400/20",    bg: "bg-blue-50 dark:bg-blue-500/10",    text: "text-blue-700 dark:text-blue-300",    icon: "text-blue-500" },
-  violet:  { border: "border-violet-200 dark:border-violet-400/20", bg: "bg-violet-50 dark:bg-violet-500/10", text: "text-violet-700 dark:text-violet-300", icon: "text-violet-500" },
-  orange:  { border: "border-orange-200 dark:border-orange-400/20", bg: "bg-orange-50 dark:bg-orange-500/10", text: "text-orange-700 dark:text-orange-300", icon: "text-orange-500" },
+  blue: { border: "border-blue-200 dark:border-blue-400/20", bg: "bg-blue-50 dark:bg-blue-500/10", text: "text-blue-700 dark:text-blue-300", icon: "text-blue-500" },
+  violet: { border: "border-violet-200 dark:border-violet-400/20", bg: "bg-violet-50 dark:bg-violet-500/10", text: "text-violet-700 dark:text-violet-300", icon: "text-violet-500" },
+  orange: { border: "border-orange-200 dark:border-orange-400/20", bg: "bg-orange-50 dark:bg-orange-500/10", text: "text-orange-700 dark:text-orange-300", icon: "text-orange-500" },
   emerald: { border: "border-emerald-200 dark:border-emerald-400/20", bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-300", icon: "text-emerald-500" },
-  amber:   { border: "border-amber-200 dark:border-amber-400/20",   bg: "bg-amber-50 dark:bg-amber-500/10",   text: "text-amber-700 dark:text-amber-300",   icon: "text-amber-500" },
+  amber: { border: "border-amber-200 dark:border-amber-400/20", bg: "bg-amber-50 dark:bg-amber-500/10", text: "text-amber-700 dark:text-amber-300", icon: "text-amber-500" },
 }
 
 function DiagBox({ color, icon, label, sub }) {
@@ -267,9 +284,9 @@ function ArchitectureDiagram() {
           </div>
           <ArrowDown />
           <div className="grid w-full grid-cols-3 gap-3">
-            <DiagBox color="violet"  icon={Server}    label="Appwrite Backend"   sub="Auth, DB, Functions" />
-            <DiagBox color="orange"  icon={Zap}       label="Cloudflare Worker"  sub="Notice Scraping, Proxy" />
-            <DiagBox color="emerald" icon={Code2}     label="Contact Worker"     sub="Form to Appwrite pipeline" />
+            <DiagBox color="violet" icon={Server} label="Appwrite Backend" sub="Auth, DB, Functions" />
+            <DiagBox color="orange" icon={Zap} label="Cloudflare Worker" sub="Notice Scraping, Proxy" />
+            <DiagBox color="emerald" icon={Code2} label="Contact Worker" sub="Form to Appwrite pipeline" />
           </div>
           <ArrowDown />
           <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-400/20 dark:bg-emerald-500/10">
@@ -280,10 +297,10 @@ function ArchitectureDiagram() {
           </div>
           <ArrowDown />
           <div className="grid w-full grid-cols-4 gap-3">
-            <DiagBox color="amber" icon={Globe}           label="Cloudinary"         sub="Media CDN" />
-            <DiagBox color="amber" icon={Bell}            label="Resend + ImproveMX" sub="Email" />
-            <DiagBox color="amber" icon={Bot}             label="Gemini API"         sub="AI Features" />
-            <DiagBox color="amber" icon={MessageSquare}   label="Giphy API"          sub="GIF support" />
+            <DiagBox color="amber" icon={Globe} label="Cloudinary" sub="Media CDN" />
+            <DiagBox color="amber" icon={Bell} label="Resend + ImproveMX" sub="Email" />
+            <DiagBox color="amber" icon={Bot} label="Gemini API" sub="AI Features" />
+            <DiagBox color="amber" icon={MessageSquare} label="Giphy API" sub="GIF support" />
           </div>
         </div>
       </ScrollDiagram>
@@ -294,13 +311,13 @@ function ArchitectureDiagram() {
 // ─── Data flow diagram ────────────────────────────────────────────────────────
 function DataFlowDiagram() {
   const steps = [
-    { label: "User Action",        desc: "Click, form submit, navigation",   cls: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300" },
-    { label: "React Component",    desc: "Event handler triggered",           cls: "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-300" },
-    { label: "Service Layer",      desc: "API call via Appwrite SDK",         cls: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-300" },
-    { label: "Appwrite Backend",   desc: "Auth check, DB operation",          cls: "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-400/20 dark:bg-purple-500/10 dark:text-purple-300" },
-    { label: "Database",           desc: "Read or write collection",          cls: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-300" },
-    { label: "Response",           desc: "Data returned to client",           cls: "border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-400/20 dark:bg-pink-500/10 dark:text-pink-300" },
-    { label: "UI Update",          desc: "State updated, view re-renders",    cls: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-300" },
+    { label: "User Action", desc: "Click, form submit, navigation", cls: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300" },
+    { label: "React Component", desc: "Event handler triggered", cls: "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-300" },
+    { label: "Service Layer", desc: "API call via Appwrite SDK", cls: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-300" },
+    { label: "Appwrite Backend", desc: "Auth check, DB operation", cls: "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-400/20 dark:bg-purple-500/10 dark:text-purple-300" },
+    { label: "Database", desc: "Read or write collection", cls: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-300" },
+    { label: "Response", desc: "Data returned to client", cls: "border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-400/20 dark:bg-pink-500/10 dark:text-pink-300" },
+    { label: "UI Update", desc: "State updated, view re-renders", cls: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-300" },
   ]
   return (
     <Card>
@@ -326,13 +343,13 @@ function DataFlowDiagram() {
 // ─── Attendance flow ──────────────────────────────────────────────────────────
 function AttendanceFlowDiagram() {
   const steps = [
-    { label: "Teacher creates a class",              role: "teacher", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
-    { label: "Students join via class code",          role: "student", pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" },
-    { label: "Teacher opens a session",              role: "teacher", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
-    { label: "Attendance marked in real time",        role: "all",     pill: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300" },
-    { label: "Session closed by teacher",            role: "teacher", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
-    { label: "Analytics and percentages computed",    role: "system",  pill: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300" },
-    { label: "CSV export and printable report",       role: "admin",   pill: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" },
+    { label: "Teacher creates a class", role: "teacher", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
+    { label: "Students join via class code", role: "student", pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" },
+    { label: "Teacher opens a session", role: "teacher", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
+    { label: "Attendance marked in real time", role: "all", pill: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300" },
+    { label: "Session closed by teacher", role: "teacher", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
+    { label: "Analytics and percentages computed", role: "system", pill: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300" },
+    { label: "CSV export and printable report", role: "admin", pill: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" },
   ]
   return (
     <Card>
@@ -366,12 +383,12 @@ function AttendanceFlowDiagram() {
 // ─── CGPA calculator workflow ─────────────────────────────────────────────────
 function CGPAFlowDiagram() {
   const steps = [
-    { label: "Add a semester",                        sub: "Name it Semester 1, 2, and so on." },
-    { label: "Enter subjects, credits, and grades",   sub: "Use AI Scan to auto-fill from a marksheet image or PDF." },
-    { label: "SGPA computed per semester",            sub: "Earned grade points divided by total credits." },
-    { label: "CGPA computed across all semesters",    sub: "Average of all semester SGPAs." },
-    { label: "View grade label and percentage",       sub: "Percentage equals CGPA multiplied by 9.5." },
-    { label: "Export as PDF or image",                sub: "Or save a snapshot to your history for later comparison." },
+    { label: "Add a semester", sub: "Name it Semester 1, 2, and so on." },
+    { label: "Enter subjects, credits, and grades", sub: "Use AI Scan to auto-fill from a marksheet image or PDF." },
+    { label: "SGPA computed per semester", sub: "Earned grade points divided by total credits." },
+    { label: "CGPA computed across all semesters", sub: "Average of all semester SGPAs." },
+    { label: "View grade label and percentage", sub: "Percentage equals CGPA multiplied by 9.5." },
+    { label: "Export as PDF or image", sub: "Or save a snapshot to your history for later comparison." },
   ]
   return (
     <Card>
@@ -477,12 +494,12 @@ function TaskFlowDiagram() {
 // ─── Timetable workflow ───────────────────────────────────────────────────────
 function TimetableFlowDiagram() {
   const steps = [
-    { icon: Settings,        label: "Setup tab",   desc: "Define time periods and add subjects with teacher and room info." },
-    { icon: ScanLine,        label: "AI Scan",     desc: "Optionally scan a timetable image to auto-fill subjects and slots." },
-    { icon: TableProperties, label: "Grid tab",    desc: "Click any cell to assign a subject to a day and period." },
-    { icon: Clock,           label: "Today tab",   desc: "See only today's classes at a glance without the full grid." },
-    { icon: Download,        label: "Export",      desc: "Save the timetable as a PDF or PNG image." },
-    { icon: BookOpen,        label: "Saved tab",   desc: "Save multiple timetables and switch between them any time." },
+    { icon: Settings, label: "Setup tab", desc: "Define time periods and add subjects with teacher and room info." },
+    { icon: ScanLine, label: "AI Scan", desc: "Optionally scan a timetable image to auto-fill subjects and slots." },
+    { icon: TableProperties, label: "Grid tab", desc: "Click any cell to assign a subject to a day and period." },
+    { icon: Clock, label: "Today tab", desc: "See only today's classes at a glance without the full grid." },
+    { icon: Download, label: "Export", desc: "Save the timetable as a PDF or PNG image." },
+    { icon: BookOpen, label: "Saved tab", desc: "Save multiple timetables and switch between them any time." },
   ]
   return (
     <Card>
@@ -525,14 +542,14 @@ function TimetableFlowDiagram() {
 // ─── Module interaction diagram ───────────────────────────────────────────────
 function ModuleInteractionDiagram() {
   const modules = [
-    { icon: BookOpen,      label: "Academic Content", color: "text-blue-500" },
-    { icon: Users,         label: "User System",      color: "text-pink-500" },
-    { icon: MessageSquare, label: "Forum",            color: "text-emerald-500" },
-    { icon: Calculator,    label: "CGPA Calc",        color: "text-rose-500" },
-    { icon: ListChecks,    label: "Task Tracker",     color: "text-sky-500" },
-    { icon: Calendar,      label: "Timetable",        color: "text-teal-500" },
-    { icon: ClipboardList, label: "Attendance",       color: "text-amber-500" },
-    { icon: Shield,        label: "Admin Panel",      color: "text-slate-500" },
+    { icon: BookOpen, label: "Academic Content", color: "text-blue-500" },
+    { icon: Users, label: "User System", color: "text-pink-500" },
+    { icon: MessageSquare, label: "Forum", color: "text-emerald-500" },
+    { icon: Calculator, label: "CGPA Calc", color: "text-rose-500" },
+    { icon: ListChecks, label: "Task Tracker", color: "text-sky-500" },
+    { icon: Calendar, label: "Timetable", color: "text-teal-500" },
+    { icon: ClipboardList, label: "Attendance", color: "text-amber-500" },
+    { icon: Shield, label: "Admin Panel", color: "text-slate-500" },
   ]
   return (
     <Card>
@@ -1220,13 +1237,41 @@ export default function About() {
 
         {/* 10 Developer */}
         <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 dark:border-white/10 dark:from-blue-500/10 dark:to-indigo-500/10">
+          {/* Primary builder */}
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-indigo-400">
             Built by
           </p>
           <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">Harsh Tayal</h3>
+          <p className="mb-1 text-xs font-medium text-indigo-500">Founder &amp; Lead Developer</p>
           <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             Unizuya is a student-driven capstone project built at J.C. Bose University of Science and Technology, YMCA, Faridabad. Every module addresses a real academic pain point encountered during undergraduate study. From hunting for PYQs the night before exams to manually tracking attendance across five subjects at once, each feature started as a problem before it became a solution.
           </p>
+
+          {/* Social icons — Harsh */}
+          <div className="mt-3 flex items-center gap-2">
+            {[
+              // TODO: Add actual GitHub link
+              { icon: Github, href: "https://github.com/Harsh-Tayal007", label: "GitHub" },
+              // TODO: Add actual LinkedIn link
+              { icon: Linkedin, href: "https://www.linkedin.com/in/harsh-tayal-619521247?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app", label: "LinkedIn" },
+              // TODO: Add actual Instagram link
+              { icon: Instagram, href: "https://www.instagram.com/harshisweeb/", label: "Instagram" },
+              // TODO: Add actual Discord link
+              { icon: DiscordIcon, href: "https://discord.gg/eZcF8eMu", label: "Discord" },
+            ].map(({ icon: Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={`Harsh Tayal on ${label}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-white/10 dark:hover:text-blue-300"
+              >
+                <Icon size={13} />
+              </a>
+            ))}
+          </div>
+
           <Link
             to="/contact"
             className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 transition-colors hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
@@ -1234,6 +1279,40 @@ export default function About() {
             Get in touch
             <ArrowRight size={14} />
           </Link>
+
+          {/* Contributor — visually secondary */}
+          <div className="mt-5 border-t border-blue-200/60 pt-4 dark:border-white/10">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+              With contributions from
+            </p>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  Kuldeep Vashishth
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Contributor &amp; Co-Developer</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {[
+                  // TODO: Add actual GitHub link
+                  { icon: Github, href: "https://github.com/kuldeepvashisth", label: "GitHub" },
+                  // TODO: Add actual LinkedIn link
+                  { icon: Linkedin, href: "https://www.linkedin.com/in/kuldeep-vashisth-974630380?utm_source=share_via&utm_content=profile&utm_medium=member_android", label: "LinkedIn" },
+                ].map(({ icon: Icon, href, label }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    aria-label={`Kuldeep Vashishth on ${label}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-white/10 dark:hover:text-blue-300"
+                  >
+                    <Icon size={13} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
       </div>
