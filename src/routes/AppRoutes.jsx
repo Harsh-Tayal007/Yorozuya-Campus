@@ -1,133 +1,188 @@
-import { Routes, Route } from "react-router-dom"
+import { lazy, Suspense } from "react"
+import { Routes, Route, Navigate } from "react-router-dom"
 
-/* 🌍 Public pages */
-import Home from "../pages/Home"
-import About from "../pages/About"
-import Contact from "../pages/Contact"
-import Universities from "../pages/universities/Universities"
-import UniversityDetail from "../pages/universities/UniversityDetail"
-
+/* ─── Layouts (always needed, not lazy) ─── */
 import PublicLayout from "@/layouts/PublicLayout"
 import UserLayout from "@/layouts/UserLayout"
+import AdminLayout from "@/layouts/AdminLayout"
+import DashboardLayout from "@/layouts/DashboardLayout"
 
+/* ─── Auth guards (always needed, not lazy) ─── */
 import PublicRoute from "./PublicRoute"
-
-import Forum from "../pages/forum/Forum"
-import ThreadDetail from "../pages/forum/ThreadDetail"
-import NotFound from "../pages/errors/NotFound"
-import ResourcesUserView from "@/pages/resources/ResourcesUserView"
-import SyllabusUserView from "../pages/admin/syllabus/SyllabusUserView"
-import PyqUserView from "@/pages/pyqs/PyqUserView"
-import PyqSemesterSubjects from "@/pages/pyqs/PyqSemesterSubjects"
-import PyqSubjectList from "@/pages/pyqs/PyqSubjectList"
-
-import ProgramDetail from "@/pages/programs/ProgramDetail"
-import ProgramSyllabus from "@/pages/programs/ProgramSyllabus"
-import BranchDetail from "@/pages/branches/BranchDetail"
-import BranchSyllabus from "@/pages/branches/BranchSyllabus"
-
-/* 🔐 Auth pages */
-import Login from "@/pages/auth/Login"
-import Signup from "@/pages/auth/Signup"
-import OAuthCallback from "@/pages/auth/OAuthCallback"
-import ForgotPassword from "@/pages/auth/ForgotPassword"
-import ResetPassword from "@/pages/auth/ResetPassword"
-
-/* 🔒 Route guards */
 import ProtectedRoute from "./ProtectedRoute"
-
-/* 🛑 Admin pages */
-import AdminDashboard from "../pages/dashboard/AdminDashboard"
-import Programs from "@/pages/admin/Programs"
-import UniversityPrograms from "@/pages/admin/UniversityPrograms"
-import ResourcesUpload from "@/pages/admin/resources/ResourcesUpload"
-import PyqUpload from "@/pages/admin/pyq/PyqUpload"
-import AdminPyqsPage from "@/pages/admin/pyq/AdminPyqsPage"
-import UnitsAdmin from "@/pages/admin/units/Units"
-import AdminActivity from "@/pages/dashboard/AdminActivity"
-import AdminStats from "@/pages/admin/stats/AdminStats"
-
-import Unauthorized from "../pages/errors/Unauthorized"
-import { Navigate } from "react-router-dom"
-import SyllabusAdmin from "@/pages/admin/syllabus/syllabus"
-
 import RequireAuth from "@/components/auth/RequireAuth"
 import RequirePermissionRoute from "@/components/auth/RequirePermissionRoute"
-import { PERMISSIONS } from "@/config/permissions"
-import AdminLayout from "@/layouts/AdminLayout"
-import UserRolesAdmin from "@/pages/admin/roles/userRolesAdmin"
-import Dashboard from "@/pages/dashboard/Dashboard"
 import RequireAcademicProfile from "@/components/auth/RequireAcademicProfile"
-import CompleteProfile from "@/pages/dashboard/CompleteProfile"
-import DashboardLayout from "@/layouts/DashboardLayout"
-import DashboardSettings from "@/pages/dashboard/DashboardSettings"
-import DashboardSyllabus from "@/components/dashboard/DashboardSyllabus"
-import DashboardSemesterSyllabus from "@/components/dashboard/DashboardSemesterSyllabus"
-import DashboardResources from "@/components/dashboard/DashboardResources"
-import DashboardPyqs from "@/components/dashboard/DashboardPyqs"
-import DashboardPyqSemester from "@/components/dashboard/DashboardPyqSemester"
-import DashboardPyqSubject from "@/components/dashboard/DashboardPyqSubject"
-import UniversityNoticesPage from "@/pages/dashboard/UniversityNoticesPage"
+import { PERMISSIONS } from "@/config/permissions"
+
+/* ─── Critical public pages (eagerly loaded — above the fold) ─── */
+import Home from "../pages/Home"
+
+/* ─── Page title manager ─── */
 import { PageTitleManager } from "@/components"
-import UserProfile from "@/pages/profile/UserProfile"
-import BranchesAdmin from "@/pages/branches/BranchesAdmin"
 
-import CGPACalculator from "@/pages/tools/CGPACalculator"
-import TaskTracker from "@/pages/tools/TaskTracker"
-import TimetableBuilder from "@/pages/tools/TimetableBuilder"
-import PrivacyPolicy from "@/pages/auth/PrivacyPolicy"
-import NotificationsPage from "@/pages/dashboard/NotificationsPage"
-import AdminModeration from "@/pages/admin/moderation/AdminModeration"
-import AdminUpdates from "@/pages/admin/updates/AdminUpdates"
-import UpdatesPage from "@/pages/updates/UpdatesPage"
-import VerifyEmail from "@/pages/auth/VerifyEmail"
-import AttendancePage from "@/pages/attendance/AttendancePage"
-import ClassAttendanceReport from "@/pages/attendance/ClassAttendanceReport"
-import AdminAttendance from "@/pages/admin/attendance/AdminAttendance"
-import AdminContactMessages from "@/pages/admin/contact/AdminContactMessages"
+/* ══════════════════════════════════════════════
+   LAZY IMPORTS
+   Every chunk below is loaded only when the
+   user navigates to that route.
+   ══════════════════════════════════════════════ */
 
-const AppRoutes = () => {
-  return (
-    <>
-      <PageTitleManager />
+/* Public */
+const About               = lazy(() => import("../pages/About"))
+const Contact             = lazy(() => import("../pages/Contact"))
+const Universities        = lazy(() => import("../pages/universities/Universities"))
+const UniversityDetail    = lazy(() => import("../pages/universities/UniversityDetail"))
+const Forum               = lazy(() => import("../pages/forum/Forum"))
+const ThreadDetail        = lazy(() => import("../pages/forum/ThreadDetail"))
+const UserProfile         = lazy(() => import("@/pages/profile/UserProfile"))
+const UpdatesPage         = lazy(() => import("@/pages/updates/UpdatesPage"))
+const ResourcesUserView   = lazy(() => import("@/pages/resources/ResourcesUserView"))
+const SyllabusUserView    = lazy(() => import("../pages/admin/syllabus/SyllabusUserView"))
+const PyqUserView         = lazy(() => import("@/pages/pyqs/PyqUserView"))
+const PyqSemesterSubjects = lazy(() => import("@/pages/pyqs/PyqSemesterSubjects"))
+const PyqSubjectList      = lazy(() => import("@/pages/pyqs/PyqSubjectList"))
+const ProgramDetail       = lazy(() => import("@/pages/programs/ProgramDetail"))
+const ProgramSyllabus     = lazy(() => import("@/pages/programs/ProgramSyllabus"))
+const BranchDetail        = lazy(() => import("@/pages/branches/BranchDetail"))
+const BranchSyllabus      = lazy(() => import("@/pages/branches/BranchSyllabus"))
+const PrivacyPolicy       = lazy(() => import("@/pages/auth/PrivacyPolicy"))
+
+/* Auth */
+const Login           = lazy(() => import("@/pages/auth/Login"))
+const Signup          = lazy(() => import("@/pages/auth/Signup"))
+const OAuthCallback   = lazy(() => import("@/pages/auth/OAuthCallback"))
+const ForgotPassword  = lazy(() => import("@/pages/auth/ForgotPassword"))
+const ResetPassword   = lazy(() => import("@/pages/auth/ResetPassword"))
+const VerifyEmail     = lazy(() => import("@/pages/auth/VerifyEmail"))
+
+/* Dashboard / user */
+const CompleteProfile         = lazy(() => import("@/pages/dashboard/CompleteProfile"))
+const Dashboard               = lazy(() => import("@/pages/dashboard/Dashboard"))
+const DashboardSettings       = lazy(() => import("@/pages/dashboard/DashboardSettings"))
+const UniversityNoticesPage   = lazy(() => import("@/pages/dashboard/UniversityNoticesPage"))
+const NotificationsPage       = lazy(() => import("@/pages/dashboard/NotificationsPage"))
+const DashboardSyllabus       = lazy(() => import("@/components/dashboard/DashboardSyllabus"))
+const DashboardSemesterSyllabus = lazy(() => import("@/components/dashboard/DashboardSemesterSyllabus"))
+const DashboardResources      = lazy(() => import("@/components/dashboard/DashboardResources"))
+const DashboardPyqs           = lazy(() => import("@/components/dashboard/DashboardPyqs"))
+const DashboardPyqSemester    = lazy(() => import("@/components/dashboard/DashboardPyqSemester"))
+const DashboardPyqSubject     = lazy(() => import("@/components/dashboard/DashboardPyqSubject"))
+
+/* Tools */
+const CGPACalculator    = lazy(() => import("@/pages/tools/CGPACalculator"))
+const TaskTracker       = lazy(() => import("@/pages/tools/TaskTracker"))
+const TimetableBuilder  = lazy(() => import("@/pages/tools/TimetableBuilder"))
+
+/* Attendance */
+const AttendancePage        = lazy(() => import("@/pages/attendance/AttendancePage"))
+const ClassAttendanceReport = lazy(() => import("@/pages/attendance/ClassAttendanceReport"))
+
+/* Errors */
+const NotFound      = lazy(() => import("../pages/errors/NotFound"))
+const Unauthorized  = lazy(() => import("../pages/errors/Unauthorized"))
+
+/* Admin — heaviest chunk, loaded only for admins */
+const AdminDashboard        = lazy(() => import("../pages/dashboard/AdminDashboard"))
+const AdminActivity         = lazy(() => import("@/pages/dashboard/AdminActivity"))
+const AdminStats            = lazy(() => import("@/pages/admin/stats/AdminStats"))
+const AdminModeration       = lazy(() => import("@/pages/admin/moderation/AdminModeration"))
+const AdminUpdates          = lazy(() => import("@/pages/admin/updates/AdminUpdates"))
+const AdminAttendance       = lazy(() => import("@/pages/admin/attendance/AdminAttendance"))
+const AdminContactMessages  = lazy(() => import("@/pages/admin/contact/AdminContactMessages"))
+const Programs              = lazy(() => import("@/pages/admin/Programs"))
+const UniversityPrograms    = lazy(() => import("@/pages/admin/UniversityPrograms"))
+const ResourcesUpload       = lazy(() => import("@/pages/admin/resources/ResourcesUpload"))
+const PyqUpload             = lazy(() => import("@/pages/admin/pyq/PyqUpload"))
+const AdminPyqsPage         = lazy(() => import("@/pages/admin/pyq/AdminPyqsPage"))
+const UnitsAdmin            = lazy(() => import("@/pages/admin/units/Units"))
+const SyllabusAdmin         = lazy(() => import("@/pages/admin/syllabus/syllabus"))
+const UserRolesAdmin        = lazy(() => import("@/pages/admin/roles/userRolesAdmin"))
+const BranchesAdmin         = lazy(() => import("@/pages/branches/BranchesAdmin"))
+// Universities already imported above (shared between public + admin)
+
+/* ══════════════════════════════════════════════
+   FALLBACK COMPONENTS
+   ══════════════════════════════════════════════ */
+
+/**
+ * Minimal CSS-only spinner — zero JS overhead, no extra dependency.
+ * Replace with your design-system skeleton if you have one.
+ */
+const PageSpinner = () => (
+  <div style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "60vh",
+  }}>
+    <div style={{
+      width: 36,
+      height: 36,
+      border: "3px solid #e5e7eb",
+      borderTop: "3px solid #6366f1",
+      borderRadius: "50%",
+      animation: "spin 0.7s linear infinite",
+    }} />
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+)
+
+/* ══════════════════════════════════════════════
+   ROUTE TREE
+   ══════════════════════════════════════════════ */
+
+const AppRoutes = () => (
+  <>
+    <PageTitleManager />
+    <Suspense fallback={<PageSpinner />}>
       <Routes>
-        {/* 🌍 Public routes */}
+
+        {/* ─── 🌍 Public routes ─── */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/forum" element={<Forum />} />
+          {/* Home is eager — it's the landing page / LCP target */}
+          <Route path="/"         element={<Home />} />
+          <Route path="/about"    element={<About />} />
+          <Route path="/contact"  element={<Contact />} />
+          <Route path="/forum"    element={<Forum />} />
           <Route path="/forum/:threadId" element={<ThreadDetail />} />
-          <Route path="/universities" element={<Universities />} />
-          <Route path="/profile/:username" element={<UserProfile />} />
+          <Route path="/universities"            element={<Universities />} />
+          <Route path="/profile/:username"       element={<UserProfile />} />
           <Route path="/university/:universityId" element={<UniversityDetail />} />
-          <Route path="/programs/:programId" element={<ProgramDetail />} />
-          <Route path="/programs/:programId/syllabus" element={<ProgramSyllabus />} />
-          <Route path="/programs/:programId/branches/:branchName" element={<BranchDetail />} />
-          <Route path="/programs/:programId/branches/:branchName/syllabus" element={<BranchSyllabus />} />
-          <Route path="/programs/:programId/branches/:branchName/syllabus/semester/:semester" element={<SyllabusUserView />} />
-          <Route path="/programs/:programId/branches/:branchName/resources" element={<ResourcesUserView />} />
-          <Route path="/programs/:programId/branches/:branchName/resources/semester/:semester" element={<ResourcesUserView />} />
+          <Route path="/updates"  element={<UpdatesPage />} />
+          <Route path="/privacy"  element={<PrivacyPolicy />} />
+
+          {/* Programs / branches */}
+          <Route path="/programs/:programId"                                                                        element={<ProgramDetail />} />
+          <Route path="/programs/:programId/syllabus"                                                              element={<ProgramSyllabus />} />
+          <Route path="/programs/:programId/branches/:branchName"                                                  element={<BranchDetail />} />
+          <Route path="/programs/:programId/branches/:branchName/syllabus"                                        element={<BranchSyllabus />} />
+          <Route path="/programs/:programId/branches/:branchName/syllabus/semester/:semester"                     element={<SyllabusUserView />} />
+
+          {/* Resources */}
+          <Route path="/programs/:programId/branches/:branchName/resources"                                       element={<ResourcesUserView />} />
+          <Route path="/programs/:programId/branches/:branchName/resources/semester/:semester"                    element={<ResourcesUserView />} />
           <Route path="/programs/:programId/branches/:branchName/resources/semester/:semester/subject/:subjectId" element={<ResourcesUserView />} />
           <Route path="/programs/:programId/branches/:branchName/resources/semester/:semester/subject/:subjectId/unit/:unitId" element={<ResourcesUserView />} />
-          <Route path="/programs/:programId/branches/:branchName/pyqs" element={<PyqUserView />} />
-          <Route path="/programs/:programId/branches/:branchName/pyqs/semester/:semester" element={<PyqSemesterSubjects />} />
-          <Route path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId" element={<PyqSubjectList />} />
+
+          {/* PYQs */}
+          <Route path="/programs/:programId/branches/:branchName/pyqs"                                            element={<PyqUserView />} />
+          <Route path="/programs/:programId/branches/:branchName/pyqs/semester/:semester"                         element={<PyqSemesterSubjects />} />
+          <Route path="/programs/:programId/branches/:branchName/pyqs/semester/:semester/subject/:subjectId"      element={<PyqSubjectList />} />
+
+          {/* Misc public */}
           <Route path="/syllabus/:syllabusId" element={<SyllabusUserView />} />
-          <Route path="/resources" element={<ResourcesUserView />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/updates" element={<UpdatesPage />} />
+          <Route path="/resources"            element={<ResourcesUserView />} />
+          <Route path="/forgot-password"      element={<ForgotPassword />} />
+          <Route path="/reset-password"       element={<ResetPassword />} />
+          <Route path="/verify-email"         element={<VerifyEmail />} />
         </Route>
 
-        {/* Auth routes */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+        {/* ─── Auth routes ─── */}
+        <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/signup"         element={<PublicRoute><Signup /></PublicRoute>} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
 
-        {/* 🔒 Logged-in user routes */}
+        {/* ─── 🔒 Authenticated user routes ─── */}
         <Route element={<ProtectedRoute />}>
           <Route path="/complete-profile" element={<CompleteProfile />} />
 
@@ -136,13 +191,13 @@ const AppRoutes = () => {
 
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<Dashboard />} />
-                <Route path="settings" element={<DashboardSettings />} />
-                <Route path="notices" element={<UniversityNoticesPage />} />
-                <Route path="cgpa" element={<CGPACalculator />} />
-                <Route path="tasks" element={<TaskTracker />} />
-                <Route path="timetable" element={<TimetableBuilder />} />
+                <Route path="settings"      element={<DashboardSettings />} />
+                <Route path="notices"       element={<UniversityNoticesPage />} />
+                <Route path="cgpa"          element={<CGPACalculator />} />
+                <Route path="tasks"         element={<TaskTracker />} />
+                <Route path="timetable"     element={<TimetableBuilder />} />
                 <Route path="notifications" element={<NotificationsPage />} />
-                <Route path="attendance" element={<AttendancePage />} />
+                <Route path="attendance"    element={<AttendancePage />} />
                 <Route path="attendance/class/:classId" element={
                   <RequirePermissionRoute permission={PERMISSIONS.MANAGE_CLASSES}>
                     <ClassAttendanceReport />
@@ -150,21 +205,21 @@ const AppRoutes = () => {
                 } />
 
                 <Route path="syllabus">
-                  <Route index element={<DashboardSyllabus />} />
+                  <Route index    element={<DashboardSyllabus />} />
                   <Route path="semester/:semester" element={<DashboardSemesterSyllabus />} />
                 </Route>
 
                 <Route path="resources">
-                  <Route index element={<DashboardResources />} />
-                  <Route path="semester/:semester" element={<DashboardResources />} />
-                  <Route path="semester/:semester/subject/:subjectId" element={<DashboardResources />} />
+                  <Route index    element={<DashboardResources />} />
+                  <Route path="semester/:semester"                               element={<DashboardResources />} />
+                  <Route path="semester/:semester/subject/:subjectId"            element={<DashboardResources />} />
                   <Route path="semester/:semester/subject/:subjectId/unit/:unitId" element={<DashboardResources />} />
                 </Route>
 
                 <Route path="pyqs">
-                  <Route index element={<DashboardPyqs />} />
-                  <Route path="semester/:semester" element={<DashboardPyqSemester />} />
-                  <Route path="semester/:semester/subject/:subjectId" element={<DashboardPyqSubject />} />
+                  <Route index    element={<DashboardPyqs />} />
+                  <Route path="semester/:semester"                        element={<DashboardPyqSemester />} />
+                  <Route path="semester/:semester/subject/:subjectId"     element={<DashboardPyqSubject />} />
                 </Route>
               </Route>
 
@@ -172,7 +227,7 @@ const AppRoutes = () => {
           </Route>
         </Route>
 
-        {/* 🔐 Admin-only routes */}
+        {/* ─── 🔐 Admin-only routes ─── */}
         <Route path="/admin" element={
           <RequireAuth>
             <RequirePermissionRoute permission={PERMISSIONS.VIEW_ADMIN_DASHBOARD}>
@@ -181,47 +236,32 @@ const AppRoutes = () => {
           </RequireAuth>
         }>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="roles" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_USERS}><UserRolesAdmin /></RequirePermissionRoute>} />
-          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="dashboard"  element={<AdminDashboard />} />
+          <Route path="activity"   element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminActivity /></RequirePermissionRoute>} />
+          <Route path="stats"      element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminStats /></RequirePermissionRoute>} />
+          <Route path="roles"      element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_USERS}><UserRolesAdmin /></RequirePermissionRoute>} />
           <Route path="universities" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_UNIVERSITIES}><Universities /></RequirePermissionRoute>} />
-          <Route path="programs" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PROGRAMS}><Programs /></RequirePermissionRoute>} />
+          <Route path="programs"   element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PROGRAMS}><Programs /></RequirePermissionRoute>} />
           <Route path="universities/:id/programs" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PROGRAMS}><UniversityPrograms /></RequirePermissionRoute>} />
-          <Route path="branches" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PROGRAMS}><BranchesAdmin /></RequirePermissionRoute>} />
-          <Route path="syllabus" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_SYLLABUS}><SyllabusAdmin /></RequirePermissionRoute>} />
-          <Route path="units" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_UNITS}><UnitsAdmin /></RequirePermissionRoute>} />
+          <Route path="branches"   element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PROGRAMS}><BranchesAdmin /></RequirePermissionRoute>} />
+          <Route path="syllabus"   element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_SYLLABUS}><SyllabusAdmin /></RequirePermissionRoute>} />
+          <Route path="units"      element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_UNITS}><UnitsAdmin /></RequirePermissionRoute>} />
           <Route path="resources/upload" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_RESOURCES}><ResourcesUpload /></RequirePermissionRoute>} />
           <Route path="pyq/upload" element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_PYQS}><PyqUpload /></RequirePermissionRoute>} />
-          <Route path="pyqs" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_PYQS}><AdminPyqsPage /></RequirePermissionRoute>} />
-          <Route path="activity" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminActivity /></RequirePermissionRoute>} />
-          <Route path="stats" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ACTIVITY_LOG}><AdminStats /></RequirePermissionRoute>} />
-          <Route path="moderation" element={
-            <RequirePermissionRoute permission={PERMISSIONS.VIEW_REPORTS}>
-              <AdminModeration />
-            </RequirePermissionRoute>
-          } />
-          <Route path="updates" element={
-            <RequirePermissionRoute permission={PERMISSIONS.VIEW_ADMIN_DASHBOARD}>
-              <AdminUpdates />
-            </RequirePermissionRoute>
-          } />
-          <Route path="attendance" element={
-            <RequirePermissionRoute permission={PERMISSIONS.VIEW_ATTENDANCE_REPORTS}>
-              <AdminAttendance />
-            </RequirePermissionRoute>
-          } />
-          <Route path="contact-messages" element={
-            <RequirePermissionRoute permission={PERMISSIONS.VIEW_CONTACT_MESSAGES}>
-              <AdminContactMessages />
-            </RequirePermissionRoute>
-          } />
+          <Route path="pyqs"       element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_PYQS}><AdminPyqsPage /></RequirePermissionRoute>} />
+          <Route path="moderation" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_REPORTS}><AdminModeration /></RequirePermissionRoute>} />
+          <Route path="updates"    element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ADMIN_DASHBOARD}><AdminUpdates /></RequirePermissionRoute>} />
+          <Route path="attendance" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ATTENDANCE_REPORTS}><AdminAttendance /></RequirePermissionRoute>} />
+          <Route path="contact-messages" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_CONTACT_MESSAGES}><AdminContactMessages /></RequirePermissionRoute>} />
         </Route>
 
-        {/* ⚠️ System routes */}
+        {/* ─── ⚠️ System routes ─── */}
         <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="*"             element={<NotFound />} />
+
       </Routes>
-    </>
-  )
-}
+    </Suspense>
+  </>
+)
 
 export default AppRoutes
