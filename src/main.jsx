@@ -6,9 +6,11 @@ import "./index.css"
 import { AuthProvider } from "@/context/AuthContext"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { Toaster } from "sonner"
 import { PushNotificationProvider } from "./context/PushNotificationContext"
+// npm install @tanstack/query-async-storage-persister idb-keyval
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister"
+import { get, set, del } from "idb-keyval"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,8 +24,9 @@ const queryClient = new QueryClient({
   },
 })
 
-const persister = createSyncStoragePersister({
-  storage: window.localStorage,
+
+const persister = createAsyncStoragePersister({
+  storage: { getItem: get, setItem: set, removeItem: del },
 })
 
 localStorage.removeItem("REACT_QUERY_OFFLINE_CACHE")

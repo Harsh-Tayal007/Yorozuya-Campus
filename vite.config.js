@@ -15,16 +15,29 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         devOptions: { enabled: true, type: "module" },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
-          globIgnores: ["push-sw.js"],
-          navigateFallbackDenylist: [/^\/push-sw\.js/],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
+          // Only precache the shell — let runtime caching handle the rest
+          globPatterns: ["**/*.{html,css,woff2}"], // JS chunks served from runtime cache
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          runtimeCaching: [
+            {
+              urlPattern: /\.(?:js)$/,
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "js-cache",
+                expiration: { maxEntries: 60 },
+              },
+            },
+          ],
+          // Don't let SW registration block the page
+          skipWaiting: true,
+          clientsClaim: true,
         },
         manifest: {
           id: "/",
           name: "Unizuya",
           short_name: "Unizuya",
-          description: "A unified academic platform - PYQs, syllabus, resources and a student forum, all in one place.",
+          description:
+            "A unified academic platform - PYQs, syllabus, resources and a student forum, all in one place.",
           theme_color: "#0b0f19",
           background_color: "#0b0f19",
           display: "standalone",
@@ -32,10 +45,30 @@ export default defineConfig(({ mode }) => {
           start_url: "/",
           scope: "/",
           icons: [
-            { src: "pwa-192.png",          sizes: "192x192", type: "image/png", purpose: "any"      },
-            { src: "pwa-512.png",          sizes: "512x512", type: "image/png", purpose: "any"      },
-            { src: "pwa-192-maskable.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-            { src: "pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+            {
+              src: "pwa-192.png",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "pwa-512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "pwa-192-maskable.png",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "maskable",
+            },
+            {
+              src: "pwa-512-maskable.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
           ],
           screenshots: [
             {
@@ -60,10 +93,12 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor:   ["react", "react-dom", "react-router-dom"],
+            vendor: ["react", "react-dom", "react-router-dom"],
             appwrite: ["appwrite"],
-            editor:   ["@tiptap/react", "@tiptap/starter-kit"],
-            ui:       ["lucide-react"],
+            motion: ["framer-motion"], // ← add this
+            editor: ["@tiptap/react", "@tiptap/starter-kit"],
+            ui: ["lucide-react"],
+            query: ["@tanstack/react-query"], // ← add this
           },
         },
       },
