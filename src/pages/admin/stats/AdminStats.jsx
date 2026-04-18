@@ -484,7 +484,7 @@ export default function AdminStats() {
   const totalWorkerReqs = history.reduce((s, d) => s + (d.page_views ?? 0), 0) + todayViews
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-10">
+    <div className="space-y-8 mx-auto max-w-7xl pb-10">
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-3 flex-wrap">

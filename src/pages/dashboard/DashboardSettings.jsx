@@ -231,14 +231,14 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Profile picture must be under 5MB"); return }
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name.trim()) { toast.error("Name cannot be empty"); return }
+    if (!name.trim()) { toast.error("Please enter a valid name"); return }
     try {
       setSaving(true)
       let newAvatarUrl = user?.avatarUrl ?? null
@@ -254,10 +254,11 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
         oldAvatarPublicId: user?.avatarPublicId ?? null,
       })
       await queryClient.invalidateQueries({ queryKey: ["profile", user?.username] })
-      toast.success("Profile saved")
-      navigate(`/profile/${user?.username}`)
+      toast.success("Profile details saved successfully")
     } catch (err) {
-      toast.error("Failed to save profile")
+      console.error(err)
+      toast.error("Couldn't save profile. Please try again.")
+    } finally {
       setSaving(false)
     }
   }
@@ -458,10 +459,10 @@ const AccountTab = ({ user }) => {
     try {
       setSaving(true)
       await account.updateEmail(email.trim(), password)
-      toast.success("Email updated successfully")
+      toast.success("Email address updated successfully")
       setActiveForm(null); resetForms()
     } catch (err) {
-      toast.error(err?.message ?? "Failed to update email")
+      toast.error(err?.message ?? "Couldn't update email. Please try again.")
     } finally { setSaving(false) }
   }
 
@@ -478,7 +479,7 @@ const AccountTab = ({ user }) => {
       setHasPassword(true)
       setActiveForm(null); resetForms()
     } catch (err) {
-      toast.error(err?.message ?? "Failed to update password")
+      toast.error(err?.message ?? "Couldn't update password. Please try again.")
     } finally { setSaving(false) }
   }
 
@@ -491,11 +492,11 @@ const AccountTab = ({ user }) => {
     try {
       setSaving(true)
       await account.updatePassword(newPassword)
-      toast.success("Password set! You can now log in with email + password too.", { duration: 5000 })
+      toast.success("Password successfully created. You can now use it to log in", { duration: 5000 })
       setHasPassword(true)
       setActiveForm(null); resetForms()
     } catch (err) {
-      toast.error(err?.message ?? "Failed to set password")
+      toast.error(err?.message ?? "Couldn't set password. Please try again.")
     } finally { setSaving(false) }
   }
 

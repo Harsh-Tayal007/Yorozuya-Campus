@@ -8,7 +8,7 @@ export async function copyShareLink(path) {
   const url = `${window.location.origin}${path}`
   try {
     await navigator.clipboard.writeText(url)
-    toast.success("Link copied!", { description: url, duration: 2500 })
+    toast.success("Link copied to clipboard!", { duration: 2500 })
   } catch {
     // Fallback for older browsers / non-https
     const el = document.createElement("textarea")
@@ -19,6 +19,6 @@ export async function copyShareLink(path) {
     el.select()
     document.execCommand("copy")
     document.body.removeChild(el)
-    toast.success("Link copied!")
+    toast.success("Link copied to clipboard!")
   }
 }

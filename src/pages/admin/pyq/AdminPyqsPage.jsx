@@ -163,7 +163,7 @@ export default function AdminPyqsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 max-w-7xl mx-auto">
 
       {/* Header */}
       <motion.div

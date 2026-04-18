@@ -69,7 +69,20 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         </PushNotificationProvider>
       </AuthProvider>
     </QueryClientProvider>
-    <Toaster position="bottom-right" richColors closeButton toastOptions={{ duration: 4000 }} />
+    <Toaster 
+      position="top-center" 
+      toastOptions={{ 
+        duration: 3500, 
+        className: "border-border/50 shadow-2xl backdrop-blur-xl bg-card/80 text-foreground",
+        classNames: {
+          toast: "group !bg-card/70 !backdrop-blur-xl !border-border/50 !shadow-2xl rounded-xl flex items-center p-4 gap-3 text-sm font-medium",
+          success: "!text-emerald-400 [&>svg]:!text-emerald-400",
+          error: "!text-destructive [&>svg]:!text-destructive",
+          info: "!text-sky-400 [&>svg]:!text-sky-400",
+          warning: "!text-amber-400 [&>svg]:!text-amber-400"
+        }
+      }} 
+    />
   </React.StrictMode>
 )
 

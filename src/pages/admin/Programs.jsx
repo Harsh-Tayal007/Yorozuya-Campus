@@ -192,7 +192,7 @@ const Programs = () => {
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className="space-y-8 max-w-7xl">
+    <div className="space-y-8 max-w-7xl mx-auto">
 
       {deleteTarget && (
         <DeleteConfirm name={deleteTarget.name}

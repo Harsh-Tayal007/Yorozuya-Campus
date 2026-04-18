@@ -79,18 +79,16 @@ define(['./workbox-9c89b58b'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "index.html",
-    "revision": "0.nub5hg16t18"
+    "revision": "0.2ovikb73888"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/],
-    denylist: [/^\/push-sw\.js/]
+    allowlist: [/^\/$/]
   }));
-  workbox.registerRoute(/assets\/.*\.js$/, new workbox.StaleWhileRevalidate({
-    "cacheName": "js-chunks",
+  workbox.registerRoute(/\.(?:js)$/, new workbox.StaleWhileRevalidate({
+    "cacheName": "js-cache",
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 80,
-      maxAgeSeconds: 604800
+      maxEntries: 60
     })]
   }), 'GET');
 

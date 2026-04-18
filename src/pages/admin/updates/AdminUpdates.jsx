@@ -211,7 +211,7 @@ export default function AdminUpdates() {
   const canSubmit   = form.title.trim() && !isBodyEmpty
 
   return (
-    <div className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
 
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">

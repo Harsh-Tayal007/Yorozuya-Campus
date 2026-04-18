@@ -72,29 +72,29 @@ const Universities = () => {
 
   const createMutation = useMutation({
     mutationFn: (data) => createUniversity(data, currentUser),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["universities"] }); setForm(emptyForm); toast.success("University created") },
-    onError: () => toast.error("Failed to create university"),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["universities"] }); setForm(emptyForm); toast.success("University added successfully") },
+    onError: () => toast.error("Couldn't add university. Please try again."),
   })
 
   const updateMutation = useMutation({
     mutationFn: (u) => updateUniversity(u.$id, { name: u.name, country: u.country, city: u.city, website: u.website }, currentUser),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["universities"] }); setEditingUniversity(null); toast.success("University updated") },
-    onError: () => toast.error("Failed to update university"),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["universities"] }); setEditingUniversity(null); toast.success("University details updated") },
+    onError: () => toast.error("Couldn't update university. Please try again."),
   })
 
   const deleteMutation = useMutation({
     mutationFn: ({ id, name }) => deleteUniversity(id, currentUser, name),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["universities"] }); setDeleteTarget(null); toast.success("University deleted") },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["universities"] }); setDeleteTarget(null); toast.success("University removed successfully") },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!canManage) return
     if (isEditing) {
-      if (!editingUniversity.name || !editingUniversity.country) { toast.error("Name and country are required"); return }
+      if (!editingUniversity.name || !editingUniversity.country) { toast.error("Please enter both university name and country"); return }
       updateMutation.mutate(editingUniversity)
     } else {
-      if (!form.name || !form.country) { toast.error("Name and country are required"); return }
+      if (!form.name || !form.country) { toast.error("Please enter both university name and country"); return }
       createMutation.mutate(form)
     }
   }

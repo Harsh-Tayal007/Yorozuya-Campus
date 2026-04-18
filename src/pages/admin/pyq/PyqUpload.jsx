@@ -430,7 +430,7 @@ const PyqUpload = () => {
   const selectedFileType = FILE_TYPES.find(t => t.value === form.fileType)
 
   return (
-    <div className="space-y-8 max-w-7xl">
+    <div className="space-y-8 max-w-7xl mx-auto">
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}

@@ -308,7 +308,7 @@ export default function ResourcesUpload() {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl">
+    <div className="space-y-8 max-w-7xl mx-auto">
 
       {/* Header */}
       <motion.div
