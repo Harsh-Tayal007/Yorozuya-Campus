@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
-import { Check, Link as LinkIcon } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Check, Link as LinkIcon, GraduationCap, BookOpen } from "lucide-react"
+import { Link, useSearchParams } from "react-router-dom"
 import { account } from "@/lib/appwrite"
 
 import AccountStep from "./AccountStep"
@@ -36,11 +36,23 @@ const GoogleIcon = () => (
 const STEP_LABELS = ["Account", "Academic", "Confirm"]
 
 const Signup = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const roleParam = searchParams.get("role") // "student" | "teacher" | null
+  const isTeacher = roleParam === "teacher"
+
+  const selectRole = (r) => setSearchParams({ role: r }, { replace: true })
+
   const [step, setStep] = useState(1)
   const [signupData, setSignupData] = useState({
     name: "", email: "", password: "",
     universityId: "", programId: "", branchId: "",
+    accountType: roleParam || "student",
   })
+
+  // Keep accountType in sync when roleParam changes
+  useEffect(() => {
+    if (roleParam) setSignupData(prev => ({ ...prev, accountType: roleParam }))
+  }, [roleParam])
 
   const [universityName, setUniversityName] = useState("")
   const [programName, setProgramName]       = useState("")
@@ -124,7 +136,63 @@ const Signup = () => {
               </div>
             </div>
 
+            {/* ── Role Selection Gateway ── */}
+            {!roleParam && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className="space-y-4 text-center"
+              >
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Join Unizuya</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">How will you use the platform?</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => selectRole("student")}
+                    className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
+                      bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-500/40
+                      hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-200">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center
+                      group-hover:bg-blue-500/20 transition-colors">
+                      <GraduationCap size={18} className="text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">Student</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Access notes, PYQs & more</p>
+                    </div>
+                  </button>
+                  <button onClick={() => selectRole("teacher")}
+                    className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
+                      bg-white dark:bg-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/40
+                      hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-200">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center
+                      group-hover:bg-emerald-500/20 transition-colors">
+                      <BookOpen size={18} className="text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">Teacher</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Manage classes & attendance</p>
+                    </div>
+                  </button>
+                </div>
+
+                <p className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06]
+                              text-center text-sm text-slate-500 dark:text-slate-400">
+                  Already have an account?{" "}
+                  <button onClick={() => navigate("/login")}
+                    className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500
+                      bg-clip-text text-transparent hover:opacity-80 transition">
+                    Sign in
+                  </button>
+                </p>
+              </motion.div>
+            )}
+
+            {/* ── Signup Flow (only when role is selected) ── */}
+            {roleParam && (
+              <>
+
             {/* Step Indicator */}
+
             <div className="flex items-center justify-center mb-5">
               {STEP_LABELS.map((label, idx) => {
                 const s = idx + 1
@@ -203,7 +271,8 @@ const Signup = () => {
 
                 {step === 2 && (
                   <AcademicStep data={signupData} setData={setSignupData}
-                    onBack={() => setStep(1)} onNext={() => setStep(3)} />
+                    onBack={() => setStep(1)} onNext={() => setStep(3)}
+                    accountType={signupData.accountType} />
                 )}
 
                 {step === 3 && !signupSuccess && (
@@ -219,10 +288,20 @@ const Signup = () => {
                       <SummaryRow label="Name"     value={signupData.name} />
                       <SummaryRow label="Email"    value={signupData.email} />
                       <SummaryRow label="Password" value="••••••••" />
+                      {isTeacher && <SummaryRow label="Account Type" value="Teacher" />}
                       {universityName && <SummaryRow label="University" value={universityName} />}
-                      {programName    && <SummaryRow label="Program"    value={programName} />}
-                      {branchName     && <SummaryRow label="Branch"     value={branchName} />}
+                      {!isTeacher && programName && <SummaryRow label="Program" value={programName} />}
+                      {!isTeacher && branchName  && <SummaryRow label="Branch"  value={branchName} />}
                     </div>
+
+                    {/* Teacher notice */}
+                    {isTeacher && (
+                      <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5">
+                        <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                          <strong>Note:</strong> Teacher accounts start with standard access. An administrator must approve your teacher privileges before you can manage classes.
+                        </p>
+                      </div>
+                    )}
 
                     {/* Privacy Policy */}
                     <div className="space-y-1">
@@ -293,7 +372,7 @@ const Signup = () => {
             </AnimatePresence>
 
             {/* Bottom link — separated with border, not cramped */}
-            {!signupSuccess && (
+            {!signupSuccess && roleParam && (
               <p className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06]
                             text-center text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{" "}
@@ -304,6 +383,11 @@ const Signup = () => {
                 </button>
               </p>
             )}
+
+            {/* Close role-selected block */}
+            </>
+            )}
+
           </CardContent>
         </Card>
       </motion.div>

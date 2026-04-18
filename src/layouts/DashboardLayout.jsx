@@ -83,11 +83,11 @@ const DashboardLayout = () => {
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-bold tracking-tight
                            text-foreground truncate">
-              {identity.branch?.name}
+              {identity.branch?.name || "Teacher Dashboard"}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {identity.program?.name}
-              {identity.university?.name ? ` · ${identity.university.name}` : ""}
+              {identity.program?.name ? `${identity.program.name} · ` : ""}
+              {identity.university?.name || "Your University"}
             </p>
           </div>
 

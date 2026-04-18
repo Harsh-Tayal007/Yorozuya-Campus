@@ -84,6 +84,9 @@ const CompleteProfile = () => {
   const location = useLocation()
   const { currentUser, completeAcademicProfile } = useAuth()
 
+  const [accountType, setAccountType] = useState(null) // null = not selected, "student" | "teacher"
+  const isTeacher = accountType === "teacher"
+
   const [universityId, setUniversityId] = useState("")
   const [programId,    setProgramId]    = useState("")
   const [branchId,     setBranchId]     = useState("")
@@ -115,16 +118,16 @@ const CompleteProfile = () => {
   const { data: programs = [], isLoading: programsLoading } = useQuery({
     queryKey: ["programs", universityId],
     queryFn: () => getProgramsByUniversity(universityId),
-    enabled: !!universityId,
+    enabled: !!universityId && !isTeacher,
   })
 
   const { data: branches = [], isLoading: branchesLoading } = useQuery({
     queryKey: ["branches", programId],
     queryFn: () => getBranchesByProgram(programId),
-    enabled: !!programId,
+    enabled: !!programId && !isTeacher,
   })
 
-  const canSubmit = universityId && programId && branchId && !saving
+  const canSubmit = universityId && (isTeacher || (programId && branchId)) && !saving
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -132,7 +135,12 @@ const CompleteProfile = () => {
     try {
       setSaving(true)
       setError(null)
-      await completeAcademicProfile({ universityId, programId, branchId })
+      await completeAcademicProfile({
+        universityId,
+        programId: isTeacher ? null : programId,
+        branchId: isTeacher ? null : branchId,
+        accountType,
+      })
       // Redirect back to where they were, or dashboard
       const from = location.state?.from?.pathname || "/dashboard"
       navigate(from, { replace: true })
@@ -177,7 +185,9 @@ const CompleteProfile = () => {
               One last step!
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
-              Tell us about your academic background so we can personalise your dashboard.
+              {accountType
+                ? isTeacher ? "Select your university to get started." : "Tell us about your academic background so we can personalise your dashboard."
+                : "How will you use the platform?"}
             </p>
             {currentUser?.name && (
               <p className="text-xs text-violet-500 dark:text-violet-400 mt-1 font-medium">
@@ -186,100 +196,148 @@ const CompleteProfile = () => {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* University */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <GraduationCap size={11} /> University
-              </label>
-              <Dropdown
-                value={universityId}
-                onChange={setUniversityId}
-                options={universities.map(u => ({ value: u.$id, label: u.name }))}
-                placeholder="Select your university"
-                icon={GraduationCap}
-              />
+          {/* Role Selection */}
+          {!accountType && (
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setAccountType("student")}
+                className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
+                  bg-white dark:bg-white/5 hover:border-violet-400 dark:hover:border-violet-500/40
+                  hover:bg-violet-50/50 dark:hover:bg-violet-500/5 transition-all duration-200">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center
+                  group-hover:bg-violet-500/20 transition-colors">
+                  <GraduationCap size={18} className="text-violet-500" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Student</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Access notes, PYQs & more</p>
+                </div>
+              </button>
+              <button onClick={() => setAccountType("teacher")}
+                className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
+                  bg-white dark:bg-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/40
+                  hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-200">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center
+                  group-hover:bg-emerald-500/20 transition-colors">
+                  <BookOpen size={18} className="text-emerald-500" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Teacher</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Manage classes & attendance</p>
+                </div>
+              </button>
             </div>
+          )}
 
-            {/* Program */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <BookOpen size={11} />
-                Program
-                {programsLoading && <Loader2 size={10} className="animate-spin ml-1" />}
-              </label>
-              <Dropdown
-                value={programId}
-                onChange={setProgramId}
-                options={programs.map(p => ({ value: p.$id, label: p.name }))}
-                disabled={!universityId || programsLoading}
-                placeholder={programsLoading ? "Loading programs…" : !universityId ? "Select university first" : "Select your program"}
-                icon={BookOpen}
-              />
-            </div>
+          {/* Academic Form — shown after role selection */}
+          {accountType && (
+            <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* Branch */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <GitBranch size={11} />
-                Branch / Specialisation
-                {branchesLoading && <Loader2 size={10} className="animate-spin ml-1" />}
-              </label>
-              <Dropdown
-                value={branchId}
-                onChange={setBranchId}
-                options={branches.map(b => ({ value: b.$id, label: b.name }))}
-                disabled={!programId || branchesLoading}
-                placeholder={branchesLoading ? "Loading branches…" : !programId ? "Select program first" : "Select your branch"}
-                icon={GitBranch}
-              />
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
-            )}
-
-            {/* Progress indicator */}
-            <div className="flex gap-1.5 pt-1">
-              {[universityId, programId, branchId].map((val, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                  val ? "bg-violet-500" : "bg-slate-200 dark:bg-white/10"
-                }`} />
-              ))}
-            </div>
-
-            {/* Submit */}
-            <motion.button
-              type="submit"
-              disabled={!canSubmit}
-              whileHover={{ scale: canSubmit ? 1.01 : 1 }}
-              whileTap={{ scale: canSubmit ? 0.98 : 1 }}
-              className="
-                w-full h-11 rounded-xl font-semibold text-sm text-white
-                bg-gradient-to-r from-violet-600 to-indigo-600
-                hover:from-violet-500 hover:to-indigo-500
-                shadow-lg shadow-violet-600/25
-                disabled:opacity-40 disabled:cursor-not-allowed
-                transition-all duration-200
-                flex items-center justify-center gap-2
-              "
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  Setting up your dashboard…
-                </>
-              ) : (
-                <>
-                  Go to Dashboard
-                  <Check size={15} />
-                </>
+              {isTeacher && (
+                <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                    As a teacher, you only need to select your university. An admin will grant you teacher privileges after setup.
+                  </p>
+                </div>
               )}
-            </motion.button>
-          </form>
+
+              {/* University */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <GraduationCap size={11} /> University
+                </label>
+                <Dropdown
+                  value={universityId}
+                  onChange={setUniversityId}
+                  options={universities.map(u => ({ value: u.$id, label: u.name }))}
+                  placeholder="Select your university"
+                  icon={GraduationCap}
+                />
+              </div>
+
+              {/* Program — only for students */}
+              {!isTeacher && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <BookOpen size={11} />
+                    Program
+                    {programsLoading && <Loader2 size={10} className="animate-spin ml-1" />}
+                  </label>
+                  <Dropdown
+                    value={programId}
+                    onChange={setProgramId}
+                    options={programs.map(p => ({ value: p.$id, label: p.name }))}
+                    disabled={!universityId || programsLoading}
+                    placeholder={programsLoading ? "Loading programs…" : !universityId ? "Select university first" : "Select your program"}
+                    icon={BookOpen}
+                  />
+                </div>
+              )}
+
+              {/* Branch — only for students */}
+              {!isTeacher && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <GitBranch size={11} />
+                    Branch / Specialisation
+                    {branchesLoading && <Loader2 size={10} className="animate-spin ml-1" />}
+                  </label>
+                  <Dropdown
+                    value={branchId}
+                    onChange={setBranchId}
+                    options={branches.map(b => ({ value: b.$id, label: b.name }))}
+                    disabled={!programId || branchesLoading}
+                    placeholder={branchesLoading ? "Loading branches…" : !programId ? "Select program first" : "Select your branch"}
+                    icon={GitBranch}
+                  />
+                </div>
+              )}
+
+              {/* Error */}
+              {error && (
+                <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              {/* Progress indicator */}
+              <div className="flex gap-1.5 pt-1">
+                {(isTeacher ? [universityId] : [universityId, programId, branchId]).map((val, i) => (
+                  <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                    val ? "bg-violet-500" : "bg-slate-200 dark:bg-white/10"
+                  }`} />
+                ))}
+              </div>
+
+              {/* Submit */}
+              <motion.button
+                type="submit"
+                disabled={!canSubmit}
+                whileHover={{ scale: canSubmit ? 1.01 : 1 }}
+                whileTap={{ scale: canSubmit ? 0.98 : 1 }}
+                className="
+                  w-full h-11 rounded-xl font-semibold text-sm text-white
+                  bg-gradient-to-r from-violet-600 to-indigo-600
+                  hover:from-violet-500 hover:to-indigo-500
+                  shadow-lg shadow-violet-600/25
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                  transition-all duration-200
+                  flex items-center justify-center gap-2
+                "
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Setting up your dashboard…
+                  </>
+                ) : (
+                  <>
+                    Go to Dashboard
+                    <Check size={15} />
+                  </>
+                )}
+              </motion.button>
+            </form>
+          )}
 
           <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
             You can change these later in Settings → Academic
@@ -290,4 +348,4 @@ const CompleteProfile = () => {
   )
 }
 
-export default CompleteProfile
+export default CompleteProfile

@@ -334,7 +334,8 @@ function AccountStep({ data, setData, onNext }) {
 // ─────────────────────────────────────────────
 // Step 2 — Academic
 // ─────────────────────────────────────────────
-function AcademicStep({ data, setData, onNext, onBack }) {
+function AcademicStep({ data, setData, onNext, onBack, accountType }) {
+  const isTeacher = accountType === "teacher"
   const [universities, setUniversities] = useState([])
   const [programs, setPrograms] = useState([])
   const [branches, setBranches] = useState([])
@@ -342,24 +343,53 @@ function AcademicStep({ data, setData, onNext, onBack }) {
 
   useEffect(() => { getUniversities().then(res => setUniversities(res || [])).catch(() => {}) }, [])
   useEffect(() => {
-    if (!data.universityId) { setPrograms([]); return }
+    if (isTeacher || !data.universityId) { setPrograms([]); return }
     getProgramsByUniversity(data.universityId).then(res => setPrograms(res || [])).catch(() => {})
     setData(prev => ({ ...prev, programId: "", branchId: "" }))
   }, [data.universityId]) // eslint-disable-line
   useEffect(() => {
-    if (!data.programId) { setBranches([]); return }
+    if (isTeacher || !data.programId) { setBranches([]); return }
     getBranchesByProgram(data.programId).then(res => setBranches(res || [])).catch(() => {})
     setData(prev => ({ ...prev, branchId: "" }))
   }, [data.programId]) // eslint-disable-line
+
+  const validate = () => {
+    if (!data.universityId) { setError("Please select a university"); return false }
+    if (!isTeacher && (!data.programId || !data.branchId)) { setError("Please select all fields"); return false }
+    setError(null)
+    return true
+  }
+
+  const handleContinue = () => {
+    if (!validate()) return
+    // For teachers, clear program/branch before continuing
+    if (isTeacher) {
+      setData(prev => ({ ...prev, programId: null, branchId: null }))
+    }
+    onNext()
+  }
 
   const selCls = "h-10 text-sm bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
 
   return (
     <div className="space-y-4">
       <div className="mb-2">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Academic details</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 2 of 3 — Help us personalise your experience</p>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+          {isTeacher ? "University details" : "Academic details"}
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          Step 2 of 3 — {isTeacher ? "Select your university" : "Help us personalise your experience"}
+        </p>
       </div>
+
+      {isTeacher && (
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+            As a teacher, you only need to select your university. An admin will grant you teacher privileges after sign-up.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-slate-600 dark:text-slate-300">University</label>
         <NativeSelect
@@ -369,33 +399,39 @@ function AcademicStep({ data, setData, onNext, onBack }) {
           placeholder="Select university"
         />
       </div>
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Program</label>
-        <NativeSelect
-          value={data.programId || ""}
-          onChange={val => setData(prev => ({ ...prev, programId: val }))}
-          options={programs.map(p => ({ value: p.$id, label: p.name }))}
-          placeholder="Select program"
-          disabled={!data.universityId}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Branch</label>
-        <NativeSelect
-          value={data.branchId || ""}
-          onChange={val => setData(prev => ({ ...prev, branchId: val }))}
-          options={branches.map(b => ({ value: b.$id, label: b.name }))}
-          placeholder="Select branch"
-          disabled={!data.programId}
-        />
-      </div>
+
+      {!isTeacher && (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Program</label>
+            <NativeSelect
+              value={data.programId || ""}
+              onChange={val => setData(prev => ({ ...prev, programId: val }))}
+              options={programs.map(p => ({ value: p.$id, label: p.name }))}
+              placeholder="Select program"
+              disabled={!data.universityId}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Branch</label>
+            <NativeSelect
+              value={data.branchId || ""}
+              onChange={val => setData(prev => ({ ...prev, branchId: val }))}
+              options={branches.map(b => ({ value: b.$id, label: b.name }))}
+              placeholder="Select branch"
+              disabled={!data.programId}
+            />
+          </div>
+        </>
+      )}
+
       {error && <p className="text-xs text-red-500 text-center">{error}</p>}
       <div className="flex gap-2 pt-1">
         <button onClick={onBack} className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-white/10
           text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 transition-all duration-150">
           Back
         </button>
-        <button onClick={() => { if (!data.universityId || !data.programId || !data.branchId) { setError("Please select all fields"); return } setError(null); onNext() }}
+        <button onClick={handleContinue}
           className="flex-1 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
             hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold
             shadow-lg shadow-blue-600/20 transition-all duration-150 flex items-center justify-center gap-2">
@@ -409,7 +445,7 @@ function AcademicStep({ data, setData, onNext, onBack }) {
 // ─────────────────────────────────────────────
 // Step 3 — Confirm
 // ─────────────────────────────────────────────
-function ConfirmStep({ data, universityName, programName, branchName, onBack, onSubmit, loading, error }) {
+function ConfirmStep({ data, universityName, programName, branchName, onBack, onSubmit, loading, error, isTeacher }) {
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [privacyError, setPrivacyError] = useState(false)
 
@@ -418,9 +454,10 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
     { label: "Email", value: data.email },
     { label: "Password", value: "••••••••" },
     { label: "Username", value: `@${data.username}` },
+    isTeacher && { label: "Account Type", value: "Teacher" },
     universityName && { label: "University", value: universityName },
-    programName && { label: "Program", value: programName },
-    branchName && { label: "Branch", value: branchName },
+    !isTeacher && programName && { label: "Program", value: programName },
+    !isTeacher && branchName && { label: "Branch", value: branchName },
   ].filter(Boolean)
 
   return (
@@ -437,6 +474,13 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
           </div>
         ))}
       </div>
+      {isTeacher && (
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5">
+          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            <strong>Note:</strong> Teacher accounts start with standard access. An admin must approve your teacher privileges.
+          </p>
+        </div>
+      )}
       <label className="flex items-start gap-2.5 cursor-pointer">
         <div onClick={() => { setPrivacyAccepted(p => !p); setPrivacyError(false) }}
           className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center transition-colors duration-150 cursor-pointer
@@ -519,8 +563,10 @@ function AuthModal({ open, mode, onClose, onSwitch }) {
   const { login, completeSignup } = useAuth()
   const navigate = useNavigate()
 
+  const [roleSelection, setRoleSelection] = useState(null) // "student" | "teacher" | null
+  const isTeacher = roleSelection === "teacher"
   const [step, setStep] = useState(1)
-  const [signupData, setSignupData] = useState({ name: "", email: "", password: "", username: "", universityId: "", programId: "", branchId: "" })
+  const [signupData, setSignupData] = useState({ name: "", email: "", password: "", username: "", universityId: "", programId: "", branchId: "", accountType: "student" })
   const [universityName, setUniversityName] = useState("")
   const [programName, setProgramName] = useState("")
   const [branchName, setBranchName] = useState("")
@@ -576,11 +622,12 @@ function AuthModal({ open, mode, onClose, onSwitch }) {
   useEffect(() => {
     if (!open) {
       setStep(1); setLoginForm({ identifier: "", password: "" }); setError(null); setShowPass(false); setSuccess(false)
-      setSignupData({ name: "", email: "", password: "", username: "", universityId: "", programId: "", branchId: "" })
+      setSignupData({ name: "", email: "", password: "", username: "", universityId: "", programId: "", branchId: "", accountType: "student" })
       setUniversityName(""); setProgramName(""); setBranchName("")
+      setRoleSelection(null)
     }
   }, [open])
-  useEffect(() => { setStep(1); setError(null); setShowPass(false); setSuccess(false) }, [mode])
+  useEffect(() => { setStep(1); setError(null); setShowPass(false); setSuccess(false); setRoleSelection(null) }, [mode])
 
   return (
     <AnimatePresence>
@@ -680,6 +727,44 @@ function AuthModal({ open, mode, onClose, onSwitch }) {
             {/* SIGNUP */}
             {!success && mode === "signup" && (
               <>
+                {/* Role selection gate */}
+                {!roleSelection && (
+                  <div className="space-y-4 text-center">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Join Unizuya</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">How will you use the platform?</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => { setRoleSelection("student"); setSignupData(prev => ({ ...prev, accountType: "student" })) }}
+                        className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-white/10
+                          bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-500/40
+                          hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-200">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                          <GraduationCap size={16} className="text-blue-500" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">Student</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500">Notes, PYQs & more</p>
+                      </button>
+                      <button onClick={() => { setRoleSelection("teacher"); setSignupData(prev => ({ ...prev, accountType: "teacher" })) }}
+                        className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-white/10
+                          bg-white dark:bg-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/40
+                          hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-200">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                          <BookOpen size={16} className="text-emerald-500" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">Teacher</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500">Classes & attendance</p>
+                      </button>
+                    </div>
+                    <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                      Already have an account?{" "}
+                      <button onClick={() => onSwitch("login")} className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
+                        Sign in
+                      </button>
+                    </p>
+                  </div>
+                )}
+
+                {/* Signup steps (after role selection) */}
+                {roleSelection && (<>
                 {step === 1 && (
                   <>
                     <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-1">Join Unizuya</h2>
@@ -701,9 +786,9 @@ function AuthModal({ open, mode, onClose, onSwitch }) {
                   <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }}>
                     {step === 1 && <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />}
-                    {step === 2 && <AcademicStep data={signupData} setData={setSignupData} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
+                    {step === 2 && <AcademicStep data={signupData} setData={setSignupData} onBack={() => setStep(1)} onNext={() => setStep(3)} accountType={signupData.accountType} />}
                     {step === 3 && <ConfirmStep data={signupData} universityName={universityName} programName={programName} branchName={branchName}
-                        onBack={() => setStep(2)} onSubmit={handleFinalSubmit} loading={loading} error={error} />}
+                        onBack={() => setStep(2)} onSubmit={handleFinalSubmit} loading={loading} error={error} isTeacher={isTeacher} />}
                   </motion.div>
                 </AnimatePresence>
                 {step === 1 && (
@@ -714,6 +799,7 @@ function AuthModal({ open, mode, onClose, onSwitch }) {
                     </button>
                   </p>
                 )}
+                </>)}
               </>
             )}
           </motion.div>

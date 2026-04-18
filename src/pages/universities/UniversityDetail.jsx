@@ -11,8 +11,9 @@ const DATABASE_ID              = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const UNIVERSITIES_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNIVERSITIES_COLLECTION_ID
 const PROGRAMS_COLLECTION_ID   = import.meta.env.VITE_APPWRITE_PROGRAMS_COLLECTION_ID
 
-const UniversityDetail = () => {
-  const { universityId } = useParams()
+const UniversityDetail = ({ universityIdProp, isDashboard }) => {
+  const params = useParams()
+  const universityId = universityIdProp || params.universityId
   const navigate = useNavigate()
 
   const { data, isLoading, isError } = useQuery({
@@ -43,7 +44,7 @@ const UniversityDetail = () => {
   const { university, programs } = data
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <div className={isDashboard ? "space-y-6" : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8"}>
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
         className="flex items-center gap-3">
         <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20">

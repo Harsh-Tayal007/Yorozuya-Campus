@@ -203,16 +203,23 @@ export default function UserSidebar() {
           <div className="h-px bg-border/40 mx-1 my-2" />
 
           {dashboardSidebarSections.map(section => {
-            const sectionLocked = !isLoggedIn && section.lockedForPublic
-            const isExpanded    = openSections.includes(section.id)
-            const SIcon         = section.icon
+            const isTeacher = user?.accountType === "teacher" || user?.role === "teacher"
+            const isGuestLocked   = !isLoggedIn && section.lockedForPublic
+            const isTeacherLocked = isTeacher && section.id === "academics"
+            const sectionLocked   = isGuestLocked || isTeacherLocked
+            const isExpanded      = openSections.includes(section.id)
+            const SIcon           = section.icon
 
             return (
               <div key={section.id}>
                 <button
                   onClick={() => {
-                    if (sectionLocked) {
+                    if (isGuestLocked) {
                       openGate(section.label, section.children[0]?.path ?? "/login")
+                      return
+                    }
+                    if (isTeacherLocked) {
+                      // Silently prevent opening for teachers
                       return
                     }
                     setOpenSections(prev =>
@@ -226,7 +233,7 @@ export default function UserSidebar() {
                                text-xs font-semibold uppercase tracking-wide
                                transition-colors duration-150
                                ${sectionLocked
-                                 ? "text-muted-foreground/40 hover:text-muted-foreground/60 cursor-pointer"
+                                 ? "text-muted-foreground/40 hover:text-muted-foreground/60 " + (isTeacherLocked ? "cursor-not-allowed" : "cursor-pointer")
                                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                }`}
                 >

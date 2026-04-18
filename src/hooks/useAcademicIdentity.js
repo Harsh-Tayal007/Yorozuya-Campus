@@ -8,14 +8,25 @@ import { getBranchById } from "@/services/university/branchService";
 export const useAcademicIdentity = () => {
   const { user } = useAuth();
 
+  const isTeacher = user?.accountType === "teacher" || user?.role === "teacher";
+
   const universityId = user?.universityId;
   const programId = user?.programId;
   const branchId = user?.branchId;
 
   const query = useQuery({
-    queryKey: ["academic-identity", universityId, programId, branchId],
+    queryKey: ["academic-identity", universityId, programId, branchId, isTeacher],
     queryFn: async () => {
-      if (!universityId || !programId || !branchId) {
+      if (!universityId) {
+        throw new Error("Academic identity incomplete");
+      }
+
+      if (isTeacher) {
+        const university = await getUniversityById(universityId);
+        return { university, program: null, branch: null };
+      }
+
+      if (!programId || !branchId) {
         throw new Error("Academic identity incomplete");
       }
 
@@ -31,7 +42,7 @@ export const useAcademicIdentity = () => {
         branch,
       };
     },
-    enabled: !!universityId && !!programId && !!branchId,
+    enabled: isTeacher ? !!universityId : (!!universityId && !!programId && !!branchId),
     staleTime: 1000 * 60 * 10, // 10 minutes
   });
 

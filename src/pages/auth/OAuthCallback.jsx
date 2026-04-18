@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { account, databases } from "@/lib/appwrite"
 import { ID, Query } from "appwrite"
@@ -13,8 +13,12 @@ const OAuthCallback = () => {
   const navigate = useNavigate()
   const [status, setStatus] = useState("Finishing sign-in…")
   const [errorDetail, setErrorDetail] = useState(null)
+  const isProcessing = useRef(false)
 
   useEffect(() => {
+    if (isProcessing.current) return
+    isProcessing.current = true
+    
     const handleCallback = async () => {
       try {
         await new Promise(r => setTimeout(r, 800))

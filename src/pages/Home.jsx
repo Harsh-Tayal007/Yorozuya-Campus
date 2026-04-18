@@ -1,4 +1,4 @@
-﻿// src/pages/Home.jsx
+// src/pages/Home.jsx
 // ─────────────────────────────────────────────
 // ONLY eager: hero + stats + "what is" section
 // Everything else is lazy / deferred
@@ -122,13 +122,13 @@ export default function Home() {
               </Link>
             ) : (
               <>
-                <button onClick={() => openAuth("signup")}
+                <Link to="/universities"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
                              bg-gradient-to-r from-blue-500 to-indigo-500 text-white
                              text-sm font-semibold shadow-lg shadow-blue-500/25
                              hover:opacity-90 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150">
-                  Join for free <ChevronRight size={14} />
-                </button>
+                  Browse content <ChevronRight size={14} />
+                </Link>
                 <button onClick={scrollToFeatures}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
                              border border-border bg-background/80 text-sm font-medium text-foreground

@@ -296,6 +296,12 @@ export default function UserRolesAdmin() {
                             {u.username}
                           </Link>
                           <RoleBadge role={u.role} />
+                          {u.accountType === "teacher" && u.role === "user" && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide
+                              bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                              Requested Teacher
+                            </span>
+                          )}
                           {isSelf && <span className="text-[10px] text-muted-foreground">(you)</span>}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>

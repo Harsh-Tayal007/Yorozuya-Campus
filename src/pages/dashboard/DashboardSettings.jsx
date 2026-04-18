@@ -220,6 +220,7 @@ const OAuthBadge = ({ provider }) => {
 // TAB: PROFILE
 // =============================================================================
 const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
+  const isTeacher = user?.accountType === "teacher" || user?.role === "teacher"
   const fileInputRef = useRef(null)
   const [name, setName] = useState(user?.name || "")
   const [bio, setBio] = useState(user?.bio || "")
@@ -249,7 +250,7 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
         newAvatarPublicId = uploaded.avatarPublicId
       }
       await updateProfile({
-        name: name.trim(), bio, yearOfStudy,
+        name: name.trim(), bio, yearOfStudy: isTeacher ? null : yearOfStudy,
         avatarUrl: newAvatarUrl, avatarPublicId: newAvatarPublicId,
         oldAvatarPublicId: user?.avatarPublicId ?? null,
       })
@@ -301,10 +302,12 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
           <Textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={160} rows={3} placeholder="Tell others about yourself…" />
           <p className="text-xs text-muted-foreground/60 text-right">{bio.length}/160</p>
         </div>
-        <div className="py-3.5 space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year of Study</label>
-          <Dropdown value={yearOfStudy} onChange={setYearOfStudy} options={YEAR_OPTIONS} placeholder="Select year" />
-        </div>
+        {!isTeacher && (
+          <div className="py-3.5 space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year of Study</label>
+            <Dropdown value={yearOfStudy} onChange={setYearOfStudy} options={YEAR_OPTIONS} placeholder="Select year" />
+          </div>
+        )}
       </Section>
       <div className="flex justify-end"><SaveBtn saving={saving} label="Save Profile" /></div>
     </form>
@@ -814,6 +817,7 @@ const AccountTab = ({ user }) => {
 // TAB: ACADEMIC
 // =============================================================================
 const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
+  const isTeacher = user?.accountType === "teacher" || user?.role === "teacher"
   const [universityId, setUniversityId] = useState(user?.universityId || "")
   const [programId, setProgramId] = useState(user?.programId || "")
   const [branchId, setBranchId] = useState(user?.branchId || "")
@@ -821,16 +825,16 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
 
   const academicDirty = (
     universityId !== (user?.universityId || "") ||
-    programId !== (user?.programId || "") ||
-    branchId !== (user?.branchId || "")
+    (!isTeacher && (programId !== (user?.programId || "") ||
+    branchId !== (user?.branchId || "")))
   )
 
   const { data: universities = [] } = useQuery({ queryKey: ["universities"], queryFn: getUniversities })
   const { data: programs = [], isLoading: programsLoading } = useQuery({
-    queryKey: ["programs", universityId], queryFn: () => getProgramsByUniversity(universityId), enabled: !!universityId,
+    queryKey: ["programs", universityId], queryFn: () => getProgramsByUniversity(universityId), enabled: !!universityId && !isTeacher,
   })
   const { data: branches = [], isLoading: branchesLoading } = useQuery({
-    queryKey: ["branches", programId], queryFn: () => getBranchesByProgram(programId), enabled: !!programId,
+    queryKey: ["branches", programId], queryFn: () => getBranchesByProgram(programId), enabled: !!programId && !isTeacher,
   })
 
   const prevUniRef = useRef(user?.universityId || "")
@@ -846,12 +850,20 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
     if (prev !== programId && programId !== (user?.programId || "")) { setBranchId("") }
   }, [programId])
 
+  const canSave = isTeacher
+    ? academicDirty && !!universityId
+    : academicDirty && !!universityId && !!programId && !!branchId
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!universityId || !programId || !branchId) return
+    if (!canSave) return
     try {
       setSaving(true)
-      await completeAcademicProfile({ universityId, programId, branchId })
+      await completeAcademicProfile({
+        universityId,
+        programId: isTeacher ? null : programId,
+        branchId: isTeacher ? null : branchId,
+      })
       await queryClient.invalidateQueries({ queryKey: ["academic-identity"] })
       toast.success("Academic preferences saved")
     } catch {
@@ -861,28 +873,39 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
 
   return (
     <form onSubmit={handleSubmit}>
+      {isTeacher && (
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5 mb-4">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+            As a teacher, you only need to set your university. Program and branch are not required.
+          </p>
+        </div>
+      )}
       <Section title="Your Institution">
         <div className="py-3.5 border-b border-border/50 space-y-1.5">
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide"><GraduationCap size={11} /> University</label>
           <Dropdown value={universityId} onChange={setUniversityId} options={universities.map(u => ({ value: u.$id, label: u.name }))} placeholder="Select university" />
         </div>
-        <div className="py-3.5 border-b border-border/50 space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            <BookOpen size={11} /> Program {programsLoading && <Loader2 size={10} className="animate-spin ml-1" />}
-          </label>
-          <Dropdown value={programId} onChange={setProgramId} options={programs.map(p => ({ value: p.$id, label: p.name }))}
-            disabled={!universityId || programsLoading} placeholder={programsLoading ? "Fetching programs…" : "Select program"} />
-        </div>
-        <div className="py-3.5 space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            <GitBranch size={11} /> Branch {branchesLoading && <Loader2 size={10} className="animate-spin ml-1" />}
-          </label>
-          <Dropdown value={branchId} onChange={setBranchId} options={branches.map(b => ({ value: b.$id, label: b.name }))}
-            disabled={!programId || branchesLoading} placeholder={branchesLoading ? "Fetching branches…" : "Select branch"} />
-        </div>
+        {!isTeacher && (
+          <>
+            <div className="py-3.5 border-b border-border/50 space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <BookOpen size={11} /> Program {programsLoading && <Loader2 size={10} className="animate-spin ml-1" />}
+              </label>
+              <Dropdown value={programId} onChange={setProgramId} options={programs.map(p => ({ value: p.$id, label: p.name }))}
+                disabled={!universityId || programsLoading} placeholder={programsLoading ? "Fetching programs…" : "Select program"} />
+            </div>
+            <div className="py-3.5 space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <GitBranch size={11} /> Branch {branchesLoading && <Loader2 size={10} className="animate-spin ml-1" />}
+              </label>
+              <Dropdown value={branchId} onChange={setBranchId} options={branches.map(b => ({ value: b.$id, label: b.name }))}
+                disabled={!programId || branchesLoading} placeholder={branchesLoading ? "Fetching branches…" : "Select branch"} />
+            </div>
+          </>
+        )}
       </Section>
       <div className="flex justify-end">
-        <SaveBtn saving={saving} disabled={!academicDirty || !universityId || !programId || !branchId} label="Save Preferences" />
+        <SaveBtn saving={saving} disabled={!canSave} label="Save Preferences" />
       </div>
     </form>
   )

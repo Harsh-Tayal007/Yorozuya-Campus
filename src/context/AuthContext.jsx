@@ -41,6 +41,7 @@ const buildCurrentUser = (accountUser, userDoc) => ({
   karma:            userDoc.karma            ?? 0,
   followerCount:    userDoc.followerCount    ?? 0,
   followingCount:   userDoc.followingCount   ?? 0,
+  accountType:      userDoc.accountType      ?? "student",
 })
 
 // ── Defer SW registration completely off critical path ───────────────────────
@@ -290,7 +291,7 @@ export const AuthProvider = ({ children }) => {
 
   // ── Signup ────────────────────────────────────────────────────────────────
   const completeSignup = async (data) => {
-    const { name, email, password, universityId, programId, branchId } = data
+    const { name, email, password, universityId, programId, branchId, accountType } = data
 
     try { await account.deleteSession("current") } catch { /* ignore */ }
 
@@ -299,7 +300,8 @@ export const AuthProvider = ({ children }) => {
 
     await databases.createDocument(DATABASE_ID, USERS_TABLE_ID, ID.unique(), {
       userId: authUser.$id, email, name, username, role: "user",
-      universityId, programId, branchId, profileCompleted: true,
+      universityId, programId: programId || null, branchId: branchId || null,
+      profileCompleted: true, accountType: accountType || "student",
       emailVerified: false, avatarUrl: null, avatarPublicId: null,
       bio: null, yearOfStudy: null,
     })
@@ -343,16 +345,20 @@ export const AuthProvider = ({ children }) => {
   }
 
   // ── Update academic profile ───────────────────────────────────────────────
-  const completeAcademicProfile = async ({ universityId, programId, branchId }) => {
+  const completeAcademicProfile = async ({ universityId, programId, branchId, accountType }) => {
     if (!currentUser) throw new Error("User not authenticated")
     if (!userDocId)   throw new Error("User doc ID not cached")
 
-    await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, {
-      universityId, programId, branchId, profileCompleted: true,
-    })
+    const payload = {
+      universityId, programId: programId || null, branchId: branchId || null, profileCompleted: true,
+    }
+    if (accountType) payload.accountType = accountType
+
+    await databases.updateDocument(DATABASE_ID, USERS_TABLE_ID, userDocId, payload)
 
     setCurrentUser(prev => {
-      const updated = { ...prev, universityId, programId, branchId, profileCompleted: true }
+      const updated = { ...prev, ...payload }
+      if (accountType) updated.accountType = accountType
       writeSessionCache(updated, role)
       return updated
     })
