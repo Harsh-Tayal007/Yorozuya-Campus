@@ -329,3 +329,22 @@ body[data-scroll-locked] {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Add these to your global CSS file (e.g. index.css or globals.css)
+   These replace framer-motion on the hero section — zero JS weight. */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  opacity: 0;
+  animation: fadeUp 0.52s ease-out forwards;
+}
