@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
           // JS chunks are served via StaleWhileRevalidate so they
           // never block the install event or inflate TBT.
           globPatterns: ["**/*.{html,css,woff2,ico,png,webp,svg}"],
-          globIgnores: ["push-sw.js"],
+          globIgnores: ["push-sw.js", "sw.js", "workbox-*.js"],
           navigateFallbackDenylist: [/^\/push-sw\.js/],
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
           skipWaiting: true,
@@ -87,15 +87,6 @@ export default defineConfig(({ mode }) => {
             if (id.includes("/node_modules/@tiptap/"))
               return "editor"
 
-            // ── Recharts + D3 (945 KB combined) ─────────────────────────
-            // These are only used in admin/attendance routes which are
-            // lazy-loaded, so isolating them prevents any bleed into index.
-            if (id.includes("/node_modules/recharts/") ||
-                id.includes("/node_modules/d3") ||
-                id.includes("/node_modules/d3-") ||
-                id.includes("/node_modules/victory"))
-              return "charts"
-
             // ── jsPDF ────────────────────────────────────────────────────
             // Already dynamically imported but Rollup may still group it.
             if (id.includes("/node_modules/jspdf/") ||
@@ -127,10 +118,6 @@ export default defineConfig(({ mode }) => {
             if (id.includes("/node_modules/idb-keyval/") ||
                 id.includes("/node_modules/idb/"))
               return "idb"
-
-            // ── ES-toolkit (lodash replacement, pulled by recharts) ───────
-            if (id.includes("/node_modules/es-toolkit/"))
-              return "charts"
 
             // Everything else → Rollup decides (your own app code gets
             // split per route automatically via the lazy() imports).
