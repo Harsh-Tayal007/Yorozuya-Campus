@@ -26,7 +26,7 @@ const NAVIGATION_LINKS = [
 // ─── Team social links ────────────────────────────────────────────────────────
 const TEAM_SOCIALS = [
   {
-    name: "Harsh Tayal",
+    name: "Harsh",
     links: [
       // TODO: Add actual GitHub link
       { icon: Github, href: "https://github.com/Harsh-Tayal007", label: "GitHub" },

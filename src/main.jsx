@@ -3,72 +3,79 @@ import ReactDOM from "react-dom/client"
 import App from "./App"
 import "./index.css"
 
-import { AuthProvider } from "@/context/AuthContext"
+import { AuthProvider }            from "@/context/AuthContext"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { persistQueryClient } from "@tanstack/react-query-persist-client"
-import { Toaster } from "sonner"
+import { Toaster }                 from "sonner"
 import { PushNotificationProvider } from "./context/PushNotificationContext"
-// npm install @tanstack/query-async-storage-persister idb-keyval
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister"
-import { get, set, del } from "idb-keyval"
 
+// ── QueryClient ───────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 30,
-      gcTime: 1000 * 60 * 60,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
+      staleTime:          1000 * 60 * 30,
+      gcTime:             1000 * 60 * 60,
+      refetchOnWindowFocus:  false,
+      refetchOnReconnect:    false,
+      refetchOnMount:        false,
     },
   },
 })
 
+// ── IDB persister — initialised lazily off the critical path ─────────────────
+// We do NOT await this before rendering. React mounts immediately with an empty
+// cache; the persisted cache hydrates in the background once IDB responds.
+// This avoids any synchronous localStorage access on the main thread.
+function initPersister() {
+  import("@tanstack/react-query-persist-client").then(({ persistQueryClient }) =>
+    import("@tanstack/query-async-storage-persister").then(({ createAsyncStoragePersister }) =>
+      import("idb-keyval").then(({ get, set, del }) => {
+        const persister = createAsyncStoragePersister({
+          storage: { getItem: get, setItem: set, removeItem: del },
+          key: "uz_rq_cache",
+        })
 
-const persister = createAsyncStoragePersister({
-  storage: { getItem: get, setItem: set, removeItem: del },
-})
+        persistQueryClient({
+          queryClient,
+          persister,
+          maxAge: 1000 * 60 * 60,
+          buster: import.meta.env.VITE_BUILD_TIME ?? "dev",
+          dehydrateOptions: {
+            shouldDehydrateQuery: (query) => {
+              const key = query.queryKey[0]
+              // Don't cache forum content — always fresh
+              return !["replies", "threads", "thread"].includes(key)
+            },
+          },
+        })
+      })
+    )
+  )
+}
 
-localStorage.removeItem("REACT_QUERY_OFFLINE_CACHE")
-
-persistQueryClient({
-  queryClient,
-  persister,
-  maxAge: 1000 * 60 * 60,
-
-  // ── Auto-busts cache on every new build ──────────────────────────────────
-  // Vite replaces import.meta.env.VITE_BUILD_TIME at build time with the
-  // current timestamp. Old localStorage cache from previous deploys is
-  // automatically discarded when this value changes.
-  // In dev (no VITE_BUILD_TIME set) falls back to "dev" so dev cache
-  // is always treated as a separate bucket from production.
-  buster: import.meta.env.VITE_BUILD_TIME ?? "dev",
-
-  dehydrateOptions: {
-    shouldDehydrateQuery: (query) => {
-      const key = query.queryKey[0]
-      const forumKeys = ["replies", "threads", "thread"]
-      return !forumKeys.includes(key)
-    },
-  },
-})
-
-// ── Capture PWA install prompt before React mounts ───────────────────────────
+// ── PWA install prompt ────────────────────────────────────────────────────────
 window.__pwaInstallPrompt = null
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault()
   window.__pwaInstallPrompt = e
 })
 
+// ── Render immediately — don't block on persister init ───────────────────────
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <PushNotificationProvider>
-        <App />
-      </PushNotificationProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-  <Toaster position="bottom-right" richColors closeButton toastOptions={{ duration: 4000 }} />
-</React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <PushNotificationProvider>
+          <App />
+        </PushNotificationProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+    <Toaster position="bottom-right" richColors closeButton toastOptions={{ duration: 4000 }} />
+  </React.StrictMode>
 )
+
+// Init persister after first render — zero impact on LCP/TBT
+if (typeof requestIdleCallback !== "undefined") {
+  requestIdleCallback(initPersister, { timeout: 3000 })
+} else {
+  setTimeout(initPersister, 1000)
+}

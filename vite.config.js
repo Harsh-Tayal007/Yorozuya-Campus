@@ -15,29 +15,33 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         devOptions: { enabled: true, type: "module" },
         workbox: {
-          // Only precache the shell — let runtime caching handle the rest
-          globPatterns: ["**/*.{html,css,woff2}"], // JS chunks served from runtime cache
+          // Only precache the shell (HTML + CSS + fonts).
+          // JS chunks are served via StaleWhileRevalidate so they
+          // never block the install event or inflate TBT.
+          globPatterns: ["**/*.{html,css,woff2,ico,png,webp,svg}"],
+          globIgnores: ["push-sw.js"],
+          navigateFallbackDenylist: [/^\/push-sw\.js/],
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          skipWaiting: true,
+          clientsClaim: true,
           runtimeCaching: [
             {
-              urlPattern: /\.(?:js)$/,
+              // JS chunks — stale-while-revalidate so they're served
+              // from cache immediately and updated in background
+              urlPattern: /assets\/.*\.js$/,
               handler: "StaleWhileRevalidate",
               options: {
-                cacheName: "js-cache",
-                expiration: { maxEntries: 60 },
+                cacheName: "js-chunks",
+                expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 7 },
               },
             },
           ],
-          // Don't let SW registration block the page
-          skipWaiting: true,
-          clientsClaim: true,
         },
         manifest: {
           id: "/",
           name: "Unizuya",
           short_name: "Unizuya",
-          description:
-            "A unified academic platform - PYQs, syllabus, resources and a student forum, all in one place.",
+          description: "A unified academic platform - PYQs, syllabus, resources and a student forum, all in one place.",
           theme_color: "#0b0f19",
           background_color: "#0b0f19",
           display: "standalone",
@@ -45,64 +49,96 @@ export default defineConfig(({ mode }) => {
           start_url: "/",
           scope: "/",
           icons: [
-            {
-              src: "pwa-192.png",
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "pwa-512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "pwa-192-maskable.png",
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "maskable",
-            },
-            {
-              src: "pwa-512-maskable.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "maskable",
-            },
+            { src: "pwa-192.png",          sizes: "192x192", type: "image/png", purpose: "any"      },
+            { src: "pwa-512.png",          sizes: "512x512", type: "image/png", purpose: "any"      },
+            { src: "pwa-192-maskable.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+            { src: "pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           ],
           screenshots: [
-            {
-              src: "screenshots/desktop.png",
-              sizes: "1280x720",
-              type: "image/png",
-              form_factor: "wide",
-              label: "Unizuya — Home",
-            },
-            {
-              src: "screenshots/mobile.png",
-              sizes: "390x844",
-              type: "image/png",
-              form_factor: "narrow",
-              label: "Unizuya — Dashboard",
-            },
+            { src: "screenshots/desktop.png", sizes: "1280x720", type: "image/png", form_factor: "wide",   label: "Unizuya — Home"      },
+            { src: "screenshots/mobile.png",  sizes: "390x844",  type: "image/png", form_factor: "narrow", label: "Unizuya — Dashboard" },
           ],
         },
       }),
     ],
+
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ["react", "react-dom", "react-router-dom"],
-            appwrite: ["appwrite"],
-            motion: ["framer-motion"], // ← add this
-            editor: ["@tiptap/react", "@tiptap/starter-kit"],
-            ui: ["lucide-react"],
-            query: ["@tanstack/react-query"], // ← add this
+          // Function form lets us inspect the actual module ID path,
+          // which is the only reliable way to split node_modules.
+          manualChunks(id) {
+            // ── Core framework — tiny, always needed ──────────────────────
+            if (id.includes("/node_modules/react/") ||
+                id.includes("/node_modules/react-dom/") ||
+                id.includes("/node_modules/react-router") ||
+                id.includes("/node_modules/scheduler/"))
+              return "vendor"
+
+            // ── Appwrite SDK ─────────────────────────────────────────────
+            if (id.includes("/node_modules/appwrite/"))
+              return "appwrite"
+
+            // ── Framer Motion ────────────────────────────────────────────
+            if (id.includes("/node_modules/framer-motion/"))
+              return "motion"
+
+            // ── TipTap editor ────────────────────────────────────────────
+            if (id.includes("/node_modules/@tiptap/"))
+              return "editor"
+
+            // ── Recharts + D3 (945 KB combined) ─────────────────────────
+            // These are only used in admin/attendance routes which are
+            // lazy-loaded, so isolating them prevents any bleed into index.
+            if (id.includes("/node_modules/recharts/") ||
+                id.includes("/node_modules/d3") ||
+                id.includes("/node_modules/d3-") ||
+                id.includes("/node_modules/victory"))
+              return "charts"
+
+            // ── jsPDF ────────────────────────────────────────────────────
+            // Already dynamically imported but Rollup may still group it.
+            if (id.includes("/node_modules/jspdf/") ||
+                id.includes("/node_modules/jspdf.es"))
+              return "jspdf"
+
+            // ── html2canvas ──────────────────────────────────────────────
+            if (id.includes("/node_modules/html2canvas/"))
+              return "html2canvas"
+
+            // ── TanStack Query ───────────────────────────────────────────
+            if (id.includes("/node_modules/@tanstack/"))
+              return "query"
+
+            // ── UI utilities ─────────────────────────────────────────────
+            if (id.includes("/node_modules/lucide-react/"))
+              return "ui"
+
+            // ── DOMPurify ────────────────────────────────────────────────
+            if (id.includes("/node_modules/dompurify/") ||
+                id.includes("/node_modules/isomorphic-dompurify/"))
+              return "purify"
+
+            // ── Sonner (toast) ───────────────────────────────────────────
+            if (id.includes("/node_modules/sonner/"))
+              return "sonner"
+
+            // ── IDB (IndexedDB persister) ────────────────────────────────
+            if (id.includes("/node_modules/idb-keyval/") ||
+                id.includes("/node_modules/idb/"))
+              return "idb"
+
+            // ── ES-toolkit (lodash replacement, pulled by recharts) ───────
+            if (id.includes("/node_modules/es-toolkit/"))
+              return "charts"
+
+            // Everything else → Rollup decides (your own app code gets
+            // split per route automatically via the lazy() imports).
           },
         },
       },
     },
+
     server: {
       proxy: {
         "/anthropic": {
@@ -117,9 +153,11 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+
     define: {
       "import.meta.env.VITE_BUILD_TIME": JSON.stringify(Date.now().toString()),
     },
+
     resolve: {
       alias: { "@": path.resolve(__dirname, "./src") },
     },
