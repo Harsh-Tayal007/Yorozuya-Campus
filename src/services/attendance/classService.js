@@ -285,3 +285,24 @@ export async function reEnrollStudent(enrollmentId) {
     { status: "active" }
   )
 }
+
+export async function hardDeleteStudent(enrollmentId, classId, studentId) {
+  const [records, tokens] = await Promise.all([
+    databases.listDocuments(DATABASE_ID, ATTENDANCE_RECORDS_COLLECTION_ID, [
+      Query.equal("classId", classId),
+      Query.equal("studentId", studentId),
+      Query.limit(500)
+    ]),
+    databases.listDocuments(DATABASE_ID, SESSION_TOKENS_COLLECTION_ID, [
+      Query.equal("classId", classId),
+      Query.equal("studentId", studentId),
+      Query.limit(500)
+    ])
+  ]);
+
+  await Promise.all([
+    ...records.documents.map(r => databases.deleteDocument(DATABASE_ID, ATTENDANCE_RECORDS_COLLECTION_ID, r.$id)),
+    ...tokens.documents.map(t => databases.deleteDocument(DATABASE_ID, SESSION_TOKENS_COLLECTION_ID, t.$id)),
+    databases.deleteDocument(DATABASE_ID, ENROLLMENTS_COLLECTION_ID, enrollmentId)
+  ]);
+}

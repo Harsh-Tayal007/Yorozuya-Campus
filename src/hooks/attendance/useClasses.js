@@ -17,6 +17,7 @@ import {
   updateClassTeachers,
   reEnrollStudent,
   getRemovedStudents,
+  hardDeleteStudent,
 } from "@/services/attendance/classService";
 import { useAuth } from "@/context/AuthContext";
 import { PERMISSIONS } from "@/config/permissions";
@@ -197,6 +198,22 @@ export function useToggleClassActive() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["classes-all"] });
       qc.invalidateQueries({ queryKey: ["classes"] });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+}
+
+export function useHardDeleteStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ enrollmentId, classId, studentId }) =>
+      hardDeleteStudent(enrollmentId, classId, studentId),
+    onSuccess: (_, { classId }) => {
+      toast.success("Student records permanently deleted");
+      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId] });
+      qc.invalidateQueries({ queryKey: ["enrollments", "class", classId, "removed"] });
+      qc.invalidateQueries({ queryKey: ["all-records", classId] });
+      qc.invalidateQueries({ queryKey: ["classes-all"] }); 
     },
     onError: (err) => toast.error(err.message),
   });

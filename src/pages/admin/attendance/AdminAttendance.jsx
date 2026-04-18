@@ -6,7 +6,7 @@ import {
     ClipboardCheck, Users, BookOpen,
     ChevronDown, ArrowUpRight, Search, UserPlus, UserMinus,
     Power, GraduationCap,
-    Zap
+    Zap, Trash2
 } from "lucide-react"
 import { getAllClasses } from "@/services/attendance/classService"
 import { getSessionsByClass } from "@/services/attendance/sessionService"
@@ -14,7 +14,7 @@ import { getEnrollmentsByClass } from "@/services/attendance/classService"
 import { Query } from "appwrite"
 import { databases } from "@/lib/appwrite"
 import { DATABASE_ID } from "@/config/appwrite"
-import { useUpdateClassTeachers, useToggleClassActive } from "@/hooks/attendance/useClasses"
+import { useUpdateClassTeachers, useToggleClassActive, useHardDeleteStudent } from "@/hooks/attendance/useClasses"
 import { toast } from "sonner"
 import client from "@/lib/appwrite"
 import { SESSIONS_COLLECTION_ID } from "@/config/appwrite"
@@ -191,11 +191,76 @@ function AssignTeachersModal({ cls, teacherMap, allTeacherIds, onClose }) {
     )
 }
 
+function HardDeleteStudentModal({ enrollment, classId, onClose }) {
+  const [confirmText, setConfirmText] = useState("")
+  const hardDelete = useHardDeleteStudent()
+  const confirmed = confirmText === "CONFIRM"
+
+  const handleDelete = async () => {
+    if (!confirmed) return
+    await hardDelete.mutateAsync({
+      enrollmentId: enrollment.$id,
+      classId,
+      studentId: enrollment.studentId
+    })
+    onClose()
+  }
+
+  const inputCls = `w-full h-9 px-3 rounded-xl border border-border/60 bg-card/60
+    text-sm text-foreground placeholder:text-muted-foreground/50
+    focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-500
+    hover:border-border transition-all duration-150`
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-card border border-destructive/30 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-base font-bold text-destructive">Permanently Delete Student</h2>
+          <p className="text-xs text-muted-foreground">
+            This will fully remove the student (<span className="text-foreground font-semibold">{enrollment.rollNumber}</span>) from this class, including <strong>all attendance records and tokens</strong>. The roll number will become available again. 
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+          <p className="text-xs text-destructive/80">
+            Type <span className="font-mono font-bold text-destructive">CONFIRM</span> to delete
+          </p>
+        </div>
+
+        <input
+          placeholder="Type CONFIRM"
+          value={confirmText}
+          onChange={e => setConfirmText(e.target.value)}
+          className={inputCls + (confirmed ? " border-destructive/50 ring-2 ring-destructive/20" : "")}
+          autoFocus
+        />
+
+        <div className="flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm
+                       text-muted-foreground hover:bg-muted transition-all">Cancel</button>
+          <button
+            onClick={handleDelete}
+            disabled={!confirmed || hardDelete.isPending}
+            className="flex-1 px-4 py-2 rounded-xl bg-destructive hover:bg-destructive/80
+                       text-white text-sm font-medium transition-all
+                       disabled:opacity-30 disabled:cursor-not-allowed">
+            {hardDelete.isPending ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ── Per-class row ─────────────────────────────────────────────────────────────
 function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
     const [expanded, setExpanded] = useState(false)
     const [showAssign, setShowAssign] = useState(false)
     const [showStudents, setShowStudents] = useState(false)
+    const [deletingEnrollment, setDeletingEnrollment] = useState(null)
 
     const toggleActive = useToggleClassActive()
 
@@ -502,11 +567,20 @@ function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="text-muted-foreground/50 shrink-0 ml-2 text-[10px]">
-                                                            {new Date(e.joinedAt).toLocaleDateString("en-IN", {
-                                                                day: "2-digit", month: "short", year: "numeric"
-                                                            })}
-                                                        </span>
+                                                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                            <span className="text-muted-foreground/50 text-[10px]">
+                                                                {new Date(e.joinedAt).toLocaleDateString("en-IN", {
+                                                                    day: "2-digit", month: "short", year: "numeric"
+                                                                })}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => setDeletingEnrollment(e)}
+                                                                className="p-1 rounded-lg text-destructive/70 hover:text-destructive
+                                                                           hover:bg-destructive/10 border border-transparent 
+                                                                           hover:border-destructive/20 transition-all">
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                         </div>
@@ -523,6 +597,16 @@ function ClassRow({ cls, index, teacherMap, allTeacherIds }) {
                                 teacherMap={teacherMap}
                                 allTeacherIds={allTeacherIds}
                                 onClose={() => setShowAssign(false)}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {deletingEnrollment && (
+                            <HardDeleteStudentModal
+                                enrollment={deletingEnrollment}
+                                classId={cls.$id}
+                                onClose={() => setDeletingEnrollment(null)}
                             />
                         )}
                     </AnimatePresence>

@@ -9,7 +9,7 @@ import { Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useClasses, useCreateClass, useUpdateClass,
-  useDeleteClass, useRemoveStudent, useClassRoster, useRemovedStudents, useReEnrollStudent
+  useDeleteClass, useRemoveStudent, useClassRoster, useRemovedStudents, useReEnrollStudent, useHardDeleteStudent
 } from "@/hooks/attendance/useClasses"
 import {
   useActiveSession, useStartSession, useCloseSession,
@@ -405,6 +405,65 @@ function DeleteClassModal({ cls, onClose }) {
   )
 }
 
+function HardDeleteStudentModal({ enrollment, classId, onClose }) {
+  const [confirmText, setConfirmText] = useState("")
+  const hardDelete = useHardDeleteStudent()
+  const confirmed = confirmText === "CONFIRM"
+
+  const handleDelete = async () => {
+    if (!confirmed) return
+    await hardDelete.mutateAsync({
+      enrollmentId: enrollment.$id,
+      classId,
+      studentId: enrollment.studentId
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-card border border-destructive/30 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-base font-bold text-destructive">Permanently Delete Student</h2>
+          <p className="text-xs text-muted-foreground">
+            This will fully remove the student (<span className="text-foreground font-semibold">{enrollment.rollNumber}</span>) from this class, including <strong>all attendance records and tokens</strong>. The roll number will become available again. 
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+          <p className="text-xs text-destructive/80">
+            Type <span className="font-mono font-bold text-destructive">CONFIRM</span> to delete
+          </p>
+        </div>
+
+        <input
+          placeholder="Type CONFIRM"
+          value={confirmText}
+          onChange={e => setConfirmText(e.target.value)}
+          className={inputCls + (confirmed ? " border-destructive/50 ring-2 ring-destructive/20" : "")}
+          autoFocus
+        />
+
+        <div className="flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm
+                       text-muted-foreground hover:bg-muted transition-all">Cancel</button>
+          <button
+            onClick={handleDelete}
+            disabled={!confirmed || hardDelete.isPending}
+            className="flex-1 px-4 py-2 rounded-xl bg-destructive hover:bg-destructive/80
+                       text-white text-sm font-medium transition-all
+                       disabled:opacity-30 disabled:cursor-not-allowed">
+            {hardDelete.isPending ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ── End session modal ─────────────────────────────────────────────────────────
 function EndSessionModal({ session, cls, onClose }) {
   const [physicalCount, setPhysicalCount] = useState("")
@@ -681,6 +740,7 @@ function SessionPanel({ cls }) {
 
 function RemovedStudentsSection({ classId }) {
   const [expanded, setExpanded] = useState(false)
+  const [deletingEnrollment, setDeletingEnrollment] = useState(null)
   const { data: removed = [] } = useRemovedStudents(classId)
   const reEnroll = useReEnrollStudent()
 
@@ -720,19 +780,37 @@ function RemovedStudentsSection({ classId }) {
                   </span>
                   {e.isLeet && <LeetBadge />}
                 </div>
-                <button
-                  onClick={() => reEnroll.mutate({ enrollmentId: e.$id, classId })}
-                  disabled={reEnroll.isPending}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity
-                             text-xs px-2 py-1 rounded-lg text-emerald-400/70
-                             hover:text-emerald-400 hover:bg-emerald-500/10
-                             border border-transparent hover:border-emerald-500/20
-                             disabled:opacity-30 shrink-0 ml-2 flex items-center gap-1">
-                  <UserCheck size={11} /> Re-enroll
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                  <button
+                    onClick={() => reEnroll.mutate({ enrollmentId: e.$id, classId })}
+                    disabled={reEnroll.isPending}
+                    className="text-xs px-2 py-1 rounded-lg text-emerald-400/70
+                               hover:text-emerald-400 hover:bg-emerald-500/10
+                               border border-transparent hover:border-emerald-500/20
+                               disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+                    <UserCheck size={11} /> Re-enroll
+                  </button>
+                  <button
+                    onClick={() => setDeletingEnrollment(e)}
+                    className="p-1 rounded-lg text-destructive/70 hover:text-destructive
+                               hover:bg-destructive/10 border border-transparent 
+                               hover:border-destructive/20 transition-all">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             ))}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deletingEnrollment && (
+          <HardDeleteStudentModal
+            enrollment={deletingEnrollment}
+            classId={classId}
+            onClose={() => setDeletingEnrollment(null)}
+          />
         )}
       </AnimatePresence>
     </div>
