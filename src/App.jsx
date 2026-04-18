@@ -8,12 +8,8 @@ import { usePWAInstall } from "./hooks/usePWAInstall"
 import CookieNotice from "./components/common/auth/CookieNotice"
 import { AppLoader } from "./components"
 
+// AFTER — render immediately, let routes handle auth state
 const App = () => {
-  const { isLoading } = useAuth()
-  usePWAInstall()
-  if (isLoading) return <AppLoader
-   />
-
   return (
     <BrowserRouter>
       <ScrollToTop />
