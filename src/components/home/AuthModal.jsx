@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   GraduationCap, X, Check, Eye, EyeOff, ChevronRight,
-  ChevronDown, Loader2, RefreshCw,
+  ChevronDown, Loader2, RefreshCw, BookOpen,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { account } from "@/lib/appwrite"
@@ -262,7 +262,8 @@ function AccountStep({ data, setData, onNext }) {
 }
 
 // ── Academic Step ─────────────────────────────────────────
-function AcademicStep({ data, setData, onNext, onBack }) {
+function ModalAcademicStep({ data, setData, onNext, onBack, accountType }) {
+  const isTeacher = accountType === "teacher"
   const [universities, setUniversities] = useState([])
   const [programs, setPrograms]         = useState([])
   const [branches, setBranches]         = useState([])
@@ -270,43 +271,79 @@ function AcademicStep({ data, setData, onNext, onBack }) {
 
   useEffect(() => { getUniversities().then(r => setUniversities(r || [])).catch(() => {}) }, [])
   useEffect(() => {
-    if (!data.universityId) { setPrograms([]); return }
+    if (isTeacher || !data.universityId) { setPrograms([]); return }
     getProgramsByUniversity(data.universityId).then(r => setPrograms(r || [])).catch(() => {})
     setData(prev => ({ ...prev, programId: "", branchId: "" }))
   }, [data.universityId]) // eslint-disable-line
   useEffect(() => {
-    if (!data.programId) { setBranches([]); return }
+    if (isTeacher || !data.programId) { setBranches([]); return }
     getBranchesByProgram(data.programId).then(r => setBranches(r || [])).catch(() => {})
     setData(prev => ({ ...prev, branchId: "" }))
   }, [data.programId]) // eslint-disable-line
 
+  const validate = () => {
+    if (!data.universityId) { setError("Please select a university"); return false }
+    if (!isTeacher && (!data.programId || !data.branchId)) { setError("Please select all fields"); return false }
+    setError(null)
+    return true
+  }
+
+  const handleContinue = () => {
+    if (!validate()) return
+    // For teachers, clear program/branch before continuing
+    if (isTeacher) {
+      setData(prev => ({ ...prev, programId: null, branchId: null }))
+    }
+    onNext()
+  }
+
   return (
     <div className="space-y-4">
       <div className="mb-2">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Academic details</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 2 of 3 - Help us personalise your experience</p>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+          {isTeacher ? "University details" : "Academic details"}
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          Step 2 of 3 - {isTeacher ? "Select your university" : "Help us personalise your experience"}
+        </p>
       </div>
-      {[
-        { label: "University", value: data.universityId, key: "universityId", options: universities.map(u => ({ value: u.$id, label: u.name })), placeholder: "Select university", disabled: false },
-        { label: "Program",    value: data.programId,    key: "programId",    options: programs.map(p => ({ value: p.$id, label: p.name })),     placeholder: "Select program",    disabled: !data.universityId },
-        { label: "Branch",     value: data.branchId,     key: "branchId",     options: branches.map(b => ({ value: b.$id, label: b.name })),     placeholder: "Select branch",     disabled: !data.programId },
-      ].map(({ label, value, key, options, placeholder, disabled }) => (
-        <div key={key} className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</label>
-          <NativeSelect value={value || ""} onChange={val => setData(prev => ({ ...prev, [key]: val }))}
-            options={options} placeholder={placeholder} disabled={disabled} />
+
+      {isTeacher && (
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+            As a teacher, you only need to select your university. An admin will grant you teacher privileges after sign-up.
+          </p>
         </div>
-      ))}
+      )}
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">University</label>
+        <NativeSelect value={data.universityId || ""} onChange={val => setData(prev => ({ ...prev, universityId: val }))}
+          options={universities.map(u => ({ value: u.$id, label: u.name }))} placeholder="Select university" />
+      </div>
+
+      {!isTeacher && (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Program</label>
+            <NativeSelect value={data.programId || ""} onChange={val => setData(prev => ({ ...prev, programId: val }))}
+              options={programs.map(p => ({ value: p.$id, label: p.name }))} placeholder="Select program" disabled={!data.universityId} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Branch</label>
+            <NativeSelect value={data.branchId || ""} onChange={val => setData(prev => ({ ...prev, branchId: val }))}
+              options={branches.map(b => ({ value: b.$id, label: b.name }))} placeholder="Select branch" disabled={!data.programId} />
+          </div>
+        </>
+      )}
+
       {error && <p className="text-xs text-red-500 text-center">{error}</p>}
       <div className="flex gap-2 pt-1">
         <button onClick={onBack} className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-white/10
           text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 transition-all duration-150">
           Back
         </button>
-        <button onClick={() => {
-          if (!data.universityId || !data.programId || !data.branchId) { setError("Please select all fields"); return }
-          setError(null); onNext()
-        }} className="flex-1 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
+        <button onClick={handleContinue} className="flex-1 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
           hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold
           shadow-lg shadow-blue-600/20 transition-all duration-150 flex items-center justify-center gap-2">
           Continue <ChevronRight size={14} />
@@ -317,7 +354,7 @@ function AcademicStep({ data, setData, onNext, onBack }) {
 }
 
 // ── Confirm Step ──────────────────────────────────────────
-function ConfirmStep({ data, universityName, programName, branchName, onBack, onSubmit, loading, error }) {
+function ConfirmStep({ data, universityName, programName, branchName, isTeacher, onBack, onSubmit, loading, error }) {
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [privacyError, setPrivacyError]       = useState(false)
 
@@ -326,9 +363,10 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
     { label: "Email",      value: data.email },
     { label: "Password",   value: "********" },
     { label: "Username",   value: `@${data.username}` },
+    isTeacher && { label: "Account Type", value: "Teacher" },
     universityName && { label: "University", value: universityName },
-    programName    && { label: "Program",    value: programName },
-    branchName     && { label: "Branch",     value: branchName },
+    !isTeacher && programName && { label: "Program",    value: programName },
+    !isTeacher && branchName  && { label: "Branch",     value: branchName },
   ].filter(Boolean)
 
   return (
@@ -345,6 +383,13 @@ function ConfirmStep({ data, universityName, programName, branchName, onBack, on
           </div>
         ))}
       </div>
+      {isTeacher && (
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5">
+          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            <strong>Note:</strong> Teacher accounts start with standard access. An administrator must approve your teacher privileges before you can manage classes.
+          </p>
+        </div>
+      )}
       <label className="flex items-start gap-2.5 cursor-pointer">
         <div onClick={() => { setPrivacyAccepted(p => !p); setPrivacyError(false) }}
           className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center transition-colors duration-150 cursor-pointer
@@ -392,9 +437,11 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
   const navigate = useNavigate()
 
   const [step, setStep] = useState(1)
+  const [role, setRole] = useState(null) // "student" | "teacher" | null
   const [signupData, setSignupData] = useState({
     name: "", email: "", password: "", username: "",
     universityId: "", programId: "", branchId: "",
+    accountType: "student",
   })
   const [universityName, setUniversityName] = useState("")
   const [programName, setProgramName]       = useState("")
@@ -404,6 +451,13 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
   const [loading, setLoading]               = useState(false)
   const [error, setError]                   = useState(null)
   const [success, setSuccess]               = useState(false)
+
+  const isTeacher = role === "teacher"
+
+  const selectRole = (r) => {
+    setRole(r)
+    setSignupData(prev => ({ ...prev, accountType: r }))
+  }
 
   // Resolve display names for confirm step
   useEffect(() => {
@@ -469,13 +523,13 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
   // Reset on close / mode switch
   useEffect(() => {
     if (!open) {
-      setStep(1); setLoginForm({ identifier: "", password: "" }); setError(null)
+      setStep(1); setRole(null); setLoginForm({ identifier: "", password: "" }); setError(null)
       setShowPass(false); setSuccess(false)
-      setSignupData({ name: "", email: "", password: "", username: "", universityId: "", programId: "", branchId: "" })
+      setSignupData({ name: "", email: "", password: "", username: "", universityId: "", programId: "", branchId: "", accountType: "student" })
       setUniversityName(""); setProgramName(""); setBranchName("")
     }
   }, [open])
-  useEffect(() => { setStep(1); setError(null); setShowPass(false); setSuccess(false) }, [mode])
+  useEffect(() => { setStep(1); setRole(null); setError(null); setShowPass(false); setSuccess(false) }, [mode])
 
   return (
     <AnimatePresence>
@@ -589,44 +643,103 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
             {/* Signup */}
             {!success && mode === "signup" && (
               <>
-                {step === 1 && (
-                  <>
-                    <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-1">Join Unizuya</h2>
-                    <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-4">Create your free account</p>
-                    <button onClick={loginWithGoogle}
-                      className="w-full flex items-center justify-center gap-2.5 h-10 mb-4
-                        border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-50
-                        dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-all shadow-sm">
-                      <GoogleIcon /> Continue with Google
-                    </button>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
-                      <span className="text-xs text-slate-400 font-medium">OR</span>
-                      <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                {/* ── Role Selection Gateway ── */}
+                {!role && (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4 text-center">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">Join Unizuya</h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">How will you use the platform?</p>
                     </div>
-                  </>
-                )}
-                {step > 1 && <StepIndicator step={step} />}
-                <AnimatePresence mode="wait">
-                  <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }}>
-                    {step === 1 && <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />}
-                    {step === 2 && <AcademicStep data={signupData} setData={setSignupData} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
-                    {step === 3 && (
-                      <ConfirmStep data={signupData}
-                        universityName={universityName} programName={programName} branchName={branchName}
-                        onBack={() => setStep(2)} onSubmit={handleFinalSubmit} loading={loading} error={error} />
-                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => selectRole("student")}
+                        className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
+                          bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-500/40
+                          hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-200">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center
+                          group-hover:bg-blue-500/20 transition-colors">
+                          <GraduationCap size={18} className="text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Student</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Access notes, PYQs & more</p>
+                        </div>
+                      </button>
+                      <button onClick={() => selectRole("teacher")}
+                        className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
+                          bg-white dark:bg-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/40
+                          hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-200">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center
+                          group-hover:bg-emerald-500/20 transition-colors">
+                          <BookOpen size={18} className="text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Teacher</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Manage classes & attendance</p>
+                        </div>
+                      </button>
+                    </div>
+                    <p className="mt-3 pt-4 border-t border-slate-100 dark:border-white/[0.06]
+                                  text-center text-sm text-slate-500 dark:text-slate-400">
+                      Already have an account?{" "}
+                      <button onClick={() => onSwitch("login")}
+                        className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
+                        Sign in
+                      </button>
+                    </p>
                   </motion.div>
-                </AnimatePresence>
-                {step === 1 && (
-                  <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                    Already have an account?{" "}
-                    <button onClick={() => onSwitch("login")}
-                      className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
-                      Sign in
-                    </button>
-                  </p>
+                )}
+
+                {/* ── Signup Flow (only when role is selected) ── */}
+                {role && (
+                  <>
+                    {step === 1 && (
+                      <>
+                        <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-1">Join Unizuya</h2>
+                        <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-4">
+                          Create your free {isTeacher ? "teacher" : "student"} account
+                        </p>
+                        <button onClick={loginWithGoogle}
+                          className="w-full flex items-center justify-center gap-2.5 h-10 mb-4
+                            border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-50
+                            dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-all shadow-sm">
+                          <GoogleIcon /> Continue with Google
+                        </button>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                          <span className="text-xs text-slate-400 font-medium">OR</span>
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                        </div>
+                      </>
+                    )}
+                    {step > 1 && <StepIndicator step={step} />}
+                    <AnimatePresence mode="wait">
+                      <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }}>
+                        {step === 1 && <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />}
+                        {step === 2 && (
+                          <ModalAcademicStep data={signupData} setData={setSignupData}
+                            onBack={() => setStep(1)} onNext={() => setStep(3)}
+                            accountType={signupData.accountType} />
+                        )}
+                        {step === 3 && (
+                          <ConfirmStep data={signupData}
+                            universityName={universityName} programName={programName} branchName={branchName}
+                            isTeacher={isTeacher}
+                            onBack={() => setStep(2)} onSubmit={handleFinalSubmit} loading={loading} error={error} />
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                    {step === 1 && (
+                      <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                        Already have an account?{" "}
+                        <button onClick={() => onSwitch("login")}
+                          className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
+                          Sign in
+                        </button>
+                      </p>
+                    )}
+                  </>
                 )}
               </>
             )}
