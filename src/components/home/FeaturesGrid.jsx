@@ -1,6 +1,6 @@
 // src/components/home/FeaturesGrid.jsx
-import { motion } from "framer-motion"
 import { FileText, BookOpen, MessageSquare, Layers, ClipboardList, BarChart2 } from "lucide-react"
+import { useReveal } from "@/hooks/useReveal"
 
 const FEATURES = [
   {
@@ -41,30 +41,29 @@ const FEATURES = [
   },
 ]
 
+function FeatureCard({ icon: Icon, color, title, desc, index }) {
+  const ref = useReveal(index * 60)
+  return (
+    <div ref={ref}
+      className="bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/8
+                 rounded-2xl p-5 h-full shadow-sm
+                 hover:border-indigo-400/40 hover:-translate-y-0.5 hover:shadow-md
+                 transition-[border-color,box-shadow,transform] duration-200 ease-out group">
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${color}
+                       group-hover:scale-105 transition-transform duration-200 ease-out`}>
+        <Icon size={17} />
+      </div>
+      <h3 className="text-sm font-semibold text-foreground mb-1.5">{title}</h3>
+      <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+    </div>
+  )
+}
+
 export default function FeaturesGrid() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {FEATURES.map(({ icon: Icon, color, title, desc }, i) => (
-        <motion.div
-          key={title}
-          initial={{ opacity: 0, y: 22 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.45, delay: i * 0.06, ease: "easeOut" }}
-        >
-          <div className="bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/8
-                          rounded-2xl p-5 h-full shadow-sm
-                          hover:border-indigo-400/40 hover:-translate-y-0.5
-                          hover:shadow-[0_4px_24px_rgba(99,102,241,0.08)]
-                          transition-all duration-300 group">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${color}
-                             group-hover:scale-110 transition-transform duration-200`}>
-              <Icon size={17} />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground mb-1.5">{title}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
-          </div>
-        </motion.div>
+      {FEATURES.map((feature, i) => (
+        <FeatureCard key={feature.title} {...feature} index={i} />
       ))}
     </div>
   )

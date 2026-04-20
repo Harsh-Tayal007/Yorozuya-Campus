@@ -1,8 +1,8 @@
-﻿// src/pages/Home.jsx
-// ─────────────────────────────────────────────
-// ONLY eager: hero + stats + "what is" section
-// Everything else is lazy / deferred
-// ─────────────────────────────────────────────
+// src/pages/Home.jsx
+// ---------------------------------------------------------
+// ONLY eager: hero + "what is" section
+// Everything else is lazy / deferred for performance
+// ---------------------------------------------------------
 import { useState, useEffect, useRef, lazy, Suspense } from "react"
 import { Link } from "react-router-dom"
 import { ChevronRight, Zap, Check, Users, Shield, Bell, ArrowRight } from "lucide-react"
@@ -12,17 +12,19 @@ import { getPublicStats } from "@/services/admin/statsService"
 import { Skeleton } from "@/components/ui/skeleton"
 import useSeoMeta from "@/hooks/useSeoMeta"
 
-// ── Lazy heavy chunks (only downloaded when needed) ──
-const AnimatedBlobs  = lazy(() => import("@/components/home/AnimatedBlobs"))
-const AuthModal      = lazy(() => import("@/components/home/AuthModal"))
-const RoadmapModal   = lazy(() => import("@/components/home/RoadmapModal"))
-const FeaturesGrid   = lazy(() => import("@/components/home/FeaturesGrid"))
+// -- Lazy heavy chunks (only downloaded when needed) --
+const AnimatedBlobs       = lazy(() => import("@/components/home/AnimatedBlobs"))
+const AuthModal           = lazy(() => import("@/components/home/AuthModal"))
+const RoadmapModal        = lazy(() => import("@/components/home/RoadmapModal"))
+const FeaturesGrid        = lazy(() => import("@/components/home/FeaturesGrid"))
+const HowItWorks          = lazy(() => import("@/components/home/HowItWorks"))
+const StatsSection        = lazy(() => import("@/components/home/StatsSection"))
+const ToolsShowcase       = lazy(() => import("@/components/home/ToolsShowcase"))
+const RolesSection        = lazy(() => import("@/components/home/RolesSection"))
+const TestimonialsSection = lazy(() => import("@/components/home/TestimonialsSection"))
+const FAQSection          = lazy(() => import("@/components/home/FAQSection"))
 
-// ── Lightweight inline motion wrapper ──
-// We avoid importing all of framer-motion at the top level.
-// Hero animations are CSS-only to keep the initial JS bundle tiny.
-// ─────────────────────────────────────────────
-
+// -- Lightweight inline constants --
 const FEATURES_SUMMARY = [
   "Syllabus and unit notes",
   "Past year questions",
@@ -83,9 +85,9 @@ export default function Home() {
         </Suspense>
       )}
 
-      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 space-y-16">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 space-y-20">
 
-        {/* ── HERO ── */}
+        {/* ── 01 HERO ── */}
         <section className="pt-10 text-center space-y-6">
           {/* CSS-only fade-up - zero JS weight */}
           <div className="animate-fade-up" style={{ animationDelay: "0ms" }}>
@@ -140,36 +142,24 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── STATS ── */}
-        <section className="animate-fade-up" style={{ animationDelay: "180ms" }}>
+        {/* ── 02 HOW IT WORKS ── */}
+        <Suspense fallback={<SectionSkeleton lines={3} />}>
+          <HowItWorks />
+        </Suspense>
+
+        {/* ── 03 ANIMATED STATS ── */}
+        <Suspense fallback={
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { value: stats?.syllabus,  label: "Syllabus items" },
-              { value: stats?.units,     label: "Units covered" },
-              { value: stats?.resources, label: "Study resources" },
-              { value: stats?.pyqs,      label: "Past year papers" },
-            ].map(({ value, label }) => (
-              <div key={label}
-                className="bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/8
-                           rounded-2xl px-4 py-5 text-center shadow-sm">
-                {statsLoading ? (
-                  <>
-                    <Skeleton className="h-7 w-14 mx-auto mb-2 rounded-lg" />
-                    <Skeleton className="h-3 w-16 mx-auto rounded" />
-                  </>
-                ) : (
-                  <>
-                    <p className="text-2xl font-bold text-foreground tabular-nums">{value ?? 0}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                  </>
-                )}
-              </div>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-2xl" />
             ))}
           </div>
-        </section>
+        }>
+          <StatsSection stats={stats} isLoading={statsLoading} />
+        </Suspense>
 
-        {/* ── WHAT IS UNIZUYA ── */}
-        <section id="about" className="animate-fade-up" style={{ animationDelay: "220ms" }}>
+        {/* ── 04 WHAT IS UNIZUYA ── */}
+        <section id="about">
           <div className="grid sm:grid-cols-2 gap-8 sm:gap-12 items-start">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-3">
@@ -214,7 +204,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── FEATURES (lazy) ── */}
+        {/* ── 05 FEATURES GRID ── */}
         <section ref={featuresRef}>
           <div className="text-center mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">
@@ -234,6 +224,26 @@ export default function Home() {
             <FeaturesGrid />
           </Suspense>
         </section>
+
+        {/* ── 06 PRODUCTIVITY TOOLS ── */}
+        <Suspense fallback={<SectionSkeleton lines={3} />}>
+          <ToolsShowcase />
+        </Suspense>
+
+        {/* ── 07 FOR STUDENTS & TEACHERS ── */}
+        <Suspense fallback={<SectionSkeleton lines={2} />}>
+          <RolesSection />
+        </Suspense>
+
+        {/* ── 08 TESTIMONIALS ── */}
+        <Suspense fallback={<Skeleton className="h-52 rounded-2xl" />}>
+          <TestimonialsSection />
+        </Suspense>
+
+        {/* ── 09 FAQ ── */}
+        <Suspense fallback={<SectionSkeleton lines={6} />}>
+          <FAQSection />
+        </Suspense>
 
         {/* ── ROADMAP TRIGGER ── */}
         <div className="flex justify-center">
@@ -320,6 +330,23 @@ export default function Home() {
         </Suspense>
       )}
 
+    </div>
+  )
+}
+
+// -- Reusable skeleton for lazy sections --
+function SectionSkeleton({ lines = 3 }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col items-center gap-2">
+        <Skeleton className="h-3 w-24 rounded" />
+        <Skeleton className="h-7 w-64 rounded-lg" />
+      </div>
+      <div className={`grid grid-cols-1 sm:grid-cols-${lines} gap-3`}>
+        {Array.from({ length: lines }).map((_, i) => (
+          <Skeleton key={i} className="h-36 rounded-2xl" />
+        ))}
+      </div>
     </div>
   )
 }
