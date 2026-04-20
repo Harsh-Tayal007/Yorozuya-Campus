@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -310,7 +310,7 @@ const Login = () => {
                     {errors.password && <p className="text-xs text-red-500 dark:text-red-400">{errors.password}</p>}
                   </div>
 
-                  {/* Privacy Policy checkbox — only for non-switch flows */}
+                  {/* Privacy Policy checkbox - only for non-switch flows */}
                   {!isSwitch && (
                     <div className="space-y-1">
                       <label className="flex items-start gap-2.5 cursor-pointer">
@@ -326,7 +326,7 @@ const Login = () => {
                           {privacyAccepted && <Check size={10} className="text-white" />}
                         </div>
                         <span className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                          I agree — we use cookies and local storage for sessions and preferences. No tracking or ads.{" "}
+                          I agree - we use cookies and local storage for sessions and preferences. No tracking or ads.{" "}
                           <Link to="/privacy"
                             className="text-blue-500 hover:text-blue-600 underline underline-offset-2 transition">
                             Privacy Policy

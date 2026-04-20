@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Plus, Check, Trash2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -252,7 +252,7 @@ const SwitchAccountModal = ({ open, onClose }) => {
                                                 </div>
                                             </button>
 
-                                            {/* Confirm delete row — slides in below on touch */}
+                                            {/* Confirm delete row - slides in below on touch */}
                                             <AnimatePresence>
                                                 {isDeleting && (
                                                     <motion.div

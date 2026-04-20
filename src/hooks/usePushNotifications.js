@@ -1,4 +1,4 @@
-/**
+﻿/**
  * usePushNotifications.js
  * Place at: src/hooks/usePushNotifications.js
  */
@@ -47,7 +47,7 @@ export function usePushNotifications() {
   const swRegRef = useRef(null);
 
   // ── Register the EXISTING Vite PWA SW (dev-sw.js / sw.js) ────────────────
-  // We do NOT register a separate push-sw.js — it can't claim scope "/" because
+  // We do NOT register a separate push-sw.js - it can't claim scope "/" because
   // the PWA SW already owns it. Instead we use the PWA SW for background push
   // and Notification API with onclick for foreground/in-tab navigation.
   useEffect(() => {
@@ -178,7 +178,7 @@ export function usePushNotifications() {
     } catch (err) { console.error("[Push] Worker send failed:", err); return false; }
   }, []);
 
-  // ── sendLocal — uses Notification API with onclick for navigation ─────────
+  // ── sendLocal - uses Notification API with onclick for navigation ─────────
   // Key fix: attach onclick BEFORE showing so click redirects the page.
   const sendLocal = useCallback(({ title = "Unizuya", body = "", url = "/dashboard", tag }) => {
     if (!("Notification" in window)) return;
@@ -187,7 +187,7 @@ export function usePushNotifications() {
 
     const absoluteUrl = url.startsWith("http") ? url : window.location.origin + url;
 
-    // Use new Notification() directly — onclick works reliably in-tab
+    // Use new Notification() directly - onclick works reliably in-tab
     const n = new Notification(title, {
       body,
       icon:  "/favicon.ico",

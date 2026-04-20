@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom"
+﻿import { useParams, Link, useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect } from "react"
 import {
@@ -209,7 +209,7 @@ const UserListItem = ({ userId, onClose }) => {
         )}
       </button>
 
-      {/* Follow button — don't show on own account */}
+      {/* Follow button - don't show on own account */}
       {!isOwn && (
         <FollowButton targetUserId={userId} size="sm" />
       )}
@@ -236,7 +236,7 @@ const FollowModal = ({ isOpen, onClose, title, userIds = [], isLoading }) => {
         onClick={onClose}
       />
 
-      {/* Sheet — slides up from bottom on mobile, centered on desktop */}
+      {/* Sheet - slides up from bottom on mobile, centered on desktop */}
       <div className="relative w-full sm:max-w-md bg-background rounded-t-2xl sm:rounded-2xl
                       border border-border shadow-2xl z-10
                       max-h-[80vh] flex flex-col
@@ -373,7 +373,7 @@ const UserProfile = () => {
     staleTime: 1000 * 60 * 5,
   })
 
-  // Followers / Following lists — lazy, only fetch when modal opens
+  // Followers / Following lists - lazy, only fetch when modal opens
   const { data: followerIds = [], isLoading: followersLoading } = useQuery({
     queryKey: ["followers-list", profile?.userId],
     queryFn: () => getFollowers(profile.userId),
@@ -432,7 +432,7 @@ const UserProfile = () => {
           {/* Top row: avatar + info */}
           <div className="flex items-start gap-3 sm:gap-4">
 
-            {/* Avatar — fixed size, doesn't grow */}
+            {/* Avatar - fixed size, doesn't grow */}
             <div className="shrink-0">
               {profile.avatarUrl ? (
                 <img src={profile.avatarUrl} alt={profile.username}
@@ -446,7 +446,7 @@ const UserProfile = () => {
               )}
             </div>
 
-            {/* Right side — name + button + stats */}
+            {/* Right side - name + button + stats */}
             <div className="flex-1 min-w-0 space-y-2.5">
 
               {/* Name + Edit/Follow */}
@@ -458,7 +458,7 @@ const UserProfile = () => {
                   <p className="text-xs pb-1 text-muted-foreground truncate">@{profile.username}</p>
                 </div>
                 <div className="shrink-0 flex items-center gap-2">
-                  {/* Share profile — always visible */}
+                  {/* Share profile - always visible */}
                   <button
                     onClick={() => copyShareLink(`/profile/${profile.username}`)}
                     className="p-1.5 rounded-xl border border-border text-muted-foreground
@@ -482,7 +482,7 @@ const UserProfile = () => {
                 </div>
               </div>
 
-              {/* Stats — evenly spaced, no overflow */}
+              {/* Stats - evenly spaced, no overflow */}
               <div className="grid grid-cols-4 gap-1 w-full">
                 <StatBlock value={userThreads.length} label="posts" />
                 <StatBlock

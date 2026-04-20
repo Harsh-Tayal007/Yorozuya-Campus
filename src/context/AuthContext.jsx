@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from "react"
+﻿import { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from "react"
 import {
   loginUser,
   logoutUser,
@@ -79,7 +79,7 @@ function readSessionCache() {
 function writeSessionCache(user, role) {
   try {
     sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ user, role }))
-  } catch { /* storage full — ignore */ }
+  } catch { /* storage full - ignore */ }
 }
 
 function clearSessionCache() {
@@ -167,7 +167,7 @@ export const AuthProvider = ({ children }) => {
 
       vaultRefreshTTL(accountUser.$id)
 
-      // SW registration deferred — does not block render
+      // SW registration deferred - does not block render
       deferRegisterAndSubscribe(accountUser.$id)
 
     } catch (err) {
@@ -212,7 +212,7 @@ export const AuthProvider = ({ children }) => {
 
       deferRegisterAndSubscribe(accountUser.$id)
     } catch {
-      // Session expired — clear cache and update UI
+      // Session expired - clear cache and update UI
       clearSessionCache()
       setAuthStatus(false)
       setCurrentUser(null)
@@ -226,10 +226,10 @@ export const AuthProvider = ({ children }) => {
     sessionRestored.current = true
 
     if (cached) {
-      // UI already hydrated from cache — just revalidate quietly in background
+      // UI already hydrated from cache - just revalidate quietly in background
       revalidateInBackground()
     } else {
-      // Cold visit — full restore (isLoading stays true until done)
+      // Cold visit - full restore (isLoading stays true until done)
       doFullRestore()
     }
   }, []) // eslint-disable-line

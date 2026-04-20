@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+﻿import { useState, useEffect, useCallback, useRef } from "react"
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
@@ -43,7 +43,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = "#3b82f6", loading }
           <div className="h-7 w-16 rounded-md bg-muted animate-pulse" />
         ) : (
           <p className="text-2xl font-bold text-foreground tabular-nums leading-none">
-            {value ?? "—"}
+            {value ?? "-"}
           </p>
         )}
         {sub && !loading && (
@@ -209,7 +209,7 @@ function FlushButton({ onFlushed }) {
         },
         body: JSON.stringify({ date: flushDate }),
       })
-      if (res.status === 401) throw new Error("Unauthorized — check VITE_FLUSH_SECRET")
+      if (res.status === 401) throw new Error("Unauthorized - check VITE_FLUSH_SECRET")
       if (!res.ok) throw new Error(`Worker returned ${res.status}`)
       setState("success")
       setOpen(false)
@@ -512,7 +512,7 @@ export default function AdminStats() {
             Refresh
           </button>
 
-          {/* Flush button — only shown if VITE_FLUSH_SECRET is defined */}
+          {/* Flush button - only shown if VITE_FLUSH_SECRET is defined */}
           <FlushButton onFlushed={load} />
         </div>
       </div>
@@ -526,8 +526,8 @@ export default function AdminStats() {
 
       {/* ── TODAY LIVE ── */}
       <Section
-        title="Today — live"
-        hint="Counts are live from Cloudflare KV — updated instantly on every visit. Flushed to Appwrite database at midnight UTC."
+        title="Today - live"
+        hint="Counts are live from Cloudflare KV - updated instantly on every visit. Flushed to Appwrite database at midnight UTC."
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard icon={Users} label="Active users" value={fmt(todayActive)}
@@ -561,7 +561,7 @@ export default function AdminStats() {
 
       {/* ── USER ACTIVITY CHART ── */}
       <Section
-        title="User activity — last 14 days + today ★"
+        title="User activity - last 14 days + today ★"
         hint="Page views = every layout mount (PublicLayout, UserLayout, AdminLayout). Active users = unique userId seen today. Drag or touch-scroll to pan on small screens."
       >
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
@@ -589,7 +589,7 @@ export default function AdminStats() {
           )}
 
           {activityData.length === 0 ? (
-            <EmptyChart message="No data yet. Visit a few pages then click Refresh — or wait for midnight flush." />
+            <EmptyChart message="No data yet. Visit a few pages then click Refresh - or wait for midnight flush." />
           ) : (
             <ScrollChart data={activityData} minWidth={Math.max(500, activityData.length * 80)} height={240}>
               <BarChart
@@ -637,7 +637,7 @@ export default function AdminStats() {
 
       {/* ── GEMINI TOKEN CHART ── */}
       <Section
-        title="Gemini token usage — last 14 days + today ★"
+        title="Gemini token usage - last 14 days + today ★"
         hint="Tokens are tracked per tool call. Total = CGPA + Timetable + any future tools."
       >
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
@@ -738,8 +738,8 @@ export default function AdminStats() {
 
       {/* ── AI SCAN LIMITS ── */}
       <Section
-        title="AI scan limits — per user per day"
-        hint="Controls how many Gemini AI Scans each user can trigger per day. Resets at midnight UTC. Stored in Cloudflare KV — takes effect immediately."
+        title="AI scan limits - per user per day"
+        hint="Controls how many Gemini AI Scans each user can trigger per day. Resets at midnight UTC. Stored in Cloudflare KV - takes effect immediately."
       >
         <div className="rounded-xl border border-border bg-card px-5 py-5">
           {limitsLoading ? (
@@ -815,7 +815,7 @@ export default function AdminStats() {
 
       {/* ── SERVICE QUOTAS ── */}
       <Section
-        title="Service quotas — free tier limits"
+        title="Service quotas - free tier limits"
         hint="Worker requests estimated from page_views count. Gemini token limit is per day, others per month."
       >
         <div className="rounded-xl border border-border bg-card px-5 py-5 space-y-5">

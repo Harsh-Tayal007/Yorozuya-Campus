@@ -1,4 +1,4 @@
-import { databases } from "@/lib/appwrite";
+﻿import { databases } from "@/lib/appwrite";
 import { Query, ID } from "appwrite";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -63,7 +63,7 @@ export const createReply = async ({
   return res;
 };
 
-// Soft delete — keeps the document but marks it deleted (used when reply has children)
+// Soft delete - keeps the document but marks it deleted (used when reply has children)
 export async function deleteReply(replyId, modDeleted = false) {
   return databases.updateDocument(DATABASE_ID, REPLIES_COLLECTION_ID, replyId, {
     content: modDeleted ? "[deleted by mods]" : "[deleted]",
@@ -75,7 +75,7 @@ export async function deleteReply(replyId, modDeleted = false) {
   })
 }
 
-// Hard delete — completely removes the document (used when reply has no children)
+// Hard delete - completely removes the document (used when reply has no children)
 export const hardDeleteReply = async (replyId) => {
   await databases.deleteDocument(DATABASE_ID, REPLIES_COLLECTION_ID, replyId);
   return replyId;

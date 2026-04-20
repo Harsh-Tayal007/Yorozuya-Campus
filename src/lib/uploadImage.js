@@ -1,4 +1,4 @@
-export async function uploadImage(file) {
+﻿export async function uploadImage(file) {
   const formData = new FormData()
   formData.append("file", file)
   formData.append("upload_preset", "forum_images")
@@ -16,6 +16,6 @@ export async function uploadImage(file) {
 
   return {
     url: data.secure_url,
-    publicId: data.public_id   // This is what gets stored — verify it matches what destroy() needs
+    publicId: data.public_id   // This is what gets stored - verify it matches what destroy() needs
   }
 }

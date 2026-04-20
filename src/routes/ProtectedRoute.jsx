@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ProtectedRoute.jsx
  *
  * Guards all logged-in routes.
@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext"
 import { Skeleton } from "@/components/ui/skeleton"
 import EmailVerificationGate from "@/components/auth/EmailVerificationGate"
 
-// ── Dashboard skeleton — mimics the real dashboard layout ───────────────────
+// ── Dashboard skeleton - mimics the real dashboard layout ───────────────────
 function DashboardSkeleton() {
   return (
     <div className="min-h-screen flex flex-col">
@@ -35,7 +35,7 @@ function DashboardSkeleton() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar — visible on desktop */}
+        {/* Sidebar - visible on desktop */}
         <aside className="hidden md:flex flex-col w-56 border-r border-border p-4 gap-2 flex-shrink-0">
           <Skeleton className="h-4 w-20 rounded mb-2" />
           {Array.from({ length: 7 }).map((_, i) => (

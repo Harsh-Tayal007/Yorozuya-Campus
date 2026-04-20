@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useCreateThread } from "@/services/forum/useCreateThread"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -67,14 +67,14 @@ export default function CreateThreadModal({
 }) {
   const { mutate, isPending } = useCreateThread()
 
-  // ── State first — hooks below depend on these ─────────────────────────────
+  // ── State first - hooks below depend on these ─────────────────────────────
   const [title,           setTitle]           = useState("")
   const [content,         setContent]         = useState("")
   const [localUniversity, setLocalUniversity] = useState(selectedUniversity)
   const [localCourse,     setLocalCourse]     = useState(selectedCourse)
   const [localBranch,     setLocalBranch]     = useState(selectedBranch)
 
-  // ── Academic data — must come AFTER state so localUniversity/localCourse exist
+  // ── Academic data - must come AFTER state so localUniversity/localCourse exist
   const { data: universities = [] } = useUniversities()
   const { data: programs = [] }     = usePrograms(localUniversity)
   const { data: branches = [] }     = useBranches(localCourse)
@@ -147,7 +147,7 @@ export default function CreateThreadModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-y-auto">
           <div className="px-5 py-4 space-y-5 flex-1">
 
-            {/* Context chips — show selected values */}
+            {/* Context chips - show selected values */}
             {(localUniversityData || localCourseData || localBranchData) && (
               <div className="flex flex-wrap gap-1.5">
                 <span className="text-[11px] font-medium uppercase tracking-wide

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -133,7 +133,7 @@
   }
 
   body {
-    /* CHANGE 1 (continued): background-color removed from body — now transparent.
+    /* CHANGE 1 (continued): background-color removed from body - now transparent.
        html carries the page color; body sits above the fixed blobs but doesn't
        cover them since it has no opaque background of its own. */
     color: var(--foreground);
@@ -331,7 +331,7 @@ body[data-scroll-locked] {
 }
 
 /* Add these to your global CSS file (e.g. index.css or globals.css)
-   These replace framer-motion on the hero section — zero JS weight. */
+   These replace framer-motion on the hero section - zero JS weight. */
 
 @keyframes fadeUp {
   from {

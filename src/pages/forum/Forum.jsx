@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+﻿import { useEffect, useMemo, useRef, useState } from "react"
 import { useUniversities, usePrograms, useBranches } from "@/hooks/useAcademicDropdowns"
 
 import ThreadCard from "@/components/forum/ThreadCard"
@@ -202,7 +202,7 @@ const Forum = () => {
               )}
             </div>
 
-            {/* Desktop search — always visible */}
+            {/* Desktop search - always visible */}
             {!searchOpen && (
               <div className="hidden sm:flex relative flex-1 group">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2
@@ -227,7 +227,7 @@ const Forum = () => {
               </div>
             )}
 
-            {/* Sort — hidden when mobile search open */}
+            {/* Sort - hidden when mobile search open */}
             {!searchOpen && (
               <div ref={sortDropdownRef} className="relative shrink-0">
                 <button
@@ -260,7 +260,7 @@ const Forum = () => {
               </div>
             )}
 
-            {/* Filter toggle — hidden when mobile search open */}
+            {/* Filter toggle - hidden when mobile search open */}
             {!searchOpen && (
               <button
                 onClick={() => setFiltersOpen(v => !v)}
@@ -430,7 +430,7 @@ const Forum = () => {
         ) : (
           <div className="rounded-2xl border border-dashed border-border py-16 text-center">
             <p className="text-muted-foreground text-sm">
-              {debouncedQuery ? `No discussions match "${debouncedQuery}"` : "No discussions yet — start one!"}
+              {debouncedQuery ? `No discussions match "${debouncedQuery}"` : "No discussions yet - start one!"}
             </p>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+﻿import { useState, useCallback, useEffect } from "react";
 import { databases, ID, Query } from "@/lib/appwrite";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -109,7 +109,7 @@ export default function useVote(
 
         onVoteChange?.(replyId, newVote, updatedVoteDocId);
 
-        // ── Karma update — fire and forget, never blocks UI ──────────────────
+        // ── Karma update - fire and forget, never blocks UI ──────────────────
         // Skip if voting on own reply (no self-karma)
         if (authorId && authorId !== userId) {
           const karmaDelta = computeKarmaDelta(prevVote, newVote);

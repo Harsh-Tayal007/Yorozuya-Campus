@@ -1,4 +1,4 @@
-// src/pages/admin/branches/BranchesAdmin.jsx
+﻿// src/pages/admin/branches/BranchesAdmin.jsx
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { databases } from "@/lib/appwrite"
@@ -256,7 +256,7 @@ export default function BranchesAdmin() {
                     </span>
                   </div>
 
-                  {/* Add button — stopPropagation so it doesn't toggle expand */}
+                  {/* Add button - stopPropagation so it doesn't toggle expand */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

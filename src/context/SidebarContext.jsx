@@ -1,4 +1,4 @@
-// src/context/SidebarContext.jsx
+﻿// src/context/SidebarContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 
 const SidebarContext = createContext(null)
@@ -29,7 +29,7 @@ export const SidebarProvider = ({ children }) => {
     if (!isMobile && !isPinned && e.clientX <= 8) setIsOpen(true)
   }, [isMobile, isPinned])
 
-  // Navbar hamburger — toggles pin on desktop, toggles open on mobile
+  // Navbar hamburger - toggles pin on desktop, toggles open on mobile
   const toggleSidebar = useCallback(() => {
     if (isMobile) {
       setIsOpen(v => !v)
@@ -39,14 +39,14 @@ export const SidebarProvider = ({ children }) => {
     }
   }, [isMobile, isPinned])
 
-  // Sidebar internal pin button — same as toggleSidebar on desktop
+  // Sidebar internal pin button - same as toggleSidebar on desktop
   const togglePin = useCallback(() => {
     if (isMobile) { setIsOpen(false); setIsPinned(false); return }
     if (isPinned) { setIsPinned(false); setIsOpen(false) }
     else          { setIsPinned(true);  setIsOpen(true)  }
   }, [isMobile, isPinned])
 
-  // Mouse leaves sidebar — close if not pinned
+  // Mouse leaves sidebar - close if not pinned
   const handleSidebarLeave = useCallback(() => {
     if (!isMobile && !isPinned) setIsOpen(false)
   }, [isMobile, isPinned])

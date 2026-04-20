@@ -1,4 +1,4 @@
-// src/config/permissions.js
+﻿// src/config/permissions.js
 
 export const PERMISSIONS = {
   // ─── Admin access ────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.DELETE_REPORTS,
     PERMISSIONS.VIEW_ACTIVITY_LOG,
     PERMISSIONS.PIN_REPLY,
-    // Attendance — admin has full oversight
+    // Attendance - admin has full oversight
     PERMISSIONS.MANAGE_CLASSES,
     PERMISSIONS.CREATE_ATTENDANCE_SESSION,
     PERMISSIONS.VIEW_ATTENDANCE_REPORTS,

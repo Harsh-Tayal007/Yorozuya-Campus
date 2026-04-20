@@ -1,4 +1,4 @@
-import {
+﻿import {
     Dialog,
     DialogContent,
     DialogHeader,
@@ -48,7 +48,7 @@ export default function PyqPreviewModal({ pyq, open, onClose }) {
 
 
 
-    // ⛔ Guard clause — must be BEFORE JSX
+    // ⛔ Guard clause - must be BEFORE JSX
     if (!pyq) return null
 
     return (

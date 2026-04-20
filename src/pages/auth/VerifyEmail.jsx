@@ -1,4 +1,4 @@
-/**
+﻿/**
  * VerifyEmail.jsx
  * Route: /verify-email
  *
@@ -56,10 +56,10 @@ const VerifyEmail = () => {
                         })
                     }
                 } catch {
-                    // Non-fatal — Appwrite's emailVerification flag is already set
+                    // Non-fatal - Appwrite's emailVerification flag is already set
                 }
 
-                // 3. Refresh context so emailVerified flips to true in memory —
+                // 3. Refresh context so emailVerified flips to true in memory -
                 //    this unmounts the gate before we navigate, preventing the redirect loop
                 await refreshUser()
 

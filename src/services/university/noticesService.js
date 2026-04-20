@@ -1,4 +1,4 @@
-// src/services/university/noticesService.js
+﻿// src/services/university/noticesService.js
 // Calls the Cloudflare Worker which handles scraping + Appwrite caching
 
 const WORKER_URL = import.meta.env.VITE_NOTICES_WORKER_URL
@@ -6,7 +6,7 @@ const WORKER_URL = import.meta.env.VITE_NOTICES_WORKER_URL
 
 /**
  * Fetch notices for a university via the Cloudflare Worker.
- * Worker checks Appwrite cache first — only scrapes if stale (> 6hr).
+ * Worker checks Appwrite cache first - only scrapes if stale (> 6hr).
  *
  * @param {{ universityId: string, noticesUrl: string }} params
  * @returns {Promise<{ notices: Notice[], lastFetched: string, fromCache: boolean, stale?: boolean }>}

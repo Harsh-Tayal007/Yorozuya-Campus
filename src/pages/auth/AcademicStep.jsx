@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { ChevronDown, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -7,7 +7,7 @@ import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram } from "@/services/university/branchService"
 
 // ─────────────────────────────────────────────
-// Custom Select — no Radix, no body scroll lock
+// Custom Select - no Radix, no body scroll lock
 // Renders its dropdown in-flow (no portal) so it
 // never triggers body overflow changes. Shows 4
 // items at a time, scrollable, scrollbar hidden.
@@ -65,7 +65,7 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
         />
       </button>
 
-      {/* Dropdown — in-flow, absolutely positioned relative to trigger */}
+      {/* Dropdown - in-flow, absolutely positioned relative to trigger */}
       {open && (
         <div
           className="absolute left-0 right-0 top-[calc(100%+4px)]
@@ -110,7 +110,7 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
 }
 
 // ─────────────────────────────────────────────
-// Step 2 — Academic
+// Step 2 - Academic
 // ─────────────────────────────────────────────
 const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
   const isTeacher = accountType === "teacher"
@@ -154,7 +154,7 @@ const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
           {isTeacher ? "University details" : "Academic details"}
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Step 2 of 3 — {isTeacher ? "Select your university" : "Help us personalise your experience"}
+          Step 2 of 3 - {isTeacher ? "Select your university" : "Help us personalise your experience"}
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
@@ -32,7 +32,7 @@ const FILE_TYPES = [
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CustomSelect — portal-based, escapes all stacking contexts
+// CustomSelect - portal-based, escapes all stacking contexts
 // ─────────────────────────────────────────────────────────────────────────────
 function CustomSelect({ value, onChange, options, placeholder, disabled }) {
   const [open, setOpen]     = useState(false)

@@ -1,4 +1,4 @@
-// src/pages/admin/pyq/AdminPyqsPage.jsx
+﻿// src/pages/admin/pyq/AdminPyqsPage.jsx
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useQuery } from "@tanstack/react-query"
@@ -120,7 +120,7 @@ export default function AdminPyqsPage() {
   const isSubjectSelected  = filters.subjectId !== "all"
   const hasActiveFilters   = Object.values(filters).some(v => v !== "all") || searchTerm
 
-  // Programs — cached till reload
+  // Programs - cached till reload
   const { data: programs = [] } = useQuery({
     queryKey: ["programs-all"],
     queryFn: async () => {
@@ -241,7 +241,7 @@ export default function AdminPyqsPage() {
         )}
       </motion.div>
 
-      {/* List — no limit, no showViewMore */}
+      {/* List - no limit, no showViewMore */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
         <PyqList
           limit={50}

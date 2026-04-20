@@ -1,4 +1,4 @@
-// src/services/pushSubscriptionService.js
+﻿// src/services/pushSubscriptionService.js
 import { databases, ID } from "@/lib/appwrite"
 import { Query } from "appwrite"
 
@@ -29,7 +29,7 @@ export async function subscribeToPush(userId) {
 
   const { endpoint, keys: { p256dh, auth } } = sub.toJSON()
 
-  // Avoid duplicate docs — check if this endpoint already stored
+  // Avoid duplicate docs - check if this endpoint already stored
   const already = await databases.listDocuments(DB, COL, [
     Query.equal("endpoint", endpoint),
     Query.limit(1),

@@ -1,4 +1,4 @@
-// src/hooks/useThreadAuthors.js
+﻿// src/hooks/useThreadAuthors.js
 // Batch fetches avatar + username for all thread authors in ONE request.
 // Results are stored per-authorId in TanStack cache as ["user-avatar", authorId]
 // so ThreadCard, ThreadDetail, and UserProfile all share the same cache entries.
@@ -44,7 +44,7 @@ export default function useThreadAuthors(threads = []) {
           })
         }
 
-        // Authors not found in DB — cache null so we don't refetch them
+        // Authors not found in DB - cache null so we don't refetch them
         const foundIds = new Set(res.documents.map(d => d.userId))
         for (const id of uncachedIds) {
           if (!foundIds.has(id)) {

@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // usePWAInstall.js
 //
 // Auto-shows the native install prompt after a short delay when the user
@@ -74,7 +74,7 @@ export function usePWAInstall() {
   //       setIsInstallable(false)
   //       setInstallPrompt(null)
   //     } else {
-  //       // Dismissed — store timestamp for cooldown
+  //       // Dismissed - store timestamp for cooldown
   //       localStorage.setItem(DISMISSED_KEY, Date.now().toString())
   //     }
   //   }, AUTO_PROMPT_MS)

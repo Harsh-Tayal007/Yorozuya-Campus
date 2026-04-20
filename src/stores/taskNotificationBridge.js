@@ -1,8 +1,8 @@
-/**
+﻿/**
  * When a task reminder fires, this adds a synthetic "task" notification
  * into the useNotifications query cache so it appears in the bell dropdown.
  *
- * Usage — call injectTaskNotification() from scheduleReminders() in TaskTracker.
+ * Usage - call injectTaskNotification() from scheduleReminders() in TaskTracker.
  */
 
 let _queryClient = null;

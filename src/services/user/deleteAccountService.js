@@ -1,4 +1,4 @@
-import { account, databases } from "@/lib/appwrite"
+﻿import { account, databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 import { DATABASE_ID, CLASSES_COLLECTION_ID } from "@/config/appwrite"
 
@@ -8,7 +8,7 @@ const DELETE_ACCOUNT_WORKER_URL = import.meta.env.VITE_DELETE_ACCOUNT_WORKER_URL
  * Calls the Cloudflare Worker to permanently delete an account.
  * Also cleans up assigned classes to prevent ghost IDs from appearing.
  *
- * @param {string} [targetUserId] — If provided, deletes that user (admin action).
+ * @param {string} [targetUserId] - If provided, deletes that user (admin action).
  *                                   If omitted, deletes the currently signed-in user.
  */
 export const deleteAccountPermanently = async (targetUserId = null) => {

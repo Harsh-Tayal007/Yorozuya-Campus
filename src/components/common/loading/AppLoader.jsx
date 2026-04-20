@@ -1,4 +1,4 @@
-// AppLoader.jsx
+﻿// AppLoader.jsx
 
 const AppLoader = () => {
   return (
@@ -166,7 +166,7 @@ const AppLoader = () => {
           {/* Beacon halo */}
           <circle cx="60" cy="18" r="9" stroke="var(--loader-accent,#4A9EFF)" strokeWidth="1.5" opacity="0.28"/>
 
-          {/* Beacon dot — targeted by CSS beacon pulse */}
+          {/* Beacon dot - targeted by CSS beacon pulse */}
           <circle cx="60" cy="18" r="5.5" fill="var(--loader-accent,#4A9EFF)"/>
         </svg>
       </div>

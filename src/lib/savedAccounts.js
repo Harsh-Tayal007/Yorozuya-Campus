@@ -1,4 +1,4 @@
-const KEY       = "unizuya_saved_accounts"
+﻿const KEY       = "unizuya_saved_accounts"
 const VAULT_KEY = "unizuya_vault"
 const TTL_MS    = 7 * 24 * 60 * 60 * 1000  // 7 days (was 30 min)
 
@@ -64,7 +64,7 @@ const decryptText = async (b64, key) => {
 
 // ── Vault ─────────────────────────────────────────────────────────────────────
 // Stores encrypted passwords in localStorage with a 7-day TTL.
-// OAuth accounts never have an entry here — they use the OAuth flow instead.
+// OAuth accounts never have an entry here - they use the OAuth flow instead.
 
 export const vaultStore = async (userId, password) => {
   if (!password) return

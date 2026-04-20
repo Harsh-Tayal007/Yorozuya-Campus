@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+﻿import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
@@ -25,7 +25,7 @@ const RESOURCE_TYPES = [
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CustomSelect — dropdown portaled into document.body
+// CustomSelect - dropdown portaled into document.body
 // Avoids ALL z-index / stacking context / overflow issues permanently
 // ─────────────────────────────────────────────────────────────────────────────
 function CustomSelect({ value, onChange, options, placeholder, disabled }) {
@@ -159,7 +159,7 @@ function CustomSelect({ value, onChange, options, placeholder, disabled }) {
         />
       </button>
 
-      {/* Portal: renders directly in document.body — zero stacking context issues */}
+      {/* Portal: renders directly in document.body - zero stacking context issues */}
       {typeof document !== "undefined" && createPortal(dropdownContent, document.body)}
     </div>
   )

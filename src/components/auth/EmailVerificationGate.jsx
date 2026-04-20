@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EmailVerificationGate.jsx
  *
  * Full-screen gate shown to logged-in but unverified users.
@@ -191,7 +191,7 @@ const EmailVerificationGate = () => {
               <div className="flex-1 min-w-0">
                 {expired ? (
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                    Verification window expired — your account may be deleted soon.
+                    Verification window expired - your account may be deleted soon.
                   </p>
                 ) : (
                   <div className="flex items-center justify-between">
@@ -219,7 +219,7 @@ const EmailVerificationGate = () => {
                 >
                   <CheckCircle size={16} className="text-green-500" />
                   <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                    New link sent — check your inbox
+                    New link sent - check your inbox
                   </span>
                 </motion.div>
               ) : resendStatus === "error" ? (

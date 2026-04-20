@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
 const DURATION = 5000
@@ -13,7 +13,7 @@ const testimonials = [
   },
   {
     quote:
-      "Working on Unizuya helped us understand real-world development — from backend architecture to UI polish.",
+      "Working on Unizuya helped us understand real-world development - from backend architecture to UI polish.",
     name: "Kuldeep Vashisth",
     role: "Co-Founder & Designer",
     avatar: "https://i.pravatar.cc/150?img=13",

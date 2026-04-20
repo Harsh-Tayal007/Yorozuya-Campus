@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { Eye, EyeOff, RefreshCw, Check, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -99,7 +99,7 @@ const AccountStep = ({ data, setData, onNext }) => {
     <div>
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">Create your account</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Step 1 of 3 — Basic info</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Step 1 of 3 - Basic info</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -263,7 +263,7 @@ const AccountStep = ({ data, setData, onNext }) => {
           )}
           {usernameStatus === "taken" && (
             <p className="text-xs text-red-500 dark:text-red-400">
-              Username taken — try another or hit ↻ to re-roll
+              Username taken - try another or hit ↻ to re-roll
             </p>
           )}
           {errors.username && usernameStatus !== "taken" && (

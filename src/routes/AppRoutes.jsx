@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react"
+﻿import { lazy, Suspense } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 
 /* ─── Layouts (always needed, not lazy) ─── */
@@ -15,7 +15,7 @@ import RequirePermissionRoute from "@/components/auth/RequirePermissionRoute"
 import RequireAcademicProfile from "@/components/auth/RequireAcademicProfile"
 import { PERMISSIONS } from "@/config/permissions"
 
-/* ─── Critical public pages (eagerly loaded — above the fold) ─── */
+/* ─── Critical public pages (eagerly loaded - above the fold) ─── */
 import Home from "../pages/Home"
 
 /* ─── Page title manager ─── */
@@ -81,7 +81,7 @@ const ClassAttendanceReport = lazy(() => import("@/pages/attendance/ClassAttenda
 const NotFound      = lazy(() => import("../pages/errors/NotFound"))
 const Unauthorized  = lazy(() => import("../pages/errors/Unauthorized"))
 
-/* Admin — heaviest chunk, loaded only for admins */
+/* Admin - heaviest chunk, loaded only for admins */
 const AdminDashboard        = lazy(() => import("../pages/dashboard/AdminDashboard"))
 const AdminActivity         = lazy(() => import("@/pages/dashboard/AdminActivity"))
 const AdminStats            = lazy(() => import("@/pages/admin/stats/AdminStats"))
@@ -105,7 +105,7 @@ const BranchesAdmin         = lazy(() => import("@/pages/branches/BranchesAdmin"
    ══════════════════════════════════════════════ */
 
 /**
- * Minimal CSS-only spinner — zero JS overhead, no extra dependency.
+ * Minimal CSS-only spinner - zero JS overhead, no extra dependency.
  * Replace with your design-system skeleton if you have one.
  */
 const PageSpinner = () => (
@@ -139,7 +139,7 @@ const AppRoutes = () => (
 
         {/* ─── 🌍 Public routes ─── */}
         <Route element={<PublicLayout />}>
-          {/* Home is eager — it's the landing page / LCP target */}
+          {/* Home is eager - it's the landing page / LCP target */}
           <Route path="/"         element={<Home />} />
           <Route path="/about"    element={<About />} />
           <Route path="/contact"  element={<Contact />} />

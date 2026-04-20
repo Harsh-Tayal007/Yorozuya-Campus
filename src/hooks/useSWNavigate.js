@@ -1,9 +1,9 @@
-/**
+﻿/**
  * useSWNavigate.js
  * Place at: src/hooks/useSWNavigate.js
  *
  * Handles SW_NAVIGATE messages from push-sw.js.
- * Uses window.location.href for reliable cross-route navigation —
+ * Uses window.location.href for reliable cross-route navigation -
  * simpler and more reliable than pushState + popstate tricks.
  */
 
@@ -20,13 +20,13 @@ export function useSWNavigate() {
         const parsed   = new URL(url);
         const current  = new URL(window.location.href);
 
-        // Same page — just scroll to hash if present
+        // Same page - just scroll to hash if present
         if (parsed.pathname === current.pathname && parsed.hash) {
           scrollToHash(parsed.hash);
           return;
         }
 
-        // Different page — navigate with full reload
+        // Different page - navigate with full reload
         // This is the most reliable approach across all browsers
         window.location.href = url;
 
@@ -40,7 +40,7 @@ export function useSWNavigate() {
   }, []);
 }
 
-// Called on initial load too — handles direct URL with hash (e.g. opening from notification)
+// Called on initial load too - handles direct URL with hash (e.g. opening from notification)
 export function useHashScroll() {
   useEffect(() => {
     const hash = window.location.hash;

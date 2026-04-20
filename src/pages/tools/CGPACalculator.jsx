@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { databases, account } from "@/lib/appwrite";
 import { ID } from "appwrite";
 import {
@@ -12,7 +12,7 @@ import { useAIScanQuota } from "@/hooks/useAIScanQuota";
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const COLLECTION_ID = "cgpa_records";
 
-// ─── Gemini API — free tier, no proxy needed (CORS allowed) ──────────────────
+// ─── Gemini API - free tier, no proxy needed (CORS allowed) ──────────────────
 // Get free key at: aistudio.google.com → Get API key → paste as VITE_GEMINI_API_KEY
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
@@ -39,7 +39,7 @@ function computeCGPA(semesters) {
 const toPercent = (c) => (c * 9.5).toFixed(2);
 const gradeLabel = (c) =>
   c >= 9 ? "Outstanding" : c >= 8 ? "Excellent" : c >= 7 ? "Very Good" :
-    c >= 6 ? "Good" : c >= 5 ? "Average" : c > 0 ? "Needs Improvement" : "—";
+    c >= 6 ? "Good" : c >= 5 ? "Average" : c > 0 ? "Needs Improvement" : "-";
 
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 const scoreColor = (v) =>
@@ -89,8 +89,8 @@ function buildExportHTML(semesters, cgpa, percentage) {
     const sgpa = computeSGPA(sem.subjects);
     const subRows = sem.subjects.map(s => `
       <tr>
-        <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#334155">${s.name || "—"}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:12px;color:#334155">${s.credits || "—"}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#334155">${s.name || "-"}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:12px;color:#334155">${s.credits || "-"}</td>
         <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:12px;font-weight:600;color:${scoreC(GRADE_POINTS[s.grade])}">${s.grade}</td>
         <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:12px;color:#64748b">${GRADE_POINTS[s.grade]}</td>
       </tr>`).join("");
@@ -104,7 +104,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
             <span style="font-size:11px;color:#94a3b8">${sem.subjects.reduce((a, s) => a + (Number(s.credits) || 0), 0)} credits</span>
           </div>
           <div style="text-align:right">
-            <div style="font-size:16px;font-weight:700;color:${scoreC(sgpa)}">${sgpa ? sgpa.toFixed(3) : "—"}</div>
+            <div style="font-size:16px;font-weight:700;color:${scoreC(sgpa)}">${sgpa ? sgpa.toFixed(3) : "-"}</div>
             <div style="font-size:10px;color:#94a3b8">SGPA</div>
           </div>
         </div>
@@ -131,7 +131,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
   }).join("");
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>CGPA Report — Unizuya</title>
+  <title>CGPA Report - Unizuya</title>
   <style>
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 32px; background: #fff; color: #1e293b; }
@@ -153,7 +153,7 @@ function buildExportHTML(semesters, cgpa, percentage) {
     <!-- Summary -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:${scoreC(cgpa)}">${cgpa > 0 ? cgpa.toFixed(2) : "—"}</div>
+        <div style="font-size:28px;font-weight:700;color:${scoreC(cgpa)}">${cgpa > 0 ? cgpa.toFixed(2) : "-"}</div>
         <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">CGPA</div>
         <div style="font-size:11px;color:#64748b;margin-top:4px">${gradeLabel(cgpa)}</div>
       </div>
@@ -363,7 +363,7 @@ function SGPAProgressionBar({ semesters }) {
             <div key={sem.id} className="flex flex-col flex-1 items-center" style={{ gap: 8 }}>
               <span className="text-xs font-semibold tabular-nums"
                 style={{ color: scoreHex(sgpa), lineHeight: 1 }}>
-                {sgpa ? sgpa.toFixed(2) : "—"}
+                {sgpa ? sgpa.toFixed(2) : "-"}
               </span>
               <div className="w-full rounded transition-all duration-500"
                 style={{ height: h, background: scoreHex(sgpa), opacity: 0.85 }} />
@@ -446,7 +446,7 @@ function AIScanModal({ onClose, onApply, semesterName, userId, onIncrement, quot
       const mediaType = isImage ? file.type : "application/pdf";
 
       // Gemini request format
-      const prompt = `This is a university marksheet/report card. Extract ALL subjects and return ONLY a valid JSON array. No explanation, no markdown, no code fences — just the raw JSON array.
+      const prompt = `This is a university marksheet/report card. Extract ALL subjects and return ONLY a valid JSON array. No explanation, no markdown, no code fences - just the raw JSON array.
 
 Format: [{"name":"Subject Name","credits":3,"grade":"A"}]
 
@@ -691,7 +691,7 @@ export default function CGPACalculator() {
 
   const [exporting, setExporting] = useState(false);
 
-  // AI scan modal — tracks which semester index triggered it
+  // AI scan modal - tracks which semester index triggered it
   const [scanModal, setScanModal] = useState(null); // null | semIndex
 
   const cgpa = computeCGPA(semesters);
@@ -755,7 +755,7 @@ export default function CGPACalculator() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      setSaveError("Save failed — check Appwrite collection permissions.");
+      setSaveError("Save failed - check Appwrite collection permissions.");
       console.error(err);
     } finally { setSaving(false); }
   };
@@ -825,7 +825,7 @@ export default function CGPACalculator() {
             <p className="text-sm text-muted-foreground mb-4">
               {loadingRec ? "Loading…"
                 : records.length === 0 ? "No saved snapshots yet."
-                  : "Your saved snapshots — load any to restore."}
+                  : "Your saved snapshots - load any to restore."}
             </p>
             {records.map(r => (
               <SavedRecord key={r.$id} record={r} onLoad={handleLoad} onDelete={handleDelete} />
@@ -853,7 +853,7 @@ export default function CGPACalculator() {
                   <GradeRing value={cgpa} />
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className={`text-xl font-bold tabular-nums ${scoreColor(cgpa)}`}>
-                      {cgpa > 0 ? cgpa.toFixed(2) : "—"}
+                      {cgpa > 0 ? cgpa.toFixed(2) : "-"}
                     </span>
                     <span className="text-[10px] text-muted-foreground">CGPA</span>
                   </div>
@@ -920,7 +920,7 @@ export default function CGPACalculator() {
               ))}
             </div>
 
-            {/* Semester cards — each has its own AI Scan button */}
+            {/* Semester cards - each has its own AI Scan button */}
             <div className="mb-4">
               {semesters.map((sem, i) => (
                 <div key={sem.id} id={`sem-${i}`}>

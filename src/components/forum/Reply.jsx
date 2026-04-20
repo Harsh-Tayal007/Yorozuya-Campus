@@ -1,5 +1,5 @@
-// =============================================================================
-// Reply.jsx — Threaded comments with mobile support
+﻿// =============================================================================
+// Reply.jsx - Threaded comments with mobile support
 // =============================================================================
 
 import React, { useState, useRef, useCallback, useContext } from "react"
@@ -72,7 +72,7 @@ function RoleFlair({ role }) {
 }
 
 // =============================================================================
-// AVATAR — image or initials, optionally wrapped in a profile link
+// AVATAR - image or initials, optionally wrapped in a profile link
 // =============================================================================
 function ReplyAvatar({ authorName, avatarUrl, username, size = AV, glow, isMobile }) {
   const baseClass = `rounded-full flex items-center justify-center font-bold
@@ -173,7 +173,7 @@ const Reply = ({
 
   const isHighlighted = useHashHighlight(reply.$id)
 
-  // Author info — { role, avatarUrl, username }
+  // Author info - { role, avatarUrl, username }
   const authorInfo = authorRoles?.[reply?.authorId] ?? null
   const authorRole = authorInfo?.role ?? null
   const authorAvatar = authorInfo?.avatarUrl ?? null
@@ -327,7 +327,7 @@ const Reply = ({
             {/* META ROW */}
             <div className="flex items-center gap-1.5 flex-wrap mb-px">
 
-              {/* Author name — clickable to profile */}
+              {/* Author name - clickable to profile */}
               {authorUsername ? (
                 <Link
                   to={`/profile/${authorUsername}`}

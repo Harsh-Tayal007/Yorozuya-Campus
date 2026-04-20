@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // OPTIONS MENU
 // Desktop: small positioned dropdown (like Reddit web, Image 1)
 // Mobile:  bottom sheet (like Reddit app)
@@ -166,7 +166,7 @@ export function OptionsMenu({
         ) : (
           <>
             <Row icon={Flag} label="Report" onClick={onReport} danger />
-            {/* Admin/mod delete — visible only when canAdminDelete and not own reply */}
+            {/* Admin/mod delete - visible only when canAdminDelete and not own reply */}
             {canAdminDelete && !reply.deleted && (
               <Row
                 icon={ShieldX}

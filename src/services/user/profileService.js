@@ -1,4 +1,4 @@
-import { databases } from "@/lib/appwrite"
+﻿import { databases } from "@/lib/appwrite"
 import { Query, ID } from "appwrite"
 
 const DATABASE_ID    = import.meta.env.VITE_APPWRITE_DATABASE_ID
@@ -39,7 +39,7 @@ export const uploadAvatar = async (file) => {
 
 // ── Follow ────────────────────────────────────────────────────────────────────
 export const followUser = async ({ followerId, followingId, followerDocId, followingDocId }) => {
-  // Only send the fields defined in your collection — no createdAt (Appwrite handles $createdAt)
+  // Only send the fields defined in your collection - no createdAt (Appwrite handles $createdAt)
   const followDoc = await databases.createDocument(
     DATABASE_ID, FOLLOWS_COL, ID.unique(),
     { followerId, followingId }
@@ -117,7 +117,7 @@ export const getFollowing = async (userId) => {
 
 // ── Bookmark ──────────────────────────────────────────────────────────────────
 export const bookmarkThread = async ({ userId, threadId, threadAuthorDocId }) => {
-  // Only send fields defined in collection — no createdAt
+  // Only send fields defined in collection - no createdAt
   const bookmarkDoc = await databases.createDocument(
     DATABASE_ID, BOOKMARKS_COL, ID.unique(),
     { userId, threadId }

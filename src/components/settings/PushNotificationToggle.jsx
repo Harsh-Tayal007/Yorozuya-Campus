@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PushNotificationToggle.jsx
  * ─────────────────────────────────────────────────────────────────────────────
  * Place at: src/components/settings/PushNotificationToggle.jsx
@@ -37,7 +37,7 @@ export default function PushNotificationToggle() {
             ? "Blocked in browser settings. Click the lock icon in your address bar to allow."
             : subscribed
             ? "You'll receive notifications even when the tab is closed."
-            : "Get notified about replies, mentions, and follows — even with the tab closed."}
+            : "Get notified about replies, mentions, and follows - even with the tab closed."}
         </p>
       </div>
 

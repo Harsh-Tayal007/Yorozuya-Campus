@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+﻿import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Plus, ChevronRight, Users, BookOpen, Hash,
@@ -368,7 +368,7 @@ function DeleteClassModal({ cls, onClose }) {
           <h2 className="text-base font-bold text-destructive">Delete Class</h2>
           <p className="text-xs text-muted-foreground">
             This will permanently delete <span className="text-foreground font-semibold">{cls.name}</span> and
-            all associated data — enrolled students, sessions, attendance records, and tokens.
+            all associated data - enrolled students, sessions, attendance records, and tokens.
             This action cannot be undone.
           </p>
         </div>

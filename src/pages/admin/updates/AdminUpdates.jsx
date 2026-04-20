@@ -1,4 +1,4 @@
-// src/pages/admin/updates/AdminUpdates.jsx
+﻿// src/pages/admin/updates/AdminUpdates.jsx
 import { useState } from "react"
 import {
   Pencil, Trash2, Plus, Eye, EyeOff, Pin,
@@ -128,7 +128,7 @@ function LogCard({ log, onEdit, onDelete, onTogglePublish, isLast }) {
           </div>
         )}
 
-        {/* Body — rich Tiptap HTML with fade */}
+        {/* Body - rich Tiptap HTML with fade */}
         {log.body && log.body !== "<p></p>" && (
           <div className="relative px-4 pb-3">
             <div className="relative max-h-[96px] overflow-hidden">
@@ -244,12 +244,12 @@ export default function AdminUpdates() {
         </div>
       )}
 
-      {/* ── Form — mirrors CreateReplyBox card layout ── */}
+      {/* ── Form - mirrors CreateReplyBox card layout ── */}
       {showForm && (
         <div className="rounded-xl border border-border mb-8 overflow-hidden
                         bg-white/60 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm">
 
-          {/* Title + version — top input row separated by a bottom border */}
+          {/* Title + version - top input row separated by a bottom border */}
           <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-border">
             <input
               className="sm:col-span-2 px-4 py-3 sm:border-r sm:border-border
@@ -275,7 +275,7 @@ export default function AdminUpdates() {
             content={form.body}
             onChange={v => set("body", v)}
             onSubmit={handleSubmit}
-            placeholder="Describe what changed — supports bold, lists, headings…"
+            placeholder="Describe what changed - supports bold, lists, headings…"
             autoFocus={false}
           />
 
@@ -290,7 +290,7 @@ export default function AdminUpdates() {
             ))}
           </div>
 
-          {/* Bottom action bar — toggles left, buttons right */}
+          {/* Bottom action bar - toggles left, buttons right */}
           <div className="flex items-center justify-between gap-3 px-3 py-2
                           border-t border-border bg-muted/10">
             <div className="flex items-center gap-4">

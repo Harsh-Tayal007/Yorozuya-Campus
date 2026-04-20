@@ -1,4 +1,4 @@
-import CreateReplyBox from "./CreateReplyBox"
+﻿import CreateReplyBox from "./CreateReplyBox"
 import { useAuth } from "@/context/AuthContext"
 import BannedBanner from "@/components/forum/BannedBanner"
 import Reply from "./Reply"
@@ -48,7 +48,7 @@ const sortReplies = (ids, byId, sortBy) => {
       case "controversial": {
         // Real Reddit-style controversial:
         // High total votes AND near-equal up/down split ranks highest.
-        // ratio = min(up,down) / total — closer to 0.5 = more controversial
+        // ratio = min(up,down) / total - closer to 0.5 = more controversial
         // weighted by total so low-engagement ties don't beat high-engagement
         const upA = ra?.upvotes ?? 0
         const downA = ra?.downvotes ?? 0
@@ -142,7 +142,7 @@ export function RepliesSkeleton() {
         <div className="h-9 w-9 rounded-full border border-border bg-muted/30 animate-pulse" />
       </div>
 
-      {/* Reply skeletons — 3 root, first one has a child */}
+      {/* Reply skeletons - 3 root, first one has a child */}
       <ReplySkeletonItem hasChild={true} />
       <ReplySkeletonItem hasChild={false} />
       <ReplySkeletonItem hasChild={false} />

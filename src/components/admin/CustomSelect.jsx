@@ -1,5 +1,5 @@
-// src/components/admin/CustomSelect.jsx
-// Portal-based custom select — escapes ALL stacking contexts / overflow clipping
+﻿// src/components/admin/CustomSelect.jsx
+// Portal-based custom select - escapes ALL stacking contexts / overflow clipping
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"

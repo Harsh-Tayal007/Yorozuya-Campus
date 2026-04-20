@@ -1,8 +1,8 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { Github, Linkedin, Instagram } from "lucide-react"
 import UnizuyaLogo from "@/components/common/Logo/UnizuyaLogo"
 
-// Discord SVG icon (not in Lucide) — inline minimal path
+// Discord SVG icon (not in Lucide) - inline minimal path
 function DiscordIcon({ size = 14 }) {
   return (
     <svg
@@ -93,7 +93,7 @@ export default function Footer() {
           </ul>
         </nav>
 
-        {/* Team socials — replaces the old "coming soon" placeholders */}
+        {/* Team socials - replaces the old "coming soon" placeholders */}
         <section aria-label="Team social links">
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
             Connect

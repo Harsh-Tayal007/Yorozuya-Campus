@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 import {
   fetchContactMessages,
@@ -87,7 +87,7 @@ function MobileMessageCard({ msg, onStatusChange, updating, currentUser }) {
           : "border-border/60 bg-card/60"
         } backdrop-blur-sm`}
     >
-      {/* Header row — always visible */}
+      {/* Header row - always visible */}
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/20 transition-colors"

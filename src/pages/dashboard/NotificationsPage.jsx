@@ -1,4 +1,4 @@
-// src/pages/dashboard/NotificationsPage.jsx
+﻿// src/pages/dashboard/NotificationsPage.jsx
 import { useNavigate } from "react-router-dom"
 import { Bell, ShieldX, Check, CheckCheck, Trash2 } from "lucide-react"
 import useNotifications from "@/hooks/useNotifications"
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
         if (notif.type === "ban" || notif.type === "ban_lifted") return
 
         if (notif.type === "follow") {
-            // Resolve current username from actorId — immune to username changes
+            // Resolve current username from actorId - immune to username changes
             if (notif.actorId) {
                 try {
                     const res = await databases.listDocuments(DATABASE_ID, USERS_COL, [

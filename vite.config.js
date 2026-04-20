@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from "vite";
+﻿import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -49,8 +49,8 @@ export default defineConfig(({ mode }) => {
             { src: "pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           ],
           screenshots: [
-            { src: "screenshots/desktop.png", sizes: "1280x720", type: "image/png", form_factor: "wide",   label: "Unizuya — Home"      },
-            { src: "screenshots/mobile.png",  sizes: "390x844",  type: "image/png", form_factor: "narrow", label: "Unizuya — Dashboard" },
+            { src: "screenshots/desktop.png", sizes: "1280x720", type: "image/png", form_factor: "wide",   label: "Unizuya - Home"      },
+            { src: "screenshots/mobile.png",  sizes: "390x844",  type: "image/png", form_factor: "narrow", label: "Unizuya - Dashboard" },
           ],
         },
       }),
@@ -59,7 +59,7 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          // Object form is safe — Rollup handles initialization order correctly.
+          // Object form is safe - Rollup handles initialization order correctly.
           // Function form isolates chunks too aggressively and breaks
           // framer-motion / D3 / TipTap which need React to be ready first.
           manualChunks: {

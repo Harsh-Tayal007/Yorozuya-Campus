@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ClipboardCheck, Hash, BookOpen, Clock,
@@ -85,7 +85,7 @@ function JoinClassModal({ onClose }) {
                 LEET Student
               </p>
               <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                Lateral entry — joined from 2nd year
+                Lateral entry - joined from 2nd year
               </p>
             </div>
             <div className={`w-8 h-4 rounded-full transition-all duration-200 relative
@@ -179,7 +179,7 @@ function ActiveSessionCard({ session, enrollment }) {
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl
                         bg-muted/30 border border-border/40">
           <p className="text-xs text-muted-foreground">
-            Manual attendance — your teacher will mark you.
+            Manual attendance - your teacher will mark you.
           </p>
         </div>
       ) : tokenExpired ? (
@@ -266,7 +266,7 @@ function ClassHistoryCard({ data, presentSessionIds, classNameMap }) {
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-3">
           <span className={`text-sm font-bold ${pctColor}`}>
-            {totalSessions === 0 ? "—" : `${overallPct}%`}
+            {totalSessions === 0 ? "-" : `${overallPct}%`}
           </span>
           <span className="text-xs text-muted-foreground">
             {totalPresent}/{totalSessions}

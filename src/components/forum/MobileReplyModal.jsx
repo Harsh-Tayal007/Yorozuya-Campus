@@ -1,4 +1,4 @@
-// src/components/forum/MobileReplyModal.jsx
+﻿// src/components/forum/MobileReplyModal.jsx
 import useKeyboardOffset from "@/hooks/useKeyboardOffset"
 import { ImageIcon } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -87,7 +87,7 @@ function MobileReplyModal({ replyingTo, onSubmit, onClose }) {
         </div>
       )}
 
-      {/* EDITOR — scrollable */}
+      {/* EDITOR - scrollable */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",
         minHeight: 0, overflowY: "auto",

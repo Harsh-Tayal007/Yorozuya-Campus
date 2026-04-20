@@ -1,4 +1,4 @@
-// src/pages/updates/UpdatesPage.jsx
+﻿// src/pages/updates/UpdatesPage.jsx
 import { useState, useEffect } from "react"
 import { Megaphone, Pin, Loader2, Tag } from "lucide-react"
 import { sortUpdateLogs, updateLogsService } from "@/services/updates/updateLogsService"
@@ -26,7 +26,7 @@ function LogEntry({ log, isFirst, isLast }) {
                          ? "border-primary bg-primary shadow-[0_0_8px_2px] shadow-primary/30"
                          : "border-border bg-background"}`} />
 
-      {/* Timeline line — solid, high contrast, stops before last entry bottom */}
+      {/* Timeline line - solid, high contrast, stops before last entry bottom */}
       {!isLast && (
         <div className="absolute left-[5px] top-4 bottom-0 w-0.5
                         bg-border dark:bg-border/80" />
@@ -66,7 +66,7 @@ function LogEntry({ log, isFirst, isLast }) {
           </div>
         )}
 
-        {/* Body — rendered as rich HTML from Tiptap */}
+        {/* Body - rendered as rich HTML from Tiptap */}
         {log.body && log.body !== "<p></p>" && (
           <div
             className="tiptap-render text-sm text-muted-foreground leading-relaxed"

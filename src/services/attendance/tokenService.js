@@ -1,4 +1,4 @@
-import { databases, ID, Query } from "@/lib/appwrite"
+﻿import { databases, ID, Query } from "@/lib/appwrite"
 import { DATABASE_ID, SESSION_TOKENS_COLLECTION_ID } from "@/config/appwrite"
 
 // Generate a 6-digit token unique within this batch
@@ -9,7 +9,7 @@ function makeToken(existing = new Set()) {
   return t
 }
 
-// Called by teacher when starting session — one token per enrolled student
+// Called by teacher when starting session - one token per enrolled student
 export async function generateStudentTokens(sessionId, classId, enrollments) {
   const used = new Set()
   const docs = await Promise.all(

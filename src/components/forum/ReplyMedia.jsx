@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react"
+﻿import React, { useRef, useState } from "react"
 import LazyGif from "./LazyGif"
 import { downloadFileXHR } from "@/services/shared/downloadService"
 
@@ -145,7 +145,7 @@ function ExpandedViewer({ src, onClose, showHint, setShowHint }) {
       onMouseLeave={handleMouseUp}
       onClick={onClose}
     >
-      {/* ── Hint — fixed to overlay, never zooms ── */}
+      {/* ── Hint - fixed to overlay, never zooms ── */}
       {showHint && (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10
                         text-xs text-white/80 bg-black/50 px-3 py-1
@@ -154,7 +154,7 @@ function ExpandedViewer({ src, onClose, showHint, setShowHint }) {
         </div>
       )}
 
-      {/* ── Close — fixed top-right, never zooms ── */}
+      {/* ── Close - fixed top-right, never zooms ── */}
       <button
         onClick={(e) => { e.stopPropagation(); onClose() }}
         className="absolute top-4 right-4 z-10
@@ -169,7 +169,7 @@ function ExpandedViewer({ src, onClose, showHint, setShowHint }) {
         ✕
       </button>
 
-      {/* ── Save — fixed bottom-right, never zooms ── */}
+      {/* ── Save - fixed bottom-right, never zooms ── */}
       <button
         onClick={handleSave}
         className="absolute bottom-6 right-6 z-10
@@ -182,7 +182,7 @@ function ExpandedViewer({ src, onClose, showHint, setShowHint }) {
         Save image
       </button>
 
-      {/* ── Zoomable image — only this transforms ── */}
+      {/* ── Zoomable image - only this transforms ── */}
       <div
         onMouseDown={handleMouseDown}
         onClick={(e) => e.stopPropagation()}

@@ -1,4 +1,4 @@
-// src/layouts/AdminLayout.jsx
+﻿// src/layouts/AdminLayout.jsx
 import { Outlet, NavLink, Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect, useRef } from "react"
@@ -72,7 +72,7 @@ function AdminTopBar({ sidebarOpen, setSidebarOpen }) {
                    backdrop-blur-xl border-b border-border
                    flex items-center px-4 gap-3 shadow-sm"
       >
-        {/* ── Single hamburger — controls sidebar ── */}
+        {/* ── Single hamburger - controls sidebar ── */}
         <button
           onClick={() => setSidebarOpen(v => !v)}
           className="p-2 rounded-lg text-muted-foreground hover:text-foreground
@@ -205,7 +205,7 @@ export default function AdminLayout() {
         />
       )}
 
-      {/* Sidebar — no inner toggle, controlled only by top bar hamburger */}
+      {/* Sidebar - no inner toggle, controlled only by top bar hamburger */}
       <aside
         style={{
           top: NAVBAR_H,

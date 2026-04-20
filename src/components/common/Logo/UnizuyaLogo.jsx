@@ -1,4 +1,4 @@
-// UnizuyaLogo.jsx
+﻿// UnizuyaLogo.jsx
 // Usage: <UnizuyaLogo size={40} theme="dark" /> or <UnizuyaLogo size={40} theme="light" />
 // theme="dark"  → blue accents on dark background (for navbar, sidebar)
 // theme="light" → navy accents (for light background)
@@ -46,7 +46,7 @@ const UnizuyaLogo = ({ size = 40, theme = "auto", className = "" }) => {
         opacity={isDark ? 0.18 : 0.15}
       />
 
-      {/* Left page — filled + outlined */}
+      {/* Left page - filled + outlined */}
       <path
         d="M28 32 L28 78 Q28 90 42 90 L58 90 L58 32 Z"
         fill={accent}
@@ -60,7 +60,7 @@ const UnizuyaLogo = ({ size = 40, theme = "auto", className = "" }) => {
         fill="none"
       />
 
-      {/* Right page — filled + outlined */}
+      {/* Right page - filled + outlined */}
       <path
         d="M92 32 L92 78 Q92 90 78 90 L62 90 L62 32 Z"
         fill={accent}
@@ -80,12 +80,12 @@ const UnizuyaLogo = ({ size = 40, theme = "auto", className = "" }) => {
       {/* Center spine */}
       <line x1="60" y1="32" x2="60" y2="90" stroke={accent} strokeWidth="1.5" strokeLinecap="round" opacity="0.45" />
 
-      {/* Page lines — left */}
+      {/* Page lines - left */}
       {[48, 56, 64].map(y => (
         <line key={y} x1="35" y1={y} x2="55" y2={y} stroke={accent} strokeWidth="1" opacity="0.22" strokeLinecap="round" />
       ))}
 
-      {/* Page lines — right */}
+      {/* Page lines - right */}
       {[48, 56, 64].map(y => (
         <line key={y} x1="65" y1={y} x2="85" y2={y} stroke={accent} strokeWidth="1" opacity="0.22" strokeLinecap="round" />
       ))}

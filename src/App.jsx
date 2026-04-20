@@ -1,4 +1,4 @@
-import { BrowserRouter } from "react-router-dom"
+﻿import { BrowserRouter } from "react-router-dom"
 import AppRoutes from "./routes/AppRoutes"
 
 import { SidebarProvider } from "@/context/SidebarContext"
@@ -8,7 +8,7 @@ import { usePWAInstall } from "./hooks/usePWAInstall"
 import CookieNotice from "./components/common/auth/CookieNotice"
 import { AppLoader } from "./components"
 
-// AFTER — render immediately, let routes handle auth state
+// AFTER - render immediately, let routes handle auth state
 const App = () => {
   return (
     <BrowserRouter>

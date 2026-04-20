@@ -1,4 +1,4 @@
-import { Moon, Sun } from "lucide-react"
+﻿import { Moon, Sun } from "lucide-react"
 import React, { useState } from "react"
 import { motion } from "framer-motion"
 
@@ -16,7 +16,7 @@ const DarkModeToggle = () => {
   const toggleTheme = () => {
     const next = !isDark
 
-    // Count DOM elements — if page is heavy, skip the transition
+    // Count DOM elements - if page is heavy, skip the transition
     const elementCount = document.querySelectorAll("*").length
 
     if (document.startViewTransition && elementCount < 1500) {

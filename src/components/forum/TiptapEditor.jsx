@@ -1,4 +1,4 @@
-// src/components/forum/TiptapEditor.jsx
+﻿// src/components/forum/TiptapEditor.jsx
 import { useEffect, useRef, useState } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
@@ -120,7 +120,7 @@ function Toolbar({ editor, onOpenLink }) {
 }
 
 /* ─── Main Editor ────────────────────────────────────────────── */
-// collapsibleToolbar — if true, toolbar starts hidden and can be toggled
+// collapsibleToolbar - if true, toolbar starts hidden and can be toggled
 //                      used in MobileReplyModal to keep UI clean
 export default function TiptapEditor({ content, onChange, onSubmit, placeholder, autoFocus, collapsibleToolbar = false }) {
   const [linkModal, setLinkModal]     = useState(false)
@@ -170,7 +170,7 @@ export default function TiptapEditor({ content, onChange, onSubmit, placeholder,
     }
   }
 
-  // Check if any formatting is active — shows dot indicator on toggle button
+  // Check if any formatting is active - shows dot indicator on toggle button
   const hasActiveFormat = editor.isActive("bold") || editor.isActive("italic") ||
     editor.isActive("strike") || editor.isActive("heading", {level:1}) ||
     editor.isActive("heading", {level:2}) || editor.isActive("heading", {level:3}) ||
@@ -204,7 +204,7 @@ export default function TiptapEditor({ content, onChange, onSubmit, placeholder,
         .toolbar-animated { animation: toolbar-slide 0.15s ease; }
       `}</style>
 
-      {/* Collapsible toolbar toggle — only shown when collapsibleToolbar=true */}
+      {/* Collapsible toolbar toggle - only shown when collapsibleToolbar=true */}
       {collapsibleToolbar && (
         <div style={{ display:"flex", alignItems:"center", padding:"4px 8px", borderBottom: toolbarOpen ? "none" : "1px solid var(--border)" }}>
           <button
@@ -230,7 +230,7 @@ export default function TiptapEditor({ content, onChange, onSubmit, placeholder,
         </div>
       )}
 
-      {/* TOOLBAR — animated slide in/out */}
+      {/* TOOLBAR - animated slide in/out */}
       {toolbarOpen && (
         <div className="toolbar-animated">
           <Toolbar editor={editor} onOpenLink={openLinkModal} />

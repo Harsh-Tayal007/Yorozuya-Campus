@@ -1,5 +1,5 @@
-/**
- * TaskTracker.jsx — src/pages/tools/TaskTracker.jsx
+﻿/**
+ * TaskTracker.jsx - src/pages/tools/TaskTracker.jsx
  * Requires: src/stores/useTaskStore.js  |  npm install jspdf
  */
 
@@ -18,11 +18,11 @@ const PRIORITY_META = {
 const PRIORITY_OPTIONS = Object.entries(PRIORITY_META).map(([k,v]) => ({ value:k, label:v.label, dot:v.dot }));
 
 const TIPS = [
-  { icon:"✦", title:"Create a task",         desc:'Hit "+ New Task" to add anything — an assignment, exam prep, or personal goal.' },
+  { icon:"✦", title:"Create a task",         desc:'Hit "+ New Task" to add anything - an assignment, exam prep, or personal goal.' },
   { icon:"⚡", title:"Set priority",           desc:"Mark tasks Low to Urgent so the most critical ones float to the top." },
   { icon:"#", title:"Due dates & reminders",  desc:"Add a due date for a live countdown. Set a reminder and your browser will notify you." },
   { icon:"✓", title:"Steps (subtasks)",       desc:"Break a big task into smaller steps. Each tick fills a progress bar on the card." },
-  { icon:"@", title:"Subject / tag",          desc:"Type any subject name — no fixed list. The filter builds itself from what you've used." },
+  { icon:"@", title:"Subject / tag",          desc:"Type any subject name - no fixed list. The filter builds itself from what you've used." },
 ];
 const LS_SEEN = "unizuya_tasks_seen";
 
@@ -31,7 +31,7 @@ const daysLeft   = iso => iso ? Math.ceil((new Date(iso) - new Date()) / 8640000
 const requestNotif = () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); };
 
 // ── Reminder system ───────────────────────────────────────────────────────────
-// Polls every 30s — works on localhost (http) where SW push is blocked.
+// Polls every 30s - works on localhost (http) where SW push is blocked.
 // Fired reminders stored in localStorage to prevent duplicate notifications.
 const FIRED_KEY = "unizuya_fired_reminders";
 const getFired  = () => { try { return new Set(JSON.parse(localStorage.getItem(FIRED_KEY)||"[]")); } catch { return new Set(); } };
@@ -64,7 +64,7 @@ function useReminderPoller(tasks) {
   }, [tasks]);
 }
 
-// ── PDF Export (NO emojis — jsPDF built-in fonts can't render them) ────────────
+// ── PDF Export (NO emojis - jsPDF built-in fonts can't render them) ────────────
 async function exportTasksPDF(tasks) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
@@ -103,7 +103,7 @@ async function exportTasksPDF(tasks) {
   doc.setFontSize(15); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
   doc.text("Task Tracker Report", pad + 14, 13);
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(220, 210, 255);
-  doc.text("Unizuya  —  Academic Todo Export", pad + 14, 20);
+  doc.text("Unizuya  -  Academic Todo Export", pad + 14, 20);
 
   // Date/time top-right
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(220,210,255);
@@ -182,7 +182,7 @@ async function exportTasksPDF(tasks) {
     const hasDesc = !!task.description;
     const hasMeta = !!(task.dueDate || subtaskTotal || task.reminder);
 
-    // Card height — computed dynamically to fit all content
+    // Card height - computed dynamically to fit all content
     let cardH = 7;                            // title row
     if (task.subject) cardH += 4.5;          // subject tag
     else              cardH += 1;
@@ -506,7 +506,7 @@ function Dropdown({ value, onChange, options, placeholder="Select…", className
         </svg>
       </button>
 
-      {/* Portal menu — renders at document.body level, above everything */}
+      {/* Portal menu - renders at document.body level, above everything */}
       {open && createPortal(
         <div
           style={{ position:"fixed", top:pos.top, left:pos.left, width:pos.width, zIndex:9999,
@@ -627,11 +627,11 @@ function DeleteConfirm({ taskTitle, onConfirm, onCancel }) {
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
 const REAL_TIPS = [
-  { icon:"✦", title:"Create a task",         desc:'Hit "+ New Task" to add anything — an assignment, exam prep, or personal goal.' },
+  { icon:"✦", title:"Create a task",         desc:'Hit "+ New Task" to add anything - an assignment, exam prep, or personal goal.' },
   { icon:"⚡", title:"Set priority",           desc:"Mark tasks Low to Urgent so the most critical ones float to the top." },
   { icon:"📅", title:"Due dates & reminders",  desc:"Add a due date for a live countdown. Set a reminder and your browser will notify you." },
   { icon:"☑",  title:"Steps (subtasks)",       desc:"Break a big task into smaller steps. Each tick fills a progress bar on the card." },
-  { icon:"🏷",  title:"Subject / tag",          desc:"Type any subject name — no fixed list. The filter builds itself from what you've used." },
+  { icon:"🏷",  title:"Subject / tag",          desc:"Type any subject name - no fixed list. The filter builds itself from what you've used." },
 ];
 
 function OnboardingPanel({ onDismiss }) {
@@ -861,7 +861,7 @@ function EditTaskModal({ task, onClose, onSave }) {
             </div>
             <div>
               <label className="text-xs text-gray-500 dark:text-zinc-500 font-semibold mb-1.5 flex items-center uppercase tracking-wide">
-                Subject / Tag <InfoIcon tip="Type any course or subject — no fixed list."/>
+                Subject / Tag <InfoIcon tip="Type any course or subject - no fixed list."/>
               </label>
               <input value={form.subject} onChange={e=>set("subject",e.target.value)}
                 placeholder="e.g. Operating Systems"
@@ -923,7 +923,7 @@ function AddTaskModal({ onClose, onAdd }) {
       <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 sm:rounded-2xl rounded-t-2xl
                       border border-gray-200 dark:border-zinc-700 shadow-2xl
                       max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header — never scrolls */}
+        {/* Header - never scrolls */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-zinc-800 flex-shrink-0">
           <h2 className="text-gray-900 dark:text-zinc-100 font-semibold text-base flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-violet-500 flex items-center justify-center text-white text-sm font-bold">+</span>
@@ -932,7 +932,7 @@ function AddTaskModal({ onClose, onAdd }) {
           <button onClick={onClose} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 text-xl leading-none transition-colors">✕</button>
         </div>
 
-        {/* Scrollable body — overflow-y-auto only here */}
+        {/* Scrollable body - overflow-y-auto only here */}
         <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-4">
           <div>
             <label className="text-xs text-gray-500 dark:text-zinc-500 font-semibold mb-1.5 block uppercase tracking-wide">Task Title *</label>
@@ -959,7 +959,7 @@ function AddTaskModal({ onClose, onAdd }) {
             </div>
             <div>
               <label className="text-xs text-gray-500 dark:text-zinc-500 font-semibold mb-1.5 flex items-center uppercase tracking-wide">
-                Subject / Tag <InfoIcon tip="Type any course or subject — no fixed list. Filter auto-builds from what you've used."/>
+                Subject / Tag <InfoIcon tip="Type any course or subject - no fixed list. Filter auto-builds from what you've used."/>
               </label>
               <input value={form.subject} onChange={e=>set("subject",e.target.value)}
                 placeholder="e.g. Operating Systems"
@@ -992,7 +992,7 @@ function AddTaskModal({ onClose, onAdd }) {
           </div>
         </div>
 
-        {/* Footer — never scrolls */}
+        {/* Footer - never scrolls */}
         <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-zinc-800 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 transition-colors">Cancel</button>
           <button onClick={submit} disabled={saving||!form.title.trim()}
@@ -1160,7 +1160,7 @@ export default function TaskTracker() {
         {tasks.length>0 && (
           <p className="text-center text-gray-500 dark:text-zinc-400 text-xs mt-6 font-medium">
             {stats.done} of {tasks.length} task{tasks.length!==1?"s":""} completed
-            {!userId && <span className="ml-1 text-gray-400 dark:text-zinc-600">(local only — log in to sync)</span>}
+            {!userId && <span className="ml-1 text-gray-400 dark:text-zinc-600">(local only - log in to sync)</span>}
           </p>
         )}
       </div>

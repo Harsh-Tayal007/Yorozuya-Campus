@@ -1,4 +1,4 @@
-// src/components/timetable/TodayWidget.jsx
+﻿// src/components/timetable/TodayWidget.jsx
 import { Calendar } from "lucide-react"
 import { formatTime, getNowPeriod, getTodayDay } from "@/utils/timetableHelpers"
 
@@ -27,7 +27,7 @@ export function TodayWidget({ periods, subjects, slots, activeDays }) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-zinc-800">
         <div className="flex items-center gap-2">
           <Calendar size={14} className="text-violet-500"/>
-          <p className="text-sm font-semibold text-foreground">Today — {today}</p>
+          <p className="text-sm font-semibold text-foreground">Today - {today}</p>
         </div>
         <p className="text-xs text-muted-foreground">{todaySlots.length} class{todaySlots.length !== 1 ? "es" : ""}</p>
       </div>

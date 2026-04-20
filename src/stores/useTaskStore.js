@@ -1,8 +1,8 @@
-/**
+﻿/**
  * useTaskStore.js
  * Place at: src/stores/useTaskStore.js
  *
- * Module-level singleton — tasks persist across route changes (no reload).
+ * Module-level singleton - tasks persist across route changes (no reload).
  * Reminder polling fires every 30s, injects into notification bell on fire.
  */
 
@@ -202,7 +202,7 @@ export function useTaskStore() {
     }
   }, [loading, queryClient]);
 
-  // Reminder polling — 30s interval
+  // Reminder polling - 30s interval
   useEffect(() => {
     if (!_loaded || tasks.length === 0) return;
     checkReminders(tasks);

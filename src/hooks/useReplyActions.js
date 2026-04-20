@@ -1,4 +1,4 @@
-// src/hooks/useReplyActions.js
+﻿// src/hooks/useReplyActions.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createReply,
@@ -117,7 +117,7 @@ export default function useReplyActions(threadId) {
         })
         .catch(console.error);
 
-      // Fire notifications — never block UI
+      // Fire notifications - never block UI
       fireReplyNotifications(serverReply, newReply, threadId).catch(
         console.error,
       );
@@ -307,7 +307,7 @@ async function fireReplyNotifications(serverReply, newReply, threadId) {
   const mentionedUsernames = extractMentions(newReply.content);
 
   // Also include anyone in the existing reply chain who might be mentioned
-  // (the parentAuthorUsername if provided — passed from Reply.jsx)
+  // (the parentAuthorUsername if provided - passed from Reply.jsx)
   const allMentions = new Set(mentionedUsernames);
 
   if (allMentions.size > 0) {

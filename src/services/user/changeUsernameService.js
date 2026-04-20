@@ -1,4 +1,4 @@
-import { account } from "@/lib/appwrite"
+﻿import { account } from "@/lib/appwrite"
 
 const WORKER_URL = "https://unizuya-change-username.harshtayal710.workers.dev"
 
@@ -10,7 +10,7 @@ const WORKER_URL = "https://unizuya-change-username.harshtayal710.workers.dev"
  * - Throws a user-readable Error on failure
  */
 export async function changeUsername(newUsername) {
-  // Create a 15-minute JWT — Worker verifies it to identify the caller
+  // Create a 15-minute JWT - Worker verifies it to identify the caller
   const jwt = await account.createJWT()
 
   const res = await fetch(WORKER_URL, {
@@ -22,7 +22,7 @@ export async function changeUsername(newUsername) {
   const data = await res.json()
 
   if (!res.ok || !data.success) {
-    // Surface the worker's error message directly — it's already user-readable
+    // Surface the worker's error message directly - it's already user-readable
     throw new Error(data.error ?? "Failed to change username")
   }
 

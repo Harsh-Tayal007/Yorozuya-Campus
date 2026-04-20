@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AlertTriangle, Loader2, X, Trash2, ShieldAlert } from "lucide-react"
 
@@ -23,7 +23,7 @@ const BulletRow = ({ label, deleted }) => (
  *
  * @param {boolean}  open
  * @param {Function} onClose
- * @param {Function} onConfirm  — async, called when user confirms; should throw on error
+ * @param {Function} onConfirm  - async, called when user confirms; should throw on error
  */
 const DeleteAccountModal = ({ open, onClose, onConfirm }) => {
   const [phrase, setPhrase]     = useState("")
@@ -43,7 +43,7 @@ const DeleteAccountModal = ({ open, onClose, onConfirm }) => {
       setError(err?.message ?? "Something went wrong. Please try again.")
       setLoading(false)
     }
-    // On success the parent navigates away — no need to reset
+    // On success the parent navigates away - no need to reset
   }
 
   const handleClose = () => {

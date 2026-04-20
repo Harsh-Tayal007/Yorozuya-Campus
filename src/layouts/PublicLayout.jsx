@@ -1,4 +1,4 @@
-// src/layouts/PublicLayout.jsx
+﻿// src/layouts/PublicLayout.jsx
 import { Outlet } from "react-router-dom"
 import { Navbar } from "@/components"
 import Footer from "@/components/common/layout/Footer"
@@ -11,7 +11,7 @@ const PublicLayout = () => {
   useTrackActivity()
   const { isPinned, isMobile, handleEdgeHover } = useSidebar()
 
-  // Shift content right only when pinned/docked — overlay when just hovering
+  // Shift content right only when pinned/docked - overlay when just hovering
   const marginLeft = (!isMobile && isPinned) ? SIDEBAR_W : 0
 
   return (

@@ -1,6 +1,6 @@
-// src/components/common/navigation/NotificationBell.jsx
+﻿// src/components/common/navigation/NotificationBell.jsx
 // Changes from original:
-//   1. NotifAvatar badge background fixed — now solid color, always visible
+//   1. NotifAvatar badge background fixed - now solid color, always visible
 //   2. Task reminder type added to TYPE_META
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
@@ -38,7 +38,7 @@ const NotifAvatar = ({ notif }) => {
   const meta = TYPE_META[notif.type] ?? TYPE_META.reply
   const { Icon, color, iconBg, avatarBg, ring } = meta
 
-  // Task notifications have no actor — show a task icon instead
+  // Task notifications have no actor - show a task icon instead
   if (notif.type === "task") {
     return (
       <div className="relative shrink-0">
@@ -61,7 +61,7 @@ const NotifAvatar = ({ notif }) => {
           </span>
         )}
       </div>
-      {/* Badge — solid background so it's always visible on any bg */}
+      {/* Badge - solid background so it's always visible on any bg */}
       <div className={`absolute -bottom-0.5 -right-0.5 w-[16px] h-[16px] rounded-full
                        ${iconBg} ring-2 ring-background
                        flex items-center justify-center shadow-sm`}>
@@ -453,7 +453,7 @@ export default function NotificationBell() {
       return
     }
 
-    // ── ADD HERE — before the threadId guard ──
+    // ── ADD HERE - before the threadId guard ──
     if (notif.type === "attendance") {
       window.location.href = "/dashboard/attendance"
       return

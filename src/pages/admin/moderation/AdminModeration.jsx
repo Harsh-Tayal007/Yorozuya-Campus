@@ -1,4 +1,4 @@
-// src/pages/admin/moderation/AdminModeration.jsx
+﻿// src/pages/admin/moderation/AdminModeration.jsx
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -61,12 +61,12 @@ function BanTypeBadge({ banType, isActive }) {
 }
 
 function fmtDate(iso) {
-  if (!iso) return "—"
+  if (!iso) return "-"
   return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 
 function extractPath(url) {
-  if (!url) return "—"
+  if (!url) return "-"
   try {
     const { pathname, search } = new URL(url)
     return pathname + search
@@ -645,7 +645,7 @@ export default function AdminModeration() {
           <RefreshCw size={14} />
         </button>
 
-        {/* Bulk clear — owner only, only shown on resolved/dismissed tabs */}
+        {/* Bulk clear - owner only, only shown on resolved/dismissed tabs */}
         {tab === TAB.REPORTS && canBulkDelete && (reportStatus === "resolved" || reportStatus === "dismissed") && reports.length > 0 && (
           <button
             onClick={() => setShowBulkModal(true)}

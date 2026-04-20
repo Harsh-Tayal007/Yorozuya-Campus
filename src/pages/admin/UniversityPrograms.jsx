@@ -1,4 +1,4 @@
-// src/pages/admin/UniversityPrograms.jsx
+﻿// src/pages/admin/UniversityPrograms.jsx
 import { useMemo, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -192,7 +192,7 @@ const UniversityPrograms = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight">
-              {university ? `${university.name} — Programs` : "Programs"}
+              {university ? `${university.name} - Programs` : "Programs"}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">{programs.length} program{programs.length !== 1 ? "s" : ""}</p>
           </div>

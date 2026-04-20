@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { GraduationCap, BookOpen, GitBranch, ChevronDown, Check, Loader2 } from "lucide-react"
@@ -228,7 +228,7 @@ const CompleteProfile = () => {
             </div>
           )}
 
-          {/* Academic Form — shown after role selection */}
+          {/* Academic Form - shown after role selection */}
           {accountType && (
             <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -254,7 +254,7 @@ const CompleteProfile = () => {
                 />
               </div>
 
-              {/* Program — only for students */}
+              {/* Program - only for students */}
               {!isTeacher && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -273,7 +273,7 @@ const CompleteProfile = () => {
                 </div>
               )}
 
-              {/* Branch — only for students */}
+              {/* Branch - only for students */}
               {!isTeacher && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">

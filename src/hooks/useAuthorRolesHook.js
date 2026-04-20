@@ -1,4 +1,4 @@
-// src/hooks/useAuthorRolesHook.js
+﻿// src/hooks/useAuthorRolesHook.js
 import { useQuery } from "@tanstack/react-query";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
@@ -62,7 +62,7 @@ export default function useAuthorRoles(replies) {
       return map;
     },
     enabled: authorIds.length > 0,
-    staleTime: 1000 * 60 * 10,  // 10 min — same as user-avatar queries
+    staleTime: 1000 * 60 * 10,  // 10 min - same as user-avatar queries
     retry: false,
   });
 

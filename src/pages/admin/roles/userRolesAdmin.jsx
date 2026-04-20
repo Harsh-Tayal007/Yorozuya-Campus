@@ -1,4 +1,4 @@
-// src/pages/admin/roles/userRolesAdmin.jsx
+﻿// src/pages/admin/roles/userRolesAdmin.jsx
 import { useMemo, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
@@ -310,7 +310,7 @@ export default function UserRolesAdmin() {
 
                     {/* Controls: role selector + delete */}
                     <div className="flex items-center gap-2 shrink-0 ml-3">
-                      {/* Role dropdown — narrower on mobile */}
+                      {/* Role dropdown - narrower on mobile */}
                       <div className="w-28 sm:w-36">
                         <CustomSelect
                           value={u.role}

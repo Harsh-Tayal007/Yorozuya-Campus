@@ -1,4 +1,4 @@
-// src/pages/dashboard/AdminDashboard.jsx
+﻿// src/pages/dashboard/AdminDashboard.jsx
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { databases } from "@/lib/appwrite"
@@ -23,7 +23,7 @@ const collections = {
   pyqs: import.meta.env.VITE_APPWRITE_PYQS_COLLECTION_ID,
 }
 
-// Stat cards are display-only — no routes, no click navigation
+// Stat cards are display-only - no routes, no click navigation
 const STAT_CONFIG = [
   { key: "universities", label: "Universities", icon: School, permission: "manage:universities", accent: "#6366f1" },
   { key: "programs", label: "Programs", icon: BookOpen, permission: "manage:programs", accent: "#8b5cf6" },
@@ -72,7 +72,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`
 }
 
-// ── Stat Card — display only, no click ───────────────────────────────────────
+// ── Stat Card - display only, no click ───────────────────────────────────────
 function StatCard({ config, value, disabled }) {
   const Icon = config.icon
 
@@ -121,7 +121,7 @@ function StatCard({ config, value, disabled }) {
   )
 }
 
-// ── Action Card — sole navigation point ──────────────────────────────────────
+// ── Action Card - sole navigation point ──────────────────────────────────────
 function ActionCard({ action, allowed, onClick }) {
   const Icon = action.icon
   return (
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
         </div>
       </motion.div>
 
-      {/* Stats — display only */}
+      {/* Stats - display only */}
       <div>
         <motion.p
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}

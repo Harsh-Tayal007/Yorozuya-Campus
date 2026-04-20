@@ -1,5 +1,5 @@
-// =============================================================================
-// TOP REPLY BOX — collapsed placeholder above the thread list (export for page use)
+﻿// =============================================================================
+// TOP REPLY BOX - collapsed placeholder above the thread list (export for page use)
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import DesktopReplyBox from "./DesktopReplyBox"

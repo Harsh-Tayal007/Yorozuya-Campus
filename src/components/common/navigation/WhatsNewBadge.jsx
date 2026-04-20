@@ -1,5 +1,5 @@
-// src/components/common/navigation/WhatsNewBadge.jsx
-// No visual changes needed — already matches your navbar glass style.
+﻿// src/components/common/navigation/WhatsNewBadge.jsx
+// No visual changes needed - already matches your navbar glass style.
 // Only path fix if you moved the service.
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"

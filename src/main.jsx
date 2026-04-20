@@ -1,4 +1,4 @@
-import React from "react"
+﻿import React from "react"
 import ReactDOM from "react-dom/client"
 import App from "./App"
 import "./index.css"
@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
   },
 })
 
-// ── IDB persister — initialised lazily off the critical path ─────────────────
+// ── IDB persister - initialised lazily off the critical path ─────────────────
 // We do NOT await this before rendering. React mounts immediately with an empty
 // cache; the persisted cache hydrates in the background once IDB responds.
 // This avoids any synchronous localStorage access on the main thread.
@@ -42,7 +42,7 @@ function initPersister() {
           dehydrateOptions: {
             shouldDehydrateQuery: (query) => {
               const key = query.queryKey[0]
-              // Don't cache forum content — always fresh
+              // Don't cache forum content - always fresh
               return !["replies", "threads", "thread"].includes(key)
             },
           },
@@ -59,7 +59,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
   window.__pwaInstallPrompt = e
 })
 
-// ── Render immediately — don't block on persister init ───────────────────────
+// ── Render immediately - don't block on persister init ───────────────────────
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -86,7 +86,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 )
 
-// Init persister after first render — zero impact on LCP/TBT
+// Init persister after first render - zero impact on LCP/TBT
 if (typeof requestIdleCallback !== "undefined") {
   requestIdleCallback(initPersister, { timeout: 3000 })
 } else {

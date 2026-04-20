@@ -1,4 +1,4 @@
-// src/components/common/auth/LoginGateSheet.jsx
+﻿// src/components/common/auth/LoginGateSheet.jsx
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { 
@@ -17,7 +17,7 @@ const BENEFITS = [
 ]
 
 const SWIPE_CLOSE_THRESHOLD  = 80    // px dragged down before snap-close
-const SWIPE_VELOCITY_THRESHOLD = 0.4 // px/ms — fast flick closes even if short
+const SWIPE_VELOCITY_THRESHOLD = 0.4 // px/ms - fast flick closes even if short
 
 export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureName }) {
   const navigate = useNavigate()
@@ -74,7 +74,7 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
       dragOffset >= SWIPE_CLOSE_THRESHOLD ||
       velocity   >= SWIPE_VELOCITY_THRESHOLD
 
-    setDragOffset(0)   // always reset — CSS transition handles close animation
+    setDragOffset(0)   // always reset - CSS transition handles close animation
     if (shouldClose) onClose()
 
     dragStartY.current    = null
@@ -89,7 +89,7 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
   const handleLogin  = () => { onClose(); navigate(buildLoginUrl()) }
   const handleSignup = () => { onClose(); navigate("/signup") }
 
-  // While finger is down use inline transform (no transition — follows finger).
+  // While finger is down use inline transform (no transition - follows finger).
   // Otherwise let CSS transition handle open/close animation.
   const translateY      = !isOpen ? "100%" : dragOffset > 0 ? `${dragOffset}px` : "0"
   const useTransition   = dragOffset === 0
@@ -125,7 +125,7 @@ export default function LoginGateSheet({ isOpen, onClose, redirectTo, featureNam
                    rounded-t-2xl
                    shadow-[0_-8px_40px_rgba(0,0,0,0.25)]"
       >
-        {/* ── Drag handle — the only touch target for swiping ── */}
+        {/* ── Drag handle - the only touch target for swiping ── */}
         <div
           className="flex justify-center pt-3 pb-3
                      cursor-grab active:cursor-grabbing

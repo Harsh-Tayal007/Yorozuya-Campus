@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+﻿import { useState, useRef, useEffect } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -383,7 +383,7 @@ const AccountTab = ({ user }) => {
     // Wait 600ms for Appwrite write to propagate before re-fetching
     await new Promise(resolve => setTimeout(resolve, 600))
  
-    // Re-fetch full profile — navbar username updates from this
+    // Re-fetch full profile - navbar username updates from this
     await refreshUser()
  
     // Bust the user-avatar query cache so ThreadCard/ThreadDetail
@@ -713,7 +713,7 @@ const AccountTab = ({ user }) => {
               )}
               {usernameStatus === "taken" && (
                 <p className="text-xs text-red-500 mt-1">
-                  Username taken — try another or hit the re-roll button
+                  Username taken - try another or hit the re-roll button
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground/60 mt-1">
@@ -992,7 +992,7 @@ const PreferencesTab = () => {
       if (result.ok) {
         toast.success("Push notifications enabled")
       } else if (result.reason === "denied") {
-        toast.error("Notifications blocked — allow them in browser settings")
+        toast.error("Notifications blocked - allow them in browser settings")
       } else {
         toast.error("Could not enable push notifications")
       }
@@ -1022,14 +1022,14 @@ const PreferencesTab = () => {
             !pushSupported
               ? "Not supported in this browser"
               : pushDenied
-                ? "Blocked — click the lock icon in your address bar to allow"
+                ? "Blocked - click the lock icon in your address bar to allow"
                 : isLocalhost
                   ? pushSubscribed
-                    ? "Active (localhost: in-tab only — deploy to https for full background push)"
+                    ? "Active (localhost: in-tab only - deploy to https for full background push)"
                     : "Enable in-app notifications (full background push requires https)"
                   : pushSubscribed
                     ? "You'll be notified even when the tab is closed"
-                    : "Get notified about replies, mentions and follows — even with the tab closed"
+                    : "Get notified about replies, mentions and follows - even with the tab closed"
           }
         >
           {!pushSupported || pushDenied ? (

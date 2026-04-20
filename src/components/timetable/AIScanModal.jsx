@@ -1,4 +1,4 @@
-// src/components/timetable/AIScanModal.jsx
+﻿// src/components/timetable/AIScanModal.jsx
 import { useState, useRef } from "react"
 import { createPortal } from "react-dom"
 import { Sparkles, Image as ImageIcon, AlertCircle, Loader2, Check } from "lucide-react"
@@ -43,7 +43,7 @@ RULES:
 - periodLabel = the label of the FIRST (topmost) period row the cell occupies.
 - Extract EVERY visible slot.
 
-SPAN DETECTION — THIS IS THE MOST IMPORTANT RULE:
+SPAN DETECTION - THIS IS THE MOST IMPORTANT RULE:
 Span = how many NON-BREAK period rows a single merged/tall cell physically occupies.
 
 For EVERY cell you see, do this step-by-step:
@@ -51,21 +51,21 @@ For EVERY cell you see, do this step-by-step:
   2. Subtract the number of BREAK/LUNCH rows inside that span.
   3. That result is the span value.
 
-Example A — 4-period lab, no break inside:
+Example A - 4-period lab, no break inside:
   Row I   → COA cell starts (top edge here)
   Row II  → COA (same cell continues)
   Row III → COA (same cell continues)
   Row IV  → COA (bottom edge here)
   → Spans 4 rows, 0 breaks inside → span: 4, periodLabel: "I"
 
-Example B — lab that crosses a lunch row:
+Example B - lab that crosses a lunch row:
   Row I   → OS Lab starts
   Row II  → OS Lab
   Row LUNCH → OS Lab (cell visually crosses the break row)
   Row III → OS Lab ends
   → Spans 4 rows, 1 break inside → span: 3, periodLabel: "I"
 
-Example C — single lecture:
+Example C - single lecture:
   Row II  → DAA (cell only occupies this one row)
   → span: 1, periodLabel: "II"
 
@@ -78,7 +78,7 @@ When uncertain between two counts, prefer the higher number.
 // ── Props ─────────────────────────────────────────────────────────────────────
 // onClose    : () => void
 // onApply    : (result, mode) => void
-// onIncrement: () => Promise<boolean>  — returns false if quota exceeded
+// onIncrement: () => Promise<boolean>  - returns false if quota exceeded
 // quota      : { used, limit, allowed } | null
 // userId     : string | null
 export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
@@ -109,7 +109,7 @@ export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
   const scan = async () => {
     if (!file) return
 
-    // ── Quota gate — increment BEFORE calling Gemini ──────────────────────
+    // ── Quota gate - increment BEFORE calling Gemini ──────────────────────
     // This prevents abuse: failed/retried scans still count against the limit.
     if (onIncrement) {
       const allowed = await onIncrement()
@@ -170,7 +170,7 @@ export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
         const lookscut = !clean.endsWith("}") && !clean.endsWith("]")
         throw new Error(
           lookscut
-            ? "The response was cut off mid-way — the timetable is too dense. Try 'Subjects only' mode first, or crop the image to fewer rows/columns and scan again."
+            ? "The response was cut off mid-way - the timetable is too dense. Try 'Subjects only' mode first, or crop the image to fewer rows/columns and scan again."
             : "Could not parse the AI response. Try a clearer or more tightly cropped image."
         )
       }
@@ -243,7 +243,7 @@ export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
           <div className="flex gap-2">
             {[
               { value: "full",     title: "Full scan",      desc: "Extracts periods, subjects, and places all classes" },
-              { value: "subjects", title: "Subjects only",  desc: "Extracts subject list — you place them manually" },
+              { value: "subjects", title: "Subjects only",  desc: "Extracts subject list - you place them manually" },
             ].map(opt => (
               <button
                 key={opt.value}
@@ -329,7 +329,7 @@ export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
                 </pre>
               </div>
               <p className="text-xs text-muted-foreground">
-                Review above. AI may miss some spanning — you can manually edit any slot after applying.
+                Review above. AI may miss some spanning - you can manually edit any slot after applying.
               </p>
             </div>
           )}

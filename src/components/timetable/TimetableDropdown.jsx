@@ -1,4 +1,4 @@
-// src/components/ui/Dropdown.jsx
+﻿// src/components/ui/Dropdown.jsx
 import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { ChevronDown, Check } from "lucide-react"
@@ -90,7 +90,7 @@ export function ClickDropdown({ label, icon: Icon, children, variant = "default"
   const [open, setOpen] = useState(false)
   const [pos,  setPos]  = useState(null)
   const ref       = useRef(null)   // trigger button wrapper
-  const portalRef = useRef(null)   // floating panel — lives in document.body portal
+  const portalRef = useRef(null)   // floating panel - lives in document.body portal
 
   useEffect(() => {
     if (!open || !ref.current) return

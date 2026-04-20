@@ -1,4 +1,4 @@
-// useAcademicData.js — cascading dropdown data for Forum + CreateThreadModal
+﻿// useAcademicData.js - cascading dropdown data for Forum + CreateThreadModal
 import { useQuery } from "@tanstack/react-query"
 import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"

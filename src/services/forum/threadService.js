@@ -1,4 +1,4 @@
-import { databases, ID } from "@/lib/appwrite";
+﻿import { databases, ID } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import { deleteCloudinaryImage } from "@/lib/deleteCloudinaryImage";
 
@@ -43,12 +43,12 @@ export async function decrementRepliesCount(threadId) {
 
 // ── Delete thread + all replies ───────────────────────────────────────────────
 // Order:
-//   1. Fetch all replies (id + imagePublicId) in cursor-paginated batches — no extra requests
-//   2. Fire all Cloudinary deletes in parallel (swallow errors — best effort)
+//   1. Fetch all replies (id + imagePublicId) in cursor-paginated batches - no extra requests
+//   2. Fire all Cloudinary deletes in parallel (swallow errors - best effort)
 //   3. Delete Appwrite reply documents in batches of 20
 //   4. Delete the thread document itself
 export async function deleteThread(threadId) {
-  // 1. Fetch reply IDs + imagePublicIds in one pass (no Query.select — full doc needed)
+  // 1. Fetch reply IDs + imagePublicIds in one pass (no Query.select - full doc needed)
   let cursor = null;
   const replies = []; // [{ id, imagePublicId }]
 
@@ -56,7 +56,7 @@ export async function deleteThread(threadId) {
     const queries = [
       Query.equal("threadId", threadId),
       Query.limit(100),
-      Query.select(["$id", "imagePublicId"]), // only 2 fields — minimal payload
+      Query.select(["$id", "imagePublicId"]), // only 2 fields - minimal payload
     ];
     if (cursor) queries.push(Query.cursorAfter(cursor));
 
@@ -68,7 +68,7 @@ export async function deleteThread(threadId) {
     cursor = res.documents[res.documents.length - 1].$id;
   }
 
-  // 2. Delete all Cloudinary images in parallel — fire-and-forget, never blocks deletion
+  // 2. Delete all Cloudinary images in parallel - fire-and-forget, never blocks deletion
   const publicIds = replies.map(r => r.imagePublicId).filter(Boolean);
   await Promise.allSettled(publicIds.map(pid => deleteCloudinaryImage(pid)));
 
@@ -81,6 +81,6 @@ export async function deleteThread(threadId) {
     );
   }
 
-  // 4. Delete the thread — throws if it fails so caller knows
+  // 4. Delete the thread - throws if it fails so caller knows
   await databases.deleteDocument(DATABASE_ID, THREADS_COL, threadId);
 }

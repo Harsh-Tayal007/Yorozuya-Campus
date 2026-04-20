@@ -1,4 +1,4 @@
-// src/pages/Home.jsx
+﻿// src/pages/Home.jsx
 // ─────────────────────────────────────────────
 // ONLY eager: hero + stats + "what is" section
 // Everything else is lazy / deferred
@@ -47,7 +47,7 @@ export default function Home() {
       "Unizuya brings together syllabus, PYQs, study resources, student forum, attendance tools, and productivity workflows into one academic platform.",
   })
 
-  // Defer blob rendering — don't block LCP
+  // Defer blob rendering - don't block LCP
   useEffect(() => {
     const id = requestIdleCallback
       ? requestIdleCallback(() => setBlobsReady(true), { timeout: 1500 })
@@ -76,7 +76,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* Blobs deferred — doesn't block LCP */}
+      {/* Blobs deferred - doesn't block LCP */}
       {blobsReady && (
         <Suspense fallback={null}>
           <AnimatedBlobs />
@@ -87,7 +87,7 @@ export default function Home() {
 
         {/* ── HERO ── */}
         <section className="pt-10 text-center space-y-6">
-          {/* CSS-only fade-up — zero JS weight */}
+          {/* CSS-only fade-up - zero JS weight */}
           <div className="animate-fade-up" style={{ animationDelay: "0ms" }}>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full
                             border border-amber-400/35 bg-amber-400/8 text-amber-500 text-xs font-medium">
@@ -248,7 +248,7 @@ export default function Home() {
           </button>
         </div>
 
-        {/* ── CTA — guests only ── */}
+        {/* ── CTA - guests only ── */}
         {!authLoading && !currentUser && (
           <section>
             <div className="rounded-2xl overflow-hidden relative"
@@ -302,7 +302,7 @@ export default function Home() {
 
       </div>
 
-      {/* ── Modals — only rendered (and downloaded) when opened ── */}
+      {/* ── Modals - only rendered (and downloaded) when opened ── */}
       {authModal.open && (
         <Suspense fallback={null}>
           <AuthModal

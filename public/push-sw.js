@@ -1,5 +1,5 @@
-/**
- * push-sw.js — /public/push-sw.js
+﻿/**
+ * push-sw.js - /public/push-sw.js
  */
 
 self.addEventListener("install",  () => self.skipWaiting());

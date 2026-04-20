@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+﻿import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
 import { databases, storage } from "@/lib/appwrite"
 import { Query } from "appwrite"
@@ -242,7 +242,7 @@ export default function PyqList({
   const { data, isLoading } = useQuery({
     queryKey,
     queryFn: () => fetchPyqsWithMeta({ limit, filters, searchTerm }),
-    staleTime: 1000 * 60 * 5,   // cached 5 min — no refetch on page switch
+    staleTime: 1000 * 60 * 5,   // cached 5 min - no refetch on page switch
     retry: false,
   })
 

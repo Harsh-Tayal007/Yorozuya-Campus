@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+﻿import { useState, useRef } from "react"
 import useResolvedColors from "./useResolvedColors"
 import { uploadImage } from "@/lib/uploadImage"
 import { toast } from "sonner"
@@ -19,7 +19,7 @@ export default function useComposeState() {
 
   const [isUploading, setIsUploading] = useState(false)
 
-  // File input ref — shared so any component can trigger it
+  // File input ref - shared so any component can trigger it
   const fileRef = useRef(null)
 
   const colors = useResolvedColors()

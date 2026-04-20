@@ -1,4 +1,4 @@
-// src/components/common/layout/Navbar.jsx
+﻿// src/components/common/layout/Navbar.jsx
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import {
@@ -14,7 +14,7 @@ import WhatsNewBadge from "../navigation/WhatsNewBadge"
 
 const NAVBAR_H = 68
 
-// ── Unizuya logo mark — bounces once on hover ─────────────────────────────────
+// ── Unizuya logo mark - bounces once on hover ─────────────────────────────────
 const NavLogoMark = () => {
   const [bouncing, setBouncing] = useState(false)
 
@@ -197,7 +197,7 @@ const Navbar = () => {
 
         <div className="flex-1" />
 
-        {/* Right — bell + auth */}
+        {/* Right - bell + auth */}
         {isLoading ? (
           <div className="h-8 w-24 rounded-full bg-muted animate-pulse" />
         ) : authStatus ? (

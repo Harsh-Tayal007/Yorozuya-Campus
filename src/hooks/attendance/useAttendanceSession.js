@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   startSession,
@@ -51,7 +51,7 @@ export function useActiveSession(classId) {
     queryFn: () => getActiveSessionByClass(classId),
     enabled: !!classId,
     staleTime: 0,
-    // refetchInterval removed — Realtime handles updates
+    // refetchInterval removed - Realtime handles updates
   });
 }
 
@@ -248,7 +248,7 @@ export function useSuspendSession(classId) {
   return useMutation({
     mutationFn: (sessionId) => suspendSession(sessionId, user.$id),
     onSuccess: () => {
-      toast.success("Session suspended — no column in report");
+      toast.success("Session suspended - no column in report");
       qc.invalidateQueries({ queryKey: ["session", "active", classId] });
       qc.invalidateQueries({ queryKey: ["sessions", classId] });
     },
@@ -339,7 +339,7 @@ export function useStudentHistory(studentId, enrollments) {
       }
     }
 
-    // new — filter sessions by joinedAt before counting
+    // new - filter sessions by joinedAt before counting
     const joinedAt = new Date(enrollment.joinedAt);
     const eligibleSessions = classSessions.filter(
       (s) => new Date(s.startTime) >= joinedAt,

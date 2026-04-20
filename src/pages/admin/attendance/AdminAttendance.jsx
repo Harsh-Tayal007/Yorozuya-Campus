@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+﻿import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Link } from "react-router-dom"
@@ -70,7 +70,7 @@ function StatCard({ icon: Icon, label, value, accent, loading }) {
                     <div className="h-7 w-16 rounded-md bg-muted animate-pulse" />
                 ) : (
                     <p className="text-2xl font-bold text-foreground tabular-nums leading-none">
-                        {value ?? "—"}
+                        {value ?? "-"}
                     </p>
                 )}
             </div>

@@ -1,4 +1,4 @@
-import {
+﻿import {
   ATTENDANCE_RECORDS_COLLECTION_ID,
   CLASSES_COLLECTION_ID,
   databases,
@@ -14,7 +14,7 @@ import { createNotification } from "../notification/notificationService";
 const TOKEN_VALIDITY_MS = 90 * 1000; // 90 seconds
 
 function generateToken() {
-  // 6-digit numeric token — easy to type on mobile
+  // 6-digit numeric token - easy to type on mobile
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
@@ -40,7 +40,7 @@ async function sendAttendancePush(studentIds, subjectName, className) {
       keys: { p256dh: doc.p256dh, auth: doc.auth },
     }));
 
-    // Fire and forget — don't block session start
+    // Fire and forget - don't block session start
     fetch(`${PUSH_WORKER}/send-bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52,9 +52,9 @@ async function sendAttendancePush(studentIds, subjectName, className) {
         tag: "attendance-session",
         type: "attendance",
       }),
-    }).catch(() => {}); // silent fail — push is best-effort
+    }).catch(() => {}); // silent fail - push is best-effort
   } catch {
-    // Silent fail — never block session start for push errors
+    // Silent fail - never block session start for push errors
   }
 }
 
@@ -132,7 +132,7 @@ export async function startSession({
     }
   }
 
-  /// ── Fire notifications in background — don't block session start ──────────
+  /// ── Fire notifications in background - don't block session start ──────────
   Promise.allSettled(
     enrollments.map((e) =>
       createNotification({

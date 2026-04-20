@@ -1,4 +1,4 @@
-import { databases } from "@/lib/appwrite"
+﻿import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 
 const DATABASE_ID       = import.meta.env.VITE_APPWRITE_DATABASE_ID
@@ -6,7 +6,7 @@ const UNIVERSITIES_COL  = import.meta.env.VITE_APPWRITE_UNIVERSITIES_COLLECTION_
 const PROGRAMS_COL      = import.meta.env.VITE_APPWRITE_PROGRAMS_COLLECTION_ID
 const BRANCHES_COL      = import.meta.env.VITE_APPWRITE_BRANCHES_COLLECTION_ID
 
-// Fetch all universities (small list — no pagination needed)
+// Fetch all universities (small list - no pagination needed)
 export async function fetchUniversities() {
   const res = await databases.listDocuments(DATABASE_ID, UNIVERSITIES_COL, [
     Query.orderAsc("name"),

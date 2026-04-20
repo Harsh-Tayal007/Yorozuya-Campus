@@ -1,4 +1,4 @@
-// src/components/common/UserSearchModal.jsx
+﻿// src/components/common/UserSearchModal.jsx
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, X, Clock, Trash2 } from "lucide-react"
@@ -145,7 +145,7 @@ export default function UserSearchModal({ open, onClose }) {
               sm:max-h-[480px]
             "
           >
-            {/* ── Drag handle — mobile only ── */}
+            {/* ── Drag handle - mobile only ── */}
             <div className="flex justify-center pt-3 pb-0 sm:hidden shrink-0">
               <div className="w-9 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
             </div>
@@ -181,7 +181,7 @@ export default function UserSearchModal({ open, onClose }) {
                   <X size={14} />
                 </button>
               ) : (
-                /* Cancel — visible only on mobile when no query */
+                /* Cancel - visible only on mobile when no query */
                 <button
                   onClick={onClose}
                   className="sm:hidden text-sm font-medium shrink-0
@@ -355,7 +355,7 @@ export default function UserSearchModal({ open, onClose }) {
               )}
             </div>
 
-            {/* ── Footer — desktop only ── */}
+            {/* ── Footer - desktop only ── */}
             <div className="hidden sm:flex items-center justify-between shrink-0
                             px-4 py-2
                             border-t border-slate-100 dark:border-white/[0.07]">

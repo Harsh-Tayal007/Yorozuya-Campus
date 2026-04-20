@@ -1,4 +1,4 @@
-// src/services/user/karmaService.js
+﻿// src/services/user/karmaService.js
 // Handles karma updates for vote events.
 // Called fire-and-forget after successful vote mutations.
 
@@ -52,7 +52,7 @@ export const computeKarmaDelta = (prevVote, newVote) => {
 
 /**
  * Update karma for a reply/thread author after a vote.
- * Fire-and-forget — never throws, logs errors only.
+ * Fire-and-forget - never throws, logs errors only.
  *
  * @param {string} authorId - userId of the reply/thread author
  * @param {number} delta    - karma change (positive or negative)
@@ -69,7 +69,7 @@ export const updateKarmaForVote = async (authorId, delta) => {
       karma: Math.max(0, (doc.karma ?? 0) + delta),
     })
   } catch (err) {
-    // Best-effort — never block the vote UI
+    // Best-effort - never block the vote UI
     console.error("Karma update failed:", err)
   }
 }

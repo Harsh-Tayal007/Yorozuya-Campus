@@ -1,4 +1,4 @@
-import { createElement, useState } from "react"
+﻿import { createElement, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   FileText,
@@ -1013,7 +1013,7 @@ const GUIDE_ITEMS = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function About() {
   useSeoMeta({
-    title: "About Unizuya — Unified Academic Platform for Students",
+    title: "About Unizuya - Unified Academic Platform for Students",
     description:
       "Unizuya is a student-first academic platform that centralises syllabus, PYQs, attendance, forum, CGPA calculator, task tracker, timetable builder, and AI support into one unified system. Built on React, Appwrite, and Cloudflare.",
   })
@@ -1247,7 +1247,7 @@ export default function About() {
             Unizuya is a student-driven capstone project built at J.C. Bose University of Science and Technology, YMCA, Faridabad. Every module addresses a real academic pain point encountered during undergraduate study. From hunting for PYQs the night before exams to manually tracking attendance across five subjects at once, each feature started as a problem before it became a solution.
           </p>
 
-          {/* Social icons — Harsh */}
+          {/* Social icons - Harsh */}
           <div className="mt-3 flex items-center gap-2">
             {[
               // TODO: Add actual GitHub link
@@ -1280,7 +1280,7 @@ export default function About() {
             <ArrowRight size={14} />
           </Link>
 
-          {/* Contributor — visually secondary */}
+          {/* Contributor - visually secondary */}
           <div className="mt-5 border-t border-blue-200/60 pt-4 dark:border-white/10">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
               With contributions from

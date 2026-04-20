@@ -1,5 +1,5 @@
-// Highlights a reply element when the URL hash matches its ID.
-// Returns a boolean `isHighlighted` — true for ~2.5s after landing on the hash.
+﻿// Highlights a reply element when the URL hash matches its ID.
+// Returns a boolean `isHighlighted` - true for ~2.5s after landing on the hash.
 
 import { useState, useEffect } from "react"
 

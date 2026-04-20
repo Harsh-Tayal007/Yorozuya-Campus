@@ -1,4 +1,4 @@
-// src/config/dashboardSidebarConfig.js
+﻿// src/config/dashboardSidebarConfig.js
 // CHANGES: added  lockedForPublic: true  to tools and preferences sections
 import {
   LayoutDashboard,
@@ -55,7 +55,7 @@ export const dashboardSidebarSections = [
     label: "Academics",
     icon: BookOpen,
     lockedForPublic: true,
-    // Academics stays unlocked — public users can browse syllabus/pyqs via public routes
+    // Academics stays unlocked - public users can browse syllabus/pyqs via public routes
     children: [
       { id: "syllabus",   label: "Syllabus",   path: "/dashboard/syllabus",   icon: FileText },
       { id: "resources",  label: "Resources",  path: "/dashboard/resources",  icon: ClipboardList },

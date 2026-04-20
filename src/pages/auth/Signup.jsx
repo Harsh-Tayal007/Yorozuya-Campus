@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Check, Link as LinkIcon, GraduationCap, BookOpen } from "lucide-react"
@@ -232,7 +232,7 @@ const Signup = () => {
               })}
             </div>
 
-            {/* Google OAuth — step 1 only */}
+            {/* Google OAuth - step 1 only */}
             <AnimatePresence mode="wait">
               {step === 1 && (
                 <motion.div key="oauth"
@@ -279,7 +279,7 @@ const Signup = () => {
                   <div className="space-y-3.5">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 dark:text-white">Almost there!</h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 — Confirm and create</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 - Confirm and create</p>
                     </div>
 
                     {/* Summary */}
@@ -371,7 +371,7 @@ const Signup = () => {
               </motion.div>
             </AnimatePresence>
 
-            {/* Bottom link — separated with border, not cramped */}
+            {/* Bottom link - separated with border, not cramped */}
             {!signupSuccess && roleParam && (
               <p className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06]
                             text-center text-sm text-slate-500 dark:text-slate-400">

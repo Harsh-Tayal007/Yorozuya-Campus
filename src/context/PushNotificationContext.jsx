@@ -1,4 +1,4 @@
-/**
+﻿/**
  
  * Wraps usePushNotifications in a React Context so:
  *  - State is shared across all components (bell, settings, task tracker)
@@ -23,7 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 const PushCtx = createContext(null);
 
 export function PushNotificationProvider({ children }) {
-  // Called ONCE at the top of the tree — state never re-initialises
+  // Called ONCE at the top of the tree - state never re-initialises
   const push = usePushNotifications();
   return <PushCtx.Provider value={push}>{children}</PushCtx.Provider>;
 }

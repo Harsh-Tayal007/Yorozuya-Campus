@@ -1,4 +1,4 @@
-import { X } from "lucide-react"
+﻿import { X } from "lucide-react"
 import { useRef, useState } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import useDebounce from "@/hooks/useDebounce"
@@ -44,7 +44,7 @@ export default function GifPicker({ colors, gifSearch, setGifSearch, onClose, on
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: colors.muted }}>
-          GIFs — GIPHY
+          GIFs - GIPHY
         </span>
 
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}>
