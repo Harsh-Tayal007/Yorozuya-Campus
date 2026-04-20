@@ -1,4 +1,4 @@
-﻿import { createElement, useState } from "react"
+import { createElement, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   FileText,
@@ -671,16 +671,21 @@ const GUIDE_ITEMS = [
         <GuideStep number="1" text="Create an account or sign in with Google." />
         <GuideStep
           number="2"
+          text="Select your role."
+          sub="Choose whether you are a Student (to access notes and PYQs) or a Teacher (to manage classes and attendance). Note: Teacher accounts require administrator approval before teacher-specific privileges are granted."
+        />
+        <GuideStep
+          number="3"
           text="Complete your academic profile."
           sub="Pick your university, program, and branch. This links you to the right syllabus, resources, and notices automatically."
         />
         <GuideStep
-          number="3"
+          number="4"
           text="Explore the dashboard."
           sub="The dashboard is your home screen. It shows your syllabus, resources, PYQs, attendance, and notices all in one place."
         />
         <GuideStep
-          number="4"
+          number="5"
           text="Customise your settings."
           sub="Visit Settings to update your profile photo, bio, year of study, theme, and notification options."
         />

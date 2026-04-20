@@ -1,4 +1,4 @@
-import { Shield, Database, Cookie, Lock, Mail, Eye, Users } from "lucide-react"
+import { Shield, Database, Cookie, Lock, Mail, Eye, Users, Activity, UserCog } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const Section = ({ icon: Icon, title, children }) => (
@@ -37,7 +37,7 @@ const PrivacyPolicy = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Privacy Policy</h1>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Last updated: March 2026</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Last updated: April 2026</p>
             </div>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed pt-2">
@@ -51,18 +51,39 @@ const PrivacyPolicy = () => {
         <div className="space-y-8">
 
           <Section icon={Database} title="What we store">
-            <p>We store the following data to make the app work:</p>
+            <p>We store the following data to make the app work and improve your experience:</p>
             <ul className="space-y-1.5 list-none">
               {[
                 ["Account info", "Your name, email, username, and profile picture if you upload one."],
                 ["Academic profile", "Your university, program, and branch, used to show you relevant content."],
+                ["Role information", "Your account type (Student, Teacher, or Admin) to enforce granular role-based access control."],
                 ["App preferences", "Theme, dashboard settings, and notification preferences."],
                 ["Content you create", "Forum posts, replies, bookmarks, and any task or timetable data."],
+                ["AI processing", "Images uploaded for timetable or marksheet scanning are processed securely in real-time. They are not stored permanently or used to train AI models."],
                 ["Session data", "Your login session, managed securely via Appwrite."],
+                ["Communication data", "Support queries or messages sent via the contact form."],
               ].map(([label, desc]) => (
                 <li key={label} className="flex gap-2">
                   <span className="text-blue-500 mt-0.5 shrink-0">•</span>
                   <span><span className="font-medium text-slate-700 dark:text-slate-300">{label}:</span> {desc}</span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+
+          <Section icon={Activity} title="How we use your data">
+            <p>Your data is used strictly to provide and maintain the Unizuya platform:</p>
+            <ul className="space-y-1.5 list-none">
+              {[
+                "To authenticate you and keep your account secure.",
+                "To personalize your experience, delivering syllabus and resources relevant to your academic profile.",
+                "To process AI requests (like scanning a marksheet or timetable) securely.",
+                "To monitor platform health, performance, and troubleshoot bugs.",
+                "To enforce community guidelines and ensure a safe environment via moderation tools.",
+              ].map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-emerald-500 mt-0.5 shrink-0">✓</span>
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
@@ -75,7 +96,8 @@ const PrivacyPolicy = () => {
                 ["Login session", "Appwrite sets a secure session cookie to keep you logged in."],
                 ["Saved accounts", "Usernames and avatars of accounts you have added for quick switching."],
                 ["Encrypted vault", "An AES-256 encrypted blob used for seamless account switching. Your password never leaves your device in plain text."],
-                ["App state", "Cached data, last visited route, and UI preferences."],
+                ["App state", "Cached data, last visited route, local filters, and UI preferences."],
+                ["Push notifications", "Service worker registrations for delivering timely alerts if you opt-in."],
               ].map(([label, desc]) => (
                 <li key={label} className="flex gap-2">
                   <span className="text-blue-500 mt-0.5 shrink-0">•</span>
@@ -100,6 +122,23 @@ const PrivacyPolicy = () => {
                 <li key={item} className="flex gap-2">
                   <span className="text-green-500 mt-0.5 shrink-0">✓</span>
                   <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+
+          <Section icon={UserCog} title="Your rights over your data">
+            <p>You have full control over your personal information on Unizuya:</p>
+            <ul className="space-y-1.5 list-none">
+              {[
+                ["Access and update", "You can view and modify all your personal data, academic profile, and settings directly from the dashboard."],
+                ["Data export", "You can export your tasks, attendance reports, and timetables via the internal tools."],
+                ["Account deletion", "You can permanently delete your account from the settings page. Personal information and forum posts are removed. Note: Attendance records you were part of may be anonymised and preserved to maintain class history for teachers."],
+                ["Opt-out of notifications", "You can disable push notifications or emails from your dashboard preferences at any time."],
+              ].map(([label, desc]) => (
+                <li key={label} className="flex gap-2">
+                  <span className="text-blue-500 mt-0.5 shrink-0">•</span>
+                  <span><span className="font-medium text-slate-700 dark:text-slate-300">{label}:</span> {desc}</span>
                 </li>
               ))}
             </ul>
