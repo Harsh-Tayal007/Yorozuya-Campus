@@ -4,6 +4,10 @@ import { updateLogsService } from "@/services/updates/updateLogsService"
 import { useAuth } from "@/context/AuthContext"
 import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
+import {
+  fetchCloudflareWorker,
+  isWorkerUnavailableError,
+} from "@/services/shared/cloudflareWorkerClient"
 
 const DB       = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const PUSH_COL = import.meta.env.VITE_APPWRITE_PUSH_SUBSCRIPTIONS_COLLECTION_ID
@@ -21,7 +25,9 @@ async function fanOutUpdateNotification(title, body, version) {
 
     const plainBody = body?.replace(/<[^>]+>/g, "").trim().slice(0, 120) ?? ""
 
-    await fetch(`${PUSH_URL}/send-bulk`, {
+    await fetchCloudflareWorker(`${PUSH_URL}/send-bulk`, {
+      timeoutMs: 8_000,
+      workerName: "Push worker",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -34,7 +40,9 @@ async function fanOutUpdateNotification(title, body, version) {
       }),
     })
   } catch (e) {
-    console.warn("Fan-out failed:", e)
+    if (!isWorkerUnavailableError(e)) {
+      console.warn("Fan-out failed:", e)
+    }
   }
 }
 

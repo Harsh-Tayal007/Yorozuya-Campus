@@ -14,6 +14,11 @@ import { Query } from "appwrite"
 import { getAppwriteUsage, getCloudflareUsage } from "@/services/shared/storageAdapter"
 import { getStorageConfig, setStorageConfig } from "@/services/shared/storageConfigService"
 import { formatFileSize } from "@/utils/formatFileSize"
+import {
+  fetchCloudflareWorker,
+  isWorkerUnavailableError,
+  readJsonSafe,
+} from "@/services/shared/cloudflareWorkerClient"
 
 const WORKER = "https://unizuya-stats.harshtayal710.workers.dev"
 
@@ -213,7 +218,9 @@ function FlushButton({ onFlushed }) {
     setState("loading")
     setErrorMsg("")
     try {
-      const res = await fetch(`${WORKER}/admin/flush`, {
+      const res = await fetchCloudflareWorker(`${WORKER}/admin/flush`, {
+        timeoutMs: 10_000,
+        workerName: "Stats worker",
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -229,7 +236,11 @@ function FlushButton({ onFlushed }) {
       setTimeout(() => setState("idle"), 3000)
     } catch (e) {
       setState("error")
-      setErrorMsg(e.message)
+      setErrorMsg(
+        isWorkerUnavailableError(e)
+          ? "Stats worker is unavailable right now. Please retry shortly."
+          : e.message,
+      )
       setTimeout(() => setState("idle"), 4000)
     }
   }
@@ -387,8 +398,14 @@ export default function AdminStats() {
     setLoading(true); setError(null)
     try {
       const [tRes, hRes] = await Promise.all([
-        fetch(`${WORKER}/stats/today`),
-        fetch(`${WORKER}/stats`),
+        fetchCloudflareWorker(`${WORKER}/stats/today`, {
+          timeoutMs: 10_000,
+          workerName: "Stats worker",
+        }),
+        fetchCloudflareWorker(`${WORKER}/stats`, {
+          timeoutMs: 10_000,
+          workerName: "Stats worker",
+        }),
       ])
       if (!tRes.ok || !hRes.ok) throw new Error("Worker returned an error")
       const tData = await tRes.json()
@@ -404,14 +421,23 @@ export default function AdminStats() {
       setHistory(sorted)
       setLastSync(new Date())
       setSelected(null)
-    } catch (e) { setError(e.message) }
+    } catch (e) {
+      setError(
+        isWorkerUnavailableError(e)
+          ? "Stats worker is unavailable right now. Please retry in a minute."
+          : e.message,
+      )
+    }
     finally { setLoading(false) }
   }, [])
 
   const loadLimits = useCallback(async () => {
     setLimitsLoading(true)
     try {
-      const res = await fetch(`${WORKER}/ai-limits`)
+      const res = await fetchCloudflareWorker(`${WORKER}/ai-limits`, {
+        timeoutMs: 8_000,
+        workerName: "Stats worker",
+      })
       if (res.ok) setLimits(await res.json())
     } catch { }
     finally { setLimitsLoading(false) }
@@ -458,14 +484,27 @@ export default function AdminStats() {
   const saveLimits = async () => {
     setLimitsSaving(true)
     try {
-      await fetch(`${WORKER}/ai-limits`, {
+      const res = await fetchCloudflareWorker(`${WORKER}/ai-limits`, {
+        timeoutMs: 10_000,
+        workerName: "Stats worker",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(limits),
       })
+      if (!res.ok) {
+        const errData = await readJsonSafe(res)
+        throw new Error(errData?.error || "Failed to save limits")
+      }
       setLimitsSaved(true)
       setTimeout(() => setLimitsSaved(false), 2000)
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      toast.error(
+        isWorkerUnavailableError(e)
+          ? "Limits service is temporarily unavailable."
+          : e.message || "Failed to save limits.",
+      )
+    }
     finally { setLimitsSaving(false) }
   }
 

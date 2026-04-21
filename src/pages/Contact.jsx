@@ -214,7 +214,12 @@ export default function Contact() {
               {isSuccess && (
                 <p className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
                   <CheckCircle2 size={14} />
-                  Message sent successfully{submitMode === "mock" ? " (demo mode)." : "."}
+                  Message sent successfully
+                  {submitMode === "mock"
+                    ? " (demo mode)."
+                    : submitMode === "appwrite-fallback"
+                    ? " (fallback mode)."
+                    : "."}
                 </p>
               )}
 

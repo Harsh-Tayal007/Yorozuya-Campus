@@ -1,6 +1,11 @@
-﻿import { account, databases } from "@/lib/appwrite"
+import { account, databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 import { DATABASE_ID, CLASSES_COLLECTION_ID } from "@/config/appwrite"
+import {
+  fetchCloudflareWorker,
+  isWorkerUnavailableError,
+  readJsonSafe,
+} from "@/services/shared/cloudflareWorkerClient"
 
 const DELETE_ACCOUNT_WORKER_URL = import.meta.env.VITE_DELETE_ACCOUNT_WORKER_URL
 
@@ -12,7 +17,6 @@ const DELETE_ACCOUNT_WORKER_URL = import.meta.env.VITE_DELETE_ACCOUNT_WORKER_URL
  *                                   If omitted, deletes the currently signed-in user.
  */
 export const deleteAccountPermanently = async (targetUserId = null) => {
-  // Determine which user is being deleted to clean up classes first
   let uid = targetUserId
   if (!uid) {
     try {
@@ -23,21 +27,19 @@ export const deleteAccountPermanently = async (targetUserId = null) => {
     }
   }
 
-  // Pre-deletion cleanup: remove user from assigned classes
   if (uid) {
     try {
       const classesRes = await databases.listDocuments(
         DATABASE_ID,
         CLASSES_COLLECTION_ID,
-        [Query.contains("teacherIds", uid), Query.limit(500)]
+        [Query.contains("teacherIds", uid), Query.limit(500)],
       )
-      
-      await Promise.all(classesRes.documents.map(cls => {
-        const newTeacherIds = (cls.teacherIds || []).filter(id => id !== uid)
-        // Ensure class doesn't crash if it ends up with 0 teachers, or handle it organically
+
+      await Promise.all(classesRes.documents.map((cls) => {
+        const newTeacherIds = (cls.teacherIds || []).filter((id) => id !== uid)
         return databases.updateDocument(DATABASE_ID, CLASSES_COLLECTION_ID, cls.$id, {
-          teacherIds: newTeacherIds.length > 0 ? newTeacherIds : []
-        }).catch(() => null) // Ignore permission errors (backend worker might cascade anyway)
+          teacherIds: newTeacherIds.length > 0 ? newTeacherIds : [],
+        }).catch(() => null)
       }))
     } catch (e) {
       console.warn("Failed to remove user from classes prior to deletion", e)
@@ -49,17 +51,26 @@ export const deleteAccountPermanently = async (targetUserId = null) => {
   const body = { jwt }
   if (targetUserId) body.targetUserId = targetUserId
 
-  const res = await fetch(DELETE_ACCOUNT_WORKER_URL, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
-  })
+  try {
+    const res = await fetchCloudflareWorker(DELETE_ACCOUNT_WORKER_URL, {
+      timeoutMs: 12_000,
+      workerName: "Delete-account worker",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
 
-  const data = await res.json()
+    const data = await readJsonSafe(res)
 
-  if (!res.ok || !data.success) {
-    throw new Error(data.error ?? "Account deletion failed")
+    if (!res.ok || !data.success) {
+      throw new Error(data.error ?? "Account deletion failed")
+    }
+
+    return data
+  } catch (err) {
+    if (isWorkerUnavailableError(err)) {
+      throw new Error("Account deletion service is temporarily unavailable. Please try again shortly.")
+    }
+    throw err
   }
-
-  return data
 }

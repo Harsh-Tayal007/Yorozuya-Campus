@@ -59,6 +59,7 @@ export default function UniversityNoticesWidget() {
   const all      = data?.notices ?? []
   const filtered = activeCategory === "All" ? all : all.filter(n => n.category === activeCategory)
   const preview  = filtered.slice(0, 5)
+  const usingFallback = Boolean(data?.fallbackReason)
 
   return (
     <motion.div
@@ -114,6 +115,12 @@ export default function UniversityNoticesWidget() {
 
       {/* Content */}
       <div className="px-4 py-3">
+        {usingFallback && !isLoading && (
+          <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-600">
+            Live notices are temporarily unavailable. Showing cached results.
+          </div>
+        )}
+
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (

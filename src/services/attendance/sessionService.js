@@ -10,6 +10,7 @@ import { getEnrollmentsByClass } from "./classService";
 import { deleteSessionTokens, generateStudentTokens } from "./tokenService";
 import { getRecordsBySession } from "./recordService";
 import { createNotification } from "../notification/notificationService";
+import { fetchCloudflareWorker } from "@/services/shared/cloudflareWorkerClient";
 
 const TOKEN_VALIDITY_MS = 90 * 1000; // 90 seconds
 
@@ -41,7 +42,9 @@ async function sendAttendancePush(studentIds, subjectName, className) {
     }));
 
     // Fire and forget - don't block session start
-    fetch(`${PUSH_WORKER}/send-bulk`, {
+    fetchCloudflareWorker(`${PUSH_WORKER}/send-bulk`, {
+      timeoutMs: 8_000,
+      workerName: "Push worker",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

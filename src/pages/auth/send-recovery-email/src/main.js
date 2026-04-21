@@ -1,6 +1,45 @@
 import { Client, Users, Query } from "node-appwrite"
 import { Resend } from "resend"
 
+const WORKER_TIMEOUT_MS = 10_000
+
+function isWorkerUnavailableStatus(status) {
+  return status === 404 || status === 502
+}
+
+async function postWorkerJson(url, payload) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), WORKER_TIMEOUT_MS)
+
+  try {
+    const workerRes = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+
+    const workerData = await workerRes.json().catch(() => ({}))
+
+    if (isWorkerUnavailableStatus(workerRes.status)) {
+      return { ok: false, unavailable: true, error: workerData?.error }
+    }
+
+    if (!workerRes.ok) {
+      return { ok: false, unavailable: false, error: workerData?.error ?? "Worker error" }
+    }
+
+    return { ok: true, data: workerData }
+  } catch (err) {
+    if (err?.name === "AbortError" || err instanceof TypeError) {
+      return { ok: false, unavailable: true, error: err?.message }
+    }
+    throw err
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 export default async ({ req, res, log, error }) => {
   try {
     const body = JSON.parse(req.body || "{}")
@@ -29,15 +68,22 @@ export default async ({ req, res, log, error }) => {
       const verifyUrl = `${appUrl}/verify-email?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(token.secret)}`
 
       if (emailWorkerUrl) {
-        const workerRes = await fetch(`${emailWorkerUrl}/send/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: email, name: name ?? "", verifyUrl }),
+        const workerResult = await postWorkerJson(`${emailWorkerUrl}/send/verify`, {
+          to: email,
+          name: name ?? "",
+          verifyUrl,
         })
-        const workerData = await workerRes.json()
-        if (!workerRes.ok) throw new Error(workerData?.error ?? "Worker error")
-        log("Verification email sent via CF worker")
-        return res.json({ ok: true })
+
+        if (workerResult.ok) {
+          log("Verification email sent via CF worker")
+          return res.json({ ok: true })
+        }
+
+        if (!workerResult.unavailable) {
+          throw new Error(workerResult.error ?? "Worker error")
+        }
+
+        log("Verification worker unavailable, falling back to direct Resend")
       }
 
       const resend = new Resend(process.env.RESEND_API_KEY)
@@ -108,15 +154,22 @@ export default async ({ req, res, log, error }) => {
       const firstName = (user.name || "").split(" ")[0] || "there"
 
       if (emailWorkerUrl) {
-        const workerRes = await fetch(`${emailWorkerUrl}/send/reset`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: email, name: user.name ?? "", resetUrl: recoveryUrl }),
+        const workerResult = await postWorkerJson(`${emailWorkerUrl}/send/reset`, {
+          to: email,
+          name: user.name ?? "",
+          resetUrl: recoveryUrl,
         })
-        const workerData = await workerRes.json()
-        if (!workerRes.ok) throw new Error(workerData?.error ?? "Worker error")
-        log("Reset email sent via CF worker")
-        return res.json({ success: true })
+
+        if (workerResult.ok) {
+          log("Reset email sent via CF worker")
+          return res.json({ success: true })
+        }
+
+        if (!workerResult.unavailable) {
+          throw new Error(workerResult.error ?? "Worker error")
+        }
+
+        log("Reset worker unavailable, falling back to direct Resend")
       }
 
       const resend = new Resend(process.env.RESEND_API_KEY)

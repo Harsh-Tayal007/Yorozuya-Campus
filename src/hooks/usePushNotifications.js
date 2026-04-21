@@ -6,6 +6,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { databases } from "@/lib/appwrite";
 import { useAuth } from "@/context/AuthContext";
+import {
+  fetchCloudflareWorker,
+  isWorkerUnavailableError,
+} from "@/services/shared/cloudflareWorkerClient";
 
 const VAPID_KEY        = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 const PUSH_WORKER_URL  = import.meta.env.VITE_PUSH_WORKER_URL;
@@ -169,13 +173,20 @@ export function usePushNotifications() {
     try {
       const sub = subscription ?? JSON.parse(localStorage.getItem(LS_SUB_KEY) ?? "null");
       if (!sub) return false;
-      const res = await fetch(`${PUSH_WORKER_URL}/send`, {
+      const res = await fetchCloudflareWorker(`${PUSH_WORKER_URL}/send`, {
+        timeoutMs: 8_000,
+        workerName: "Push worker",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscription: sub, title, body, url, tag, type }),
       });
       return res.ok;
-    } catch (err) { console.error("[Push] Worker send failed:", err); return false; }
+    } catch (err) {
+      if (!isWorkerUnavailableError(err)) {
+        console.error("[Push] Worker send failed:", err);
+      }
+      return false;
+    }
   }, []);
 
   // ── sendLocal - uses Notification API with onclick for navigation ─────────

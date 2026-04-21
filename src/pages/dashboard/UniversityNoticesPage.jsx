@@ -53,6 +53,7 @@ export default function UniversityNoticesPage() {
   })
 
   const all = data?.notices ?? []
+  const usingFallback = Boolean(data?.fallbackReason)
 
   const filtered = useMemo(() => {
     let list = activeCategory === "All" ? all : all.filter(n => n.category === activeCategory)
@@ -148,6 +149,12 @@ export default function UniversityNoticesPage() {
       </div>
 
       {/* Notices list */}
+      {usingFallback && !isLoading && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700">
+          Live notices are temporarily unavailable. Showing cached results.
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 8 }).map((_, i) => (

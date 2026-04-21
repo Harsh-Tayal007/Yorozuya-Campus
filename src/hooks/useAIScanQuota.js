@@ -1,5 +1,6 @@
 // src/hooks/useAIScanQuota.js
 import { useState, useEffect, useCallback } from "react"
+import { fetchCloudflareWorker } from "@/services/shared/cloudflareWorkerClient"
 
 const WORKER = "https://unizuya-stats.harshtayal710.workers.dev"
 
@@ -11,7 +12,10 @@ export function useAIScanQuota(userId, tool) {
     if (!userId) return
     setLoading(true)
     try {
-      const res = await fetch(`${WORKER}/ai-scans/check?userId=${userId}&tool=${tool}`)
+      const res = await fetchCloudflareWorker(`${WORKER}/ai-scans/check?userId=${userId}&tool=${tool}`, {
+        timeoutMs: 8_000,
+        workerName: "Stats worker",
+      })
       const data = await res.json()
       setQuota(data)
     } catch { setQuota(null) }
@@ -23,7 +27,9 @@ export function useAIScanQuota(userId, tool) {
   const increment = useCallback(async () => {
     if (!userId) return false
     try {
-      const res = await fetch(`${WORKER}/ai-scans/increment`, {
+      const res = await fetchCloudflareWorker(`${WORKER}/ai-scans/increment`, {
+        timeoutMs: 8_000,
+        workerName: "Stats worker",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, tool }),

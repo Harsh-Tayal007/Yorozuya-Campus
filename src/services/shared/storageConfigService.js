@@ -5,6 +5,12 @@
  * unizuya-storage Cloudflare Worker (KV-backed).
  */
 
+import {
+  fetchCloudflareWorker,
+  isWorkerUnavailableError,
+  readJsonSafe,
+} from "./cloudflareWorkerClient"
+
 const WORKER_URL = import.meta.env.VITE_STORAGE_WORKER_URL
 const STORAGE_SECRET = import.meta.env.VITE_STORAGE_SECRET
 
@@ -22,8 +28,15 @@ export async function getStorageConfig() {
     return _cachedConfig
   }
 
+  if (!WORKER_URL) {
+    return { activeStorage: "appwrite", workerUrl: WORKER_URL }
+  }
+
   try {
-    const res = await fetch(`${WORKER_URL}/config`)
+    const res = await fetchCloudflareWorker(`${WORKER_URL}/config`, {
+      timeoutMs: 6_000,
+      workerName: "Storage worker",
+    })
     if (!res.ok) throw new Error(`Config fetch failed: ${res.status}`)
     const data = await res.json()
 
@@ -34,7 +47,9 @@ export async function getStorageConfig() {
     _cacheTimestamp = now
     return _cachedConfig
   } catch (err) {
-    console.error("Failed to fetch storage config, defaulting to appwrite:", err)
+    if (!isWorkerUnavailableError(err)) {
+      console.error("Failed to fetch storage config, defaulting to appwrite:", err)
+    }
     // Fallback to appwrite if worker is unreachable
     return { activeStorage: "appwrite", workerUrl: WORKER_URL }
   }
@@ -45,7 +60,13 @@ export async function getStorageConfig() {
  * @param {"appwrite" | "cloudflare"} activeStorage
  */
 export async function setStorageConfig(activeStorage) {
-  const res = await fetch(`${WORKER_URL}/config`, {
+  if (!WORKER_URL) {
+    throw new Error("Storage worker URL is not configured.")
+  }
+
+  const res = await fetchCloudflareWorker(`${WORKER_URL}/config`, {
+    timeoutMs: 8_000,
+    workerName: "Storage worker",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -55,7 +76,7 @@ export async function setStorageConfig(activeStorage) {
   })
 
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}))
+    const errorData = await readJsonSafe(res)
     throw new Error(errorData.error || `Failed to set config: ${res.status}`)
   }
 

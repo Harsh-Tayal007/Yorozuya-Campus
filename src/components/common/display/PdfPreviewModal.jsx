@@ -4,14 +4,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogOverlay,
-} from "@/components/ui/dialog";
-import { FileText } from "lucide-react";
-import { DialogDescription } from "@radix-ui/react-dialog";
-import { useEffect, useState } from "react";
-import { getFileViewUrl } from "@/services/shared/storageAdapter";
+} from "@/components/ui/dialog"
+import { FileText } from "lucide-react"
+import { DialogDescription } from "@radix-ui/react-dialog"
+import { useEffect, useRef, useState } from "react"
+import { getFileViewUrl } from "@/services/shared/storageAdapter"
 
-// 🔒 In-memory cache (per tab)
-const pdfViewCache = new Map();
+const pdfViewCache = new Map()
+const PREVIEW_TIMEOUT_MS = 12_000
 
 export default function PdfPreviewModal({
   title,
@@ -22,52 +22,74 @@ export default function PdfPreviewModal({
   open,
   onClose,
 }) {
-  const [pdfUrl, setPdfUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState("")
+  const timeoutRef = useRef(null)
 
   useEffect(() => {
-    if (!open || !fileId || !bucketId) return;
+    if (!open || !fileId) return
 
-    const cacheKey = `${storageProvider || "appwrite"}:${bucketId || "default"}:${fileId}`;
-
-    setLoading(true);
-    setError(false);
-
-    // 1️⃣ In-memory cache
-    if (pdfViewCache.has(cacheKey)) {
-      setPdfUrl(pdfViewCache.get(cacheKey));
-      setLoading(false);
-      return;
+    const provider = storageProvider || "appwrite"
+    const requiresBucket = provider !== "cloudflare"
+    if (requiresBucket && !bucketId) {
+      setPdfUrl(null)
+      setLoading(false)
+      setErrorMessage("Preview unavailable")
+      return
     }
 
-    // 2️⃣ sessionStorage cache
-    const stored = sessionStorage.getItem(cacheKey);
-    if (stored) {
-      pdfViewCache.set(cacheKey, stored);
-      setPdfUrl(stored);
-      setLoading(false);
-      return;
+    const cacheBucket = provider === "cloudflare" ? "cloudflare" : bucketId || "default"
+    const cacheKey = `${provider}:${cacheBucket}:${fileId}`
+
+    setLoading(true)
+    setErrorMessage("")
+
+    const cached = pdfViewCache.get(cacheKey) || sessionStorage.getItem(cacheKey)
+    if (cached) {
+      pdfViewCache.set(cacheKey, cached)
+      setPdfUrl(cached)
+      return
     }
 
-    // 3️⃣ Adapter call
     try {
-      const baseUrl = getFileViewUrl(fileId, storageProvider, type, bucketId);
-      const url = `${baseUrl}#zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`;
+      const baseUrl = getFileViewUrl(fileId, storageProvider, type, bucketId)
+      if (!baseUrl) throw new Error("Missing preview URL")
 
-      pdfViewCache.set(cacheKey, url);
-      sessionStorage.setItem(cacheKey, url);
-
-      setPdfUrl(url);
+      const url = `${baseUrl}#zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`
+      pdfViewCache.set(cacheKey, url)
+      sessionStorage.setItem(cacheKey, url)
+      setPdfUrl(url)
     } catch (err) {
-      console.error("Failed to load PDF preview", err);
-      setError(true);
-    } finally {
-      setLoading(false);
+      console.error("Failed to build PDF preview URL", err)
+      setPdfUrl(null)
+      setLoading(false)
+      setErrorMessage("Preview unavailable")
     }
-  }, [open, bucketId, fileId]);
+  }, [open, bucketId, fileId, storageProvider, type])
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open || !pdfUrl || errorMessage) return
+
+    clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false)
+      setErrorMessage("Preview unavailable")
+    }, PREVIEW_TIMEOUT_MS)
+
+    return () => clearTimeout(timeoutRef.current)
+  }, [open, pdfUrl, errorMessage])
+
+  useEffect(() => {
+    if (!open) {
+      clearTimeout(timeoutRef.current)
+      setPdfUrl(null)
+      setLoading(true)
+      setErrorMessage("")
+    }
+  }, [open])
+
+  if (!open) return null
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -77,42 +99,45 @@ export default function PdfPreviewModal({
         onOpenAutoFocus={(e) => e.preventDefault()}
         className="max-w-4xl p-0 overflow-hidden"
       >
-        {/* Header */}
         <DialogHeader className="flex flex-row items-center gap-2 px-6 py-4 border-b">
           <FileText className="h-5 w-5 text-red-600" />
-          <DialogTitle className="text-base font-semibold">
-            {title}
-          </DialogTitle>
+          <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
         </DialogHeader>
 
-        <DialogDescription className="sr-only">
-          PDF preview dialog
-        </DialogDescription>
+        <DialogDescription className="sr-only">PDF preview dialog</DialogDescription>
 
-        {/* Body */}
-        <div className="h-[75vh] bg-background">
+        <div className="h-[75vh] bg-background relative">
           {loading && (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+              Loading PDF...
+            </div>
+          )}
+
+          {errorMessage && (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Loading PDF…
+              {errorMessage}. Download the file to view it.
             </div>
           )}
 
-          {error && (
-            <div className="flex h-full items-center justify-center text-sm text-destructive">
-              Failed to load PDF preview
-            </div>
-          )}
-
-          {!loading && !error && pdfUrl && (
+          {!errorMessage && pdfUrl && (
             <iframe
               src={pdfUrl}
               title={title}
               className="h-full w-full"
-              style={{ border: "none" }}
+              style={{ border: "none", visibility: loading ? "hidden" : "visible" }}
+              onLoad={() => {
+                clearTimeout(timeoutRef.current)
+                setLoading(false)
+              }}
+              onError={() => {
+                clearTimeout(timeoutRef.current)
+                setLoading(false)
+                setErrorMessage("Preview unavailable")
+              }}
             />
           )}
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

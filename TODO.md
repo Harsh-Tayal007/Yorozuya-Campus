@@ -24,7 +24,7 @@
 - [x] Validate manual upgrade workflow for teachers on the Admin Roles page.
 
 ## Infrastructure & Storage
-- [ ] Implement resilience/fallback logic for Cloudflare Worker outages
+- [x] Implement resilience/fallback logic for Cloudflare Worker outages
   - Handle cases where the worker is unreachable (404, 502, or timeout)
   - Provide meaningful UI fallbacks (e.g., "Preview unavailable") instead of infinite loading
   - Consider a secondary fallback to Appwrite if the primary worker is down
