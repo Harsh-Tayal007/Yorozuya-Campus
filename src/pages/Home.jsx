@@ -14,6 +14,9 @@ import useSeoMeta from "@/hooks/useSeoMeta"
 
 // -- Lazy heavy chunks (only downloaded when needed) --
 const AnimatedBlobs       = lazy(() => import("@/components/home/AnimatedBlobs"))
+const ParticleSphere      = lazy(() => import("@/components/home/ParticleSphere"))
+const AntigravityShapes   = lazy(() => import("@/components/home/AntigravityShapes"))
+const LevitatingSphere    = lazy(() => import("@/components/home/LevitatingSphere"))
 const AuthModal           = lazy(() => import("@/components/home/AuthModal"))
 const RoadmapModal        = lazy(() => import("@/components/home/RoadmapModal"))
 const FeaturesGrid        = lazy(() => import("@/components/home/FeaturesGrid"))
@@ -39,10 +42,16 @@ export default function Home() {
   const { currentUser, isLoading: authLoading } = useAuth()
   const [authModal, setAuthModal]     = useState({ open: false, mode: "signup" })
   const [roadmapOpen, setRoadmapOpen] = useState(false)
-  // Animated blobs preference - off by default for performance
-  const blobsEnabled = useState(() => localStorage.getItem("pref_animated_bg") === "1")[0]
-  // Defer blob rendering until after first paint (only when enabled)
-  const [blobsReady, setBlobsReady]   = useState(false)
+  // Background animation preferences - all off by default for performance
+  const blobsEnabled       = useState(() => localStorage.getItem("pref_animated_bg") === "1")[0]
+  const confettiEnabled    = useState(() => localStorage.getItem("pref_confetti_bg") === "1")[0]
+  const antigravityEnabled = useState(() => localStorage.getItem("pref_antigravity_bg") === "1")[0]
+  const levitatingEnabled  = useState(() => localStorage.getItem("pref_levitating_bg") === "1")[0]
+  // Defer rendering until after first paint (only when enabled)
+  const [blobsReady, setBlobsReady]           = useState(false)
+  const [confettiReady, setConfettiReady]     = useState(false)
+  const [antigravityReady, setAntigravityReady] = useState(false)
+  const [levitatingReady, setLevitatingReady] = useState(false)
   const featuresRef = useRef(null)
 
   useSeoMeta({
@@ -51,7 +60,7 @@ export default function Home() {
       "Unizuya brings together syllabus, PYQs, study resources, student forum, attendance tools, and productivity workflows into one academic platform.",
   })
 
-  // Defer blob rendering - don't block LCP
+  // Defer background animations - don't block LCP
   useEffect(() => {
     if (!blobsEnabled) return
     const id = requestIdleCallback
@@ -59,6 +68,30 @@ export default function Home() {
       : setTimeout(() => setBlobsReady(true), 300)
     return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
   }, [blobsEnabled])
+
+  useEffect(() => {
+    if (!confettiEnabled) return
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => setConfettiReady(true), { timeout: 800 })
+      : setTimeout(() => setConfettiReady(true), 200)
+    return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
+  }, [confettiEnabled])
+
+  useEffect(() => {
+    if (!antigravityEnabled) return
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => setAntigravityReady(true), { timeout: 800 })
+      : setTimeout(() => setAntigravityReady(true), 200)
+    return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
+  }, [antigravityEnabled])
+
+  useEffect(() => {
+    if (!levitatingEnabled) return
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => setLevitatingReady(true), { timeout: 800 })
+      : setTimeout(() => setLevitatingReady(true), 200)
+    return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
+  }, [levitatingEnabled])
 
   // Lock scroll when roadmap open
   useEffect(() => {
@@ -81,10 +114,25 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* Blobs - only rendered if user opted in via Settings > Preferences */}
+      {/* Background animations - only rendered if user opted in via Settings > Preferences */}
       {blobsEnabled && blobsReady && (
         <Suspense fallback={null}>
           <AnimatedBlobs />
+        </Suspense>
+      )}
+      {confettiEnabled && confettiReady && (
+        <Suspense fallback={null}>
+          <ParticleSphere />
+        </Suspense>
+      )}
+      {antigravityEnabled && antigravityReady && (
+        <Suspense fallback={null}>
+          <AntigravityShapes />
+        </Suspense>
+      )}
+      {levitatingEnabled && levitatingReady && (
+        <Suspense fallback={null}>
+          <LevitatingSphere />
         </Suspense>
       )}
 

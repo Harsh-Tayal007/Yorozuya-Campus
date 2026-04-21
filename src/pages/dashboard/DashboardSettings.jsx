@@ -10,7 +10,7 @@ import {
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
   KeyRound, AlertCircle,
   Trash2, AtSign, RefreshCw,
-  X, Sparkles
+  X, Sparkles, Orbit, Shapes, Globe
 } from "lucide-react"
 
 import { getUniversities } from "@/services/university/universityService"
@@ -922,6 +922,15 @@ const PreferencesTab = () => {
   const [animatedBg, setAnimatedBg] = useState(() =>
     localStorage.getItem("pref_animated_bg") === "1"
   )
+  const [confettiBg, setConfettiBg] = useState(() =>
+    localStorage.getItem("pref_confetti_bg") === "1"
+  )
+  const [antigravityBg, setAntigravityBg] = useState(() =>
+    localStorage.getItem("pref_antigravity_bg") === "1"
+  )
+  const [levitatingBg, setLevitatingBg] = useState(() =>
+    localStorage.getItem("pref_levitating_bg") === "1"
+  )
 
   // ── In-app notification prefs (Appwrite account prefs) ────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
@@ -1025,6 +1034,48 @@ const PreferencesTab = () => {
               setAnimatedBg(v)
               localStorage.setItem("pref_animated_bg", v ? "1" : "0")
               toast.success(v ? "Background animations enabled" : "Background animations disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={Orbit}
+          label="Confetti particles"
+          hint="Scattered colorful particles that react to your cursor. Off by default for better performance."
+        >
+          <Toggle
+            checked={confettiBg}
+            onChange={(v) => {
+              setConfettiBg(v)
+              localStorage.setItem("pref_confetti_bg", v ? "1" : "0")
+              toast.success(v ? "Confetti particles enabled" : "Confetti particles disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={Shapes}
+          label="Antigravity shapes"
+          hint="Floating geometric shapes with physics and cursor interaction. Off by default for better performance."
+        >
+          <Toggle
+            checked={antigravityBg}
+            onChange={(v) => {
+              setAntigravityBg(v)
+              localStorage.setItem("pref_antigravity_bg", v ? "1" : "0")
+              toast.success(v ? "Antigravity shapes enabled" : "Antigravity shapes disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={Globe}
+          label="Levitating sphere"
+          hint="Elastic liquid particles with advanced interactions. Click to repel, scroll to resize influence. Full touch & mobile support."
+        >
+          <Toggle
+            checked={levitatingBg}
+            onChange={(v) => {
+              setLevitatingBg(v)
+              localStorage.setItem("pref_levitating_bg", v ? "1" : "0")
+              toast.success(v ? "Levitating sphere enabled" : "Levitating sphere disabled")
             }}
           />
         </PrefRow>
