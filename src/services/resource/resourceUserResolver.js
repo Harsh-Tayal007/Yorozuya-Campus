@@ -1,11 +1,11 @@
-import { databases, storage } from "@/lib/appwrite";
+import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
+import { getFileMetadata } from "@/services/shared/storageAdapter";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const RESOURCES_COLLECTION_ID = import.meta.env
   .VITE_APPWRITE_RESOURCES_COLLECTION_ID;
 const UNITS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID;
-const RESOURCES_BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID;
 
 export const getResolvedResourcesForSubject = async ({
   programId,
@@ -73,14 +73,15 @@ export const getResolvedResourcesForSubject = async ({
       }
 
       try {
-        const file = await storage.getFile(
-          RESOURCES_BUCKET_ID,
+        const metadata = await getFileMetadata(
           resource.fileId,
+          resource.storageProvider,
+          "resource",
+          resource.bucketId
         );
-
         return {
           ...resource,
-          fileSize: file.sizeOriginal,
+          fileSize: metadata.size,
         };
       } catch {
         // ❗ never poison UI on metadata failure

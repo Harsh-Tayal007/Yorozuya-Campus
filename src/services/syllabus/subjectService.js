@@ -1,12 +1,11 @@
-import { databases, storage } from "@/lib/appwrite";
+import { databases } from "@/lib/appwrite";
 import { ID, Query } from "appwrite";
 import { ACTIVITIES_COLLECTION_ID } from "@/config/appwrite";
+import { uploadFile as adapterUpload, deleteFile as adapterDelete } from "@/services/shared/storageAdapter";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const SUBJECTS_COLLECTION_ID = import.meta.env
   .VITE_APPWRITE_SUBJECTS_COLLECTION_ID;
-
-const SYLLABUS_BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID;
 
 // ---------------- SUBJECT CACHE ----------------
 const subjectCache = new Map(); // key: subjectId, value: subject doc
@@ -28,6 +27,7 @@ export const createSubject = async (data, currentUser) => {
       subjectName: data.subjectName,
       description: data.description || "",
       pdfFileId: data.pdfFileId, // 🔒 enforced
+      storageProvider: data.storageProvider || "appwrite",
       views: data.views ?? 0,
       ratingAvg: data.ratingAvg ?? 0,
       ratingCount: data.ratingCount ?? 0,
@@ -66,7 +66,22 @@ export const getSubjectsBySyllabus = async (syllabusId) => {
 /**
  * Delete subject
  */
-export const deleteSubject = async (id, currentUser, entityName) => {
+export const deleteSubject = async (id, currentUser) => {
+  const subject = await databases.getDocument(DATABASE_ID, SUBJECTS_COLLECTION_ID, id);
+
+  if (subject.pdfFileId) {
+    try {
+      await adapterDelete(
+        subject.pdfFileId,
+        subject.storageProvider,
+        "syllabus",
+        subject.bucketId,
+      );
+    } catch (err) {
+      console.warn("Failed to delete subject storage file:", err);
+    }
+  }
+
   await databases.deleteDocument(DATABASE_ID, SUBJECTS_COLLECTION_ID, id);
 
   if (currentUser) {
@@ -74,11 +89,11 @@ export const deleteSubject = async (id, currentUser, entityName) => {
       actor: currentUser,
       action: "deleted",
       entityType: "Subject",
-      entityName,
+      entityName: subject.subjectName,
     });
   }
 
-  subjectCache.delete(id); // or clear() for simplicity
+  subjectCache.delete(id);
 };
 
 /* ---------------- ACTIVITY HELPER ---------------- */
@@ -98,12 +113,8 @@ const logActivity = async ({ actor, action, entityType, entityName }) => {
 };
 
 export const updateSubjectPdf = async (subjectId, newFile) => {
-  // 1. Upload new PDF
-  const uploaded = await storage.createFile(
-    SYLLABUS_BUCKET_ID,
-    ID.unique(),
-    newFile,
-  );
+  // 1. Upload new PDF via adapter
+  const uploadResult = await adapterUpload(newFile, "syllabus");
 
   // 2. Get existing subject
   const existing = await databases.getDocument(
@@ -112,10 +123,17 @@ export const updateSubjectPdf = async (subjectId, newFile) => {
     subjectId,
   );
 
-  // 3. Update subject with new PDF + version bump
-
+  // 3. Delete old file (using old storageProvider)
   if (existing.pdfFileId) {
-    await storage.deleteFile(SYLLABUS_BUCKET_ID, existing.pdfFileId);
+    try {
+      await adapterDelete(
+        existing.pdfFileId,
+        existing.storageProvider,
+        "syllabus",
+      );
+    } catch {
+      // ignore — old file may already be gone
+    }
   }
 
   subjectCache.delete(subjectId);
@@ -125,7 +143,8 @@ export const updateSubjectPdf = async (subjectId, newFile) => {
     SUBJECTS_COLLECTION_ID,
     subjectId,
     {
-      pdfFileId: uploaded.$id,
+      pdfFileId: uploadResult.fileId,
+      storageProvider: uploadResult.storageProvider,
       version: (existing.version || 1) + 1,
     },
   );

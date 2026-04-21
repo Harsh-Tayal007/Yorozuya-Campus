@@ -1,5 +1,6 @@
-import { databases, storage } from "@/lib/appwrite";
+import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
+import { getFileMetadata } from "@/services/shared/storageAdapter";
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const PYQS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_PYQS_COLLECTION_ID;
@@ -94,13 +95,16 @@ export const getPyqsForSubject = async ({ programId, semester, subjectId }) => {
   // 4️⃣ Attach file metadata (non-blocking)
   const enrichedPyqs = await Promise.all(
     resolvedPyqs.map(async (pyq) => {
-      if (!pyq.fileId || !pyq.bucketId) return pyq;
+      // Cloudflare files don't have a bucketId, handle accordingly
+      if (!pyq.fileId || (pyq.storageProvider !== "cloudflare" && !pyq.bucketId)) {
+        return pyq;
+      }
 
       try {
-        const file = await storage.getFile(pyq.bucketId, pyq.fileId);
+        const metadata = await getFileMetadata(pyq.fileId, pyq.storageProvider, "pyq", pyq.bucketId);
         return {
           ...pyq,
-          fileSize: file.sizeOriginal,
+          fileSize: metadata.size,
         };
       } catch {
         return pyq; // ❗ don’t poison cache

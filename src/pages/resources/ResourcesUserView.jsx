@@ -7,7 +7,7 @@ import { Library, Download, ExternalLink, ArrowUpRight, Layers, BookOpen } from 
 import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 
-import { getPdfViewUrl } from "@/services/shared/storageService"
+import { getPdfViewUrl, getPdfDownloadUrl } from "@/services/shared/storageService"
 import { getAvailableResourceSemesters } from "@/services/resource/resourceAvailabilityService"
 import { getResolvedResourcesForSubject } from "@/services/resource/resourceUserResolver"
 import { getProgramById } from "@/services/university/programService"
@@ -283,14 +283,19 @@ export default function ResourcesUserView({
                               Unit {resource.unit.order}: {resource.unit.title}
                             </span>
                           )}
-                          {resource.fileSize && <span className="text-[11px] text-muted-foreground/60">{formatFileSize(resource.fileSize)}</span>}
+                          {resource.fileSize > 0 && (
+                            <span className="hidden sm:inline-block text-[11px] text-muted-foreground/60">
+                              {formatFileSize(resource.fileSize)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
                       <button onClick={() => {
                         if (resource.type === "link" && resource.url) { window.open(resource.url, "_blank"); return }
-                        if (isMobileDevice()) { window.open(getPdfViewUrl(resource.fileId), "_blank"); return }
+                        const viewUrl = getPdfViewUrl(resource.fileId, resource.storageProvider, "resource", resource.bucketId)
+                        if (isMobileDevice()) { window.open(viewUrl, "_blank"); return }
                         setPreviewResource(resource)
                       }}
                         className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
@@ -305,7 +310,7 @@ export default function ResourcesUserView({
                               if (downloadingId === resource.$id) return
                               setDownloadingId(resource.$id); setProgress(0)
                               const ctrl = downloadFileXHR({
-                                url: getPdfViewUrl(resource.fileId),
+                                url: getPdfDownloadUrl(resource.fileId, resource.storageProvider, "resource", resource.bucketId),
                                 fileName: buildResourceFilename(resource),
                                 onProgress: (d) => setProgress(typeof d === "number" ? d : Math.min(Math.round((d.loaded / resource.fileSize) * 100), 99)),
                                 onSuccess: () => { setProgress(null); setDownloadingId(null); setActiveDownload(null) },
@@ -342,9 +347,15 @@ export default function ResourcesUserView({
       )}
 
       {!isMobileDevice() && (
-        <PdfPreviewModal open={!!previewResource} fileId={previewResource?.fileId}
-          bucketId={STORAGE_BUCKET_ID} title={previewResource?.title}
-          onClose={() => setPreviewResource(null)} />
+        <PdfPreviewModal 
+          open={!!previewResource} 
+          fileId={previewResource?.fileId}
+          bucketId={previewResource?.bucketId || STORAGE_BUCKET_ID} 
+          storageProvider={previewResource?.storageProvider}
+          type="resource"
+          title={previewResource?.title}
+          onClose={() => setPreviewResource(null)} 
+        />
       )}
     </div>
   )

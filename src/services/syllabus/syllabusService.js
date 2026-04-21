@@ -70,10 +70,25 @@ export const updateSyllabus = async (id, data, currentUser) => {
   return updated;
 };
 
+import { getSubjectsBySyllabus, deleteSubject } from "./subjectService";
+
 /**
  * Delete syllabus
  */
 export const deleteSyllabus = async (id, currentUser, entityName) => {
+  // 1. Get associated subjects
+  const subjects = await getSubjectsBySyllabus(id);
+
+  // 2. Delete each subject (which cleans up storage files)
+  for (const subject of subjects) {
+    try {
+      await deleteSubject(subject.$id, currentUser);
+    } catch (err) {
+      console.warn(`Failed to delete subject ${subject.$id} during syllabus deletion:`, err);
+    }
+  }
+
+  // 3. Delete the syllabus document
   await databases.deleteDocument(DATABASE_ID, SYLLABUS_COLLECTION_ID, id);
 
   await logActivity({

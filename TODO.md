@@ -23,6 +23,12 @@
 - [x] Add UI warning stating teacher accounts remain as standard users until upgraded by an Administrator.
 - [x] Validate manual upgrade workflow for teachers on the Admin Roles page.
 
+## Infrastructure & Storage
+- [ ] Implement resilience/fallback logic for Cloudflare Worker outages
+  - Handle cases where the worker is unreachable (404, 502, or timeout)
+  - Provide meaningful UI fallbacks (e.g., "Preview unavailable") instead of infinite loading
+  - Consider a secondary fallback to Appwrite if the primary worker is down
+
 ## Other Features
 <!-- Add future feature TODOs here -->
 

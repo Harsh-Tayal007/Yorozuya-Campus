@@ -6,12 +6,13 @@ import { getUnitsBySubject } from "@/services/syllabus/unitService"
 import { deleteResource } from "@/services/resource/resourceService"
 import { useAuth } from "@/context/AuthContext"
 import { getSubjectsByIds } from "@/services/syllabus/subjectService"
-import {
-  Search, ExternalLink, Pencil, Trash2, FileText,
+import { Search, ExternalLink, Pencil, Trash2, FileText,
   Video, Link as LinkIcon, StickyNote, ChevronDown,
   Check, BookOpen, Layers, GraduationCap, GitBranch,
   Filter, X,
 } from "lucide-react"
+import { getFileViewUrl, getFileMetadata } from "@/services/shared/storageAdapter"
+import { formatFileSize } from "@/utils/formatFileSize"
 
 // ── Type config ───────────────────────────────────────────────────────────────
 const TYPE_CONFIG = {
@@ -86,7 +87,7 @@ function FilterSelect({ value, onChange, options, placeholder, icon: Icon }) {
 }
 
 // ── Resource card ─────────────────────────────────────────────────────────────
-function ResourceCard({ r, programMap, subjectMap, unitMap, canEdit, canDelete, onEdit, onDelete, onOpen, searchTerm }) {
+function ResourceCard({ r, programMap, subjectMap, unitMap, fileSize, canEdit, canDelete, onEdit, onDelete, onOpen, searchTerm }) {
   const typeConfig = TYPE_CONFIG[r.type] ?? TYPE_CONFIG.pdf
   const Icon = typeConfig.icon
 
@@ -134,12 +135,19 @@ function ResourceCard({ r, programMap, subjectMap, unitMap, canEdit, canDelete, 
                 {highlightMatch(r.title, searchTerm)}
               </h3>
               {/* Type badge */}
-              <span
-                className="inline-flex items-center gap-1 mt-1 px-1.5 py-px rounded text-[10px] font-bold uppercase tracking-wide"
-                style={{ background: `${typeConfig.accent}15`, color: typeConfig.accent }}
-              >
-                {typeConfig.label}
-              </span>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px] font-bold uppercase tracking-wide"
+                  style={{ background: `${typeConfig.accent}15`, color: typeConfig.accent }}
+                >
+                  {typeConfig.label}
+                </span>
+                {fileSize > 0 && (
+                  <span className="hidden sm:inline-block text-[10px] font-semibold bg-muted/60 text-muted-foreground/80 px-1.5 py-px rounded">
+                    {formatFileSize(fileSize)}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Actions */}
@@ -234,6 +242,7 @@ export default function ResourcesList({ resources, setResources, onEdit }) {
   const [filterUnit,     setFilterUnit]     = useState("all")
   const [searchTerm,      setSearchTerm]      = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [fileSizeMap,     setFileSizeMap]     = useState({})
   const { user, role } = useAuth()
   const canEdit   = role === "admin" || role === "mod"
   const canDelete = role === "admin"
@@ -247,7 +256,7 @@ export default function ResourcesList({ resources, setResources, onEdit }) {
 
   const openResource = (r) => {
     if (r.type === "link") { window.open(r.url, "_blank"); return }
-    const fileUrl = `${import.meta.env.VITE_APPWRITE_ENDPOINT}/storage/buckets/${import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID}/files/${r.fileId}/view?project=${import.meta.env.VITE_APPWRITE_PROJECT_ID}`
+    const fileUrl = getFileViewUrl(r.fileId, r.storageProvider, "resource", r.bucketId)
     window.open(fileUrl, "_blank")
   }
 
@@ -299,6 +308,25 @@ export default function ResourcesList({ resources, setResources, onEdit }) {
       results.flat().forEach(u => { unitMapTemp[u.$id] = u.title })
       setUnitMap(unitMapTemp)
     }).catch(console.error)
+  }, [resources])
+
+  useEffect(() => {
+    if (!resources?.length) return
+    const toFetch = resources.filter(r => r.fileId && !fileSizeMap[r.fileId] && r.type === "pdf")
+    if (!toFetch.length) return
+
+    Promise.all(toFetch.map(async r => {
+      try {
+        const meta = await getFileMetadata(r.fileId, r.storageProvider, "resource", r.bucketId)
+        return { id: r.fileId, size: meta.size }
+      } catch {
+        return null
+      }
+    })).then(results => {
+      const newMap = { ...fileSizeMap }
+      results.forEach(res => { if (res) newMap[res.id] = res.size })
+      setFileSizeMap(newMap)
+    })
   }, [resources])
 
   if (!resources || resources.length === 0) {
@@ -449,6 +477,7 @@ export default function ResourcesList({ resources, setResources, onEdit }) {
                 programMap={programMap}
                 subjectMap={subjectMap}
                 unitMap={unitMap}
+                fileSize={fileSizeMap[r.fileId]}
                 canEdit={canEdit}
                 canDelete={canDelete}
                 searchTerm={debouncedSearch}

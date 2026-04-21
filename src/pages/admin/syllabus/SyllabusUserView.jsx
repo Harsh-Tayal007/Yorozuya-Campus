@@ -5,9 +5,10 @@ import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { ClipboardList, Download, ExternalLink } from "lucide-react"
 
-import { getPdfViewUrl } from "@/services/shared/storageService"
-import { databases, storage } from "@/lib/appwrite"
+import { getPdfViewUrl, getPdfDownloadUrl } from "@/services/shared/storageService"
+import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
+import { getFileMetadata, getFileViewUrl } from "@/services/shared/storageAdapter"
 import { Breadcrumbs } from "@/components"
 import { BackButton } from "@/components"
 import { PdfPreviewModal } from "@/components"
@@ -82,13 +83,16 @@ export default function SyllabusUserView({
   })
 
   const { data: fileSizes = {} } = useQuery({
-    queryKey: ["syllabus-file-sizes", subjects.map(s => s.pdfFileId)],
     queryFn: async () => {
       const sizes = {}
       await Promise.all(subjects.map(async s => {
         if (!s.pdfFileId) return
-        const file = await storage.getFile(SYLLABUS_BUCKET_ID, s.pdfFileId)
-        sizes[s.pdfFileId] = file.sizeOriginal
+        try {
+          const metadata = await getFileMetadata(s.pdfFileId, s.storageProvider, "syllabus", s.bucketId)
+          sizes[s.pdfFileId] = metadata.size
+        } catch (err) {
+          console.error("Size fetch failed", err)
+        }
       }))
       return sizes
     },
@@ -161,8 +165,15 @@ export default function SyllabusUserView({
                 <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0">
                     <FileTypeBadge fileType="pdf" onPreview={() => {
-                      if (isMobile()) { window.open(storage.getFileView(SYLLABUS_BUCKET_ID, subject.pdfFileId), "_blank"); return }
-                      setPreviewFile({ fileId: subject.pdfFileId, bucketId: SYLLABUS_BUCKET_ID, title: subject.subjectName })
+                      const url = getFileViewUrl(subject.pdfFileId, subject.storageProvider, "syllabus", subject.bucketId)
+                      if (isMobile()) { window.open(url, "_blank"); return }
+                      setPreviewFile({
+                        fileId: subject.pdfFileId,
+                        bucketId: subject.bucketId || SYLLABUS_BUCKET_ID,
+                        storageProvider: subject.storageProvider,
+                        type: "syllabus",
+                        title: subject.subjectName
+                      })
                     }} />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{subject.subjectName}</p>
@@ -170,8 +181,8 @@ export default function SyllabusUserView({
                         {subject.description && (
                           <span className="text-[11px] text-muted-foreground truncate">{subject.description}</span>
                         )}
-                        {fileSizes[subject.pdfFileId] && (
-                          <span className="text-[11px] text-muted-foreground/60 shrink-0">
+                        {fileSizes[subject.pdfFileId] > 0 && (
+                          <span className="hidden sm:inline-block text-[11px] text-muted-foreground/60 shrink-0">
                             {formatFileSize(fileSizes[subject.pdfFileId])}
                           </span>
                         )}
@@ -181,8 +192,15 @@ export default function SyllabusUserView({
                   <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => {
-                        if (isMobile()) { window.open(storage.getFileView(SYLLABUS_BUCKET_ID, subject.pdfFileId), "_blank"); return }
-                        setPreviewFile({ fileId: subject.pdfFileId, bucketId: SYLLABUS_BUCKET_ID, title: subject.subjectName })
+                        const url = getFileViewUrl(subject.pdfFileId, subject.storageProvider, "syllabus", subject.bucketId)
+                        if (isMobile()) { window.open(url, "_blank"); return }
+                        setPreviewFile({
+                          fileId: subject.pdfFileId,
+                          bucketId: subject.bucketId || SYLLABUS_BUCKET_ID,
+                          storageProvider: subject.storageProvider,
+                          type: "syllabus",
+                          title: subject.subjectName
+                        })
                       }}
                       className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
                                  border border-border/60 bg-muted/30 text-muted-foreground
@@ -193,7 +211,7 @@ export default function SyllabusUserView({
                     </button>
                     <button
                       onClick={() => downloadFileXHR({
-                        url: getPdfViewUrl(subject.pdfFileId),
+                        url: getPdfDownloadUrl(subject.pdfFileId, subject.storageProvider, "syllabus", subject.bucketId),
                         fileName: buildSyllabusFilename({ subjectName: subject.subjectName, semester }),
                       })}
                       className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
@@ -215,6 +233,8 @@ export default function SyllabusUserView({
           open={!!previewFile}
           fileId={previewFile?.fileId}
           bucketId={previewFile?.bucketId}
+          storageProvider={previewFile?.storageProvider}
+          type={previewFile?.type}
           title={previewFile?.title}
           onClose={() => setPreviewFile(null)}
         />

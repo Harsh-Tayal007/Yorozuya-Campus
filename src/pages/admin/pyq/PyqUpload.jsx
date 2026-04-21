@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
@@ -9,11 +9,12 @@ import {
   Filter, BookOpen, GraduationCap, GitBranch, Layers,
 } from "lucide-react"
 
-import { databases, storage } from "@/lib/appwrite"
+import { databases } from "@/lib/appwrite"
 import { Query, ID } from "appwrite"
 import { useAuth } from "@/context/AuthContext"
 import { ACTIVITIES_COLLECTION_ID } from "@/config/appwrite"
 import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
+import { uploadFile as adapterUpload, deleteFile as adapterDelete } from "@/services/shared/storageAdapter"
 import PyqList from "./PyqList"
 
 const DATABASE_ID          = import.meta.env.VITE_APPWRITE_DATABASE_ID
@@ -21,7 +22,6 @@ const PROGRAMS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_PROGRAMS_COLLECTION
 const SYLLABUS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_SYLLABUS_COLLECTION_ID
 const UNITS_COLLECTION_ID  = import.meta.env.VITE_APPWRITE_UNITS_COLLECTION_ID
 const PYQS_COLLECTION_ID   = import.meta.env.VITE_APPWRITE_PYQS_COLLECTION_ID
-const STORAGE_BUCKET_ID    = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID
 const MOCK_SEMESTERS       = [1,2,3,4,5,6,7,8]
 
 const FILE_TYPES = [
@@ -384,15 +384,23 @@ const PyqUpload = () => {
     setIsUploading(true)
     try {
       let fileId  = editingPyq?.fileId   || null
-      let bucketId = editingPyq?.bucketId || STORAGE_BUCKET_ID
+      let bucketId = editingPyq?.bucketId || ""
+      let storageProvider = editingPyq?.storageProvider || "appwrite"
 
       if (form.file) {
-        const newFileId = ID.unique()
-        await storage.createFile(STORAGE_BUCKET_ID, newFileId,
-          new File([form.file], `pyq_${Date.now()}_${form.file.name}`, { type: form.file.type }))
-        if (editingPyq?.fileId && editingPyq?.bucketId)
-          await storage.deleteFile(editingPyq.bucketId, editingPyq.fileId)
-        fileId = newFileId; bucketId = STORAGE_BUCKET_ID
+        const renamedFile = new File([form.file], `pyq_${Date.now()}_${form.file.name}`, { type: form.file.type })
+        const uploadResult = await adapterUpload(renamedFile, "pyq")
+
+        // Delete old file if editing (using old storageProvider)
+        if (editingPyq?.fileId) {
+          try {
+            await adapterDelete(editingPyq.fileId, editingPyq.storageProvider, "pyq", editingPyq.bucketId)
+          } catch { /* ignore */ }
+        }
+
+        fileId = uploadResult.fileId
+        bucketId = uploadResult.bucketId || ""
+        storageProvider = uploadResult.storageProvider
       }
 
       let pyqId
@@ -400,7 +408,7 @@ const PyqUpload = () => {
         title: form.title, description: form.description || null,
         programId: form.programId, semester: String(form.semester),
         subjectId: form.subjectId, unitId: form.unitId || null,
-        fileId, bucketId, fileType: form.fileType,
+        fileId, bucketId, storageProvider, fileType: form.fileType,
       }
 
       if (isEditMode) {

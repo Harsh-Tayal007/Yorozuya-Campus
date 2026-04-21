@@ -1,15 +1,19 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { toast } from "sonner"
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts"
 import {
-  Users, Eye, UserPlus, Sparkles,
-  Mail, RefreshCw, TrendingUp, Loader2, Info, ChevronDown, ChevronUp,
-  DatabaseZap, CheckCircle2, AlertCircle,
+  Users, Eye, UserPlus, Sparkles, Mail, RefreshCw,
+  TrendingUp, Loader2, Info, ChevronDown, ChevronUp,
+  DatabaseZap, CheckCircle2, AlertCircle, HardDrive, Server, Zap
 } from "lucide-react"
 import { databases, account } from "@/lib/appwrite"
 import { Query } from "appwrite"
+import { getAppwriteUsage, getCloudflareUsage } from "@/services/shared/storageAdapter"
+import { getStorageConfig, setStorageConfig } from "@/services/shared/storageConfigService"
+import { formatFileSize } from "@/utils/formatFileSize"
 
 const WORKER = "https://unizuya-stats.harshtayal710.workers.dev"
 
@@ -169,6 +173,14 @@ function Section({ title, hint, children }) {
           </span>
         )}
       </div>
+      {children}
+    </div>
+  )
+}
+
+function GlassCard({ children, className = "" }) {
+  return (
+    <div className={`rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-5 ${className}`}>
       {children}
     </div>
   )
@@ -343,6 +355,15 @@ export default function AdminStats() {
   const [usersExpanded, setUsersExpanded] = useState(false)
   const [usernameMap, setUsernameMap] = useState({})
 
+  // Storage Stats
+  const [storageStats, setStorageStats] = useState({
+    appwrite: { totalSize: 0, fileCount: 0 },
+    cloudflare: { totalSize: 0, fileCount: 0 },
+    activeProvider: "appwrite"
+  })
+  const [storageLoading, setStorageLoading] = useState(true)
+  const [storageToggling, setStorageToggling] = useState(false)
+
   const resolveUsernames = async (userIds) => {
     if (!userIds.length) return {}
     try {
@@ -396,7 +417,43 @@ export default function AdminStats() {
     finally { setLimitsLoading(false) }
   }, [])
 
+  const loadStorageStats = useCallback(async () => {
+    setStorageLoading(true)
+    try {
+      const [appwrite, cloudflare, config] = await Promise.all([
+        getAppwriteUsage(),
+        getCloudflareUsage(),
+        getStorageConfig()
+      ])
+      setStorageStats({
+        appwrite,
+        cloudflare,
+        activeProvider: config.activeStorage
+      })
+    } catch (e) {
+      console.error("Failed to load storage stats:", e)
+    } finally {
+      setStorageLoading(false)
+    }
+  }, [])
+
+  const handleToggleStorage = async (provider) => {
+    if (provider === storageStats.activeProvider) return
+    setStorageToggling(true)
+    try {
+      await setStorageConfig(provider)
+      setStorageStats(prev => ({ ...prev, activeProvider: provider }))
+      toast.success(`Storage provider switched to ${provider}`)
+    } catch (e) {
+      console.error(e)
+      toast.error("Failed to switch storage provider")
+    } finally {
+      setStorageToggling(false)
+    }
+  }
+
   useEffect(() => { loadLimits() }, [loadLimits])
+  useEffect(() => { loadStorageStats() }, [loadStorageStats])
 
   const saveLimits = async () => {
     setLimitsSaving(true)
@@ -810,6 +867,117 @@ export default function AdminStats() {
               </div>
             </>
           )}
+        </div>
+      </Section>
+
+      {/* ── STORAGE MANAGEMENT ── */}
+      <Section
+        title="Storage Management - Dual Backend"
+        hint="Appwrite has a 2GB limit. Cloudflare R2 provides much larger storage. New uploads go to the active provider."
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Controls */}
+          <GlassCard className="lg:col-span-1 flex flex-col justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Active Storage Provider</p>
+              <p className="text-[11px] text-muted-foreground mt-1 mb-4">
+                Routing all new uploads to the selected backend. Deletions are cross-backend.
+              </p>
+              
+              <div className="space-y-2">
+                {[
+                  { id: "appwrite", label: "Appwrite Bucket", icon: DatabaseZap, color: "#ef4444" },
+                  { id: "cloudflare", label: "Cloudflare R2", icon: Zap, color: "#f59e0b" }
+                ].map((prov) => (
+                  <button
+                    key={prov.id}
+                    disabled={storageToggling || storageLoading}
+                    onClick={() => handleToggleStorage(prov.id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all
+                                ${storageStats.activeProvider === prov.id 
+                                  ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(59,130,246,0.1)]" 
+                                  : "bg-card/40 border-border/40 hover:border-border hover:bg-card/60"}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center`}
+                        style={{ background: `${prov.color}15`, color: prov.color }}>
+                        <prov.icon size={14} />
+                      </div>
+                      <span className={`text-xs font-semibold ${storageStats.activeProvider === prov.id ? "text-foreground" : "text-muted-foreground"}`}>
+                        {prov.label}
+                      </span>
+                    </div>
+                    {storageStats.activeProvider === prov.id && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-tighter">
+                        <CheckCircle2 size={12} /> Active
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {storageToggling && (
+              <div className="mt-4 flex items-center gap-2 text-[10px] text-primary animate-pulse font-medium">
+                <Loader2 size={10} className="animate-spin" /> Updating global configuration…
+              </div>
+            )}
+          </GlassCard>
+
+          {/* Usage Stats Content */}
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <GlassCard className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center">
+                    <DatabaseZap size={13} />
+                  </div>
+                  <span className="text-xs font-bold text-foreground">Appwrite Usage</span>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 uppercase">Limit: 2GB</span>
+              </div>
+              
+              <div className="space-y-3">
+                <QuotaBar 
+                  label="Storage Space" 
+                  used={storageStats.appwrite.totalSize / (1024 * 1024 * 1024)} 
+                  limit={2} 
+                  color="#ef4444" 
+                  note={formatFileSize(storageStats.appwrite.totalSize)}
+                />
+                <div className="pt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>File Count</span>
+                  <span className="font-semibold text-foreground">{storageStats.appwrite.fileCount}</span>
+                </div>
+              </div>
+            </GlassCard>
+
+            <GlassCard className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <Zap size={13} />
+                  </div>
+                  <span className="text-xs font-bold text-foreground">Cloudflare R2</span>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 uppercase">Limit: 10GB</span>
+              </div>
+              
+              <div className="space-y-3">
+                <QuotaBar 
+                  label="Used Capacity" 
+                  used={storageStats.cloudflare.totalSize / (1024 * 1024 * 1024)} 
+                  limit={10} // Cloudflare R2 Free Tier: 10GB
+                  color="#f59e0b" 
+                  note={formatFileSize(storageStats.cloudflare.totalSize)}
+                />
+                <div className="pt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>File Count</span>
+                  <span className="font-semibold text-foreground">{storageStats.cloudflare.fileCount}</span>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
         </div>
       </Section>
 

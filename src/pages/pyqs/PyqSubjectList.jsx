@@ -4,7 +4,9 @@ import { useParams, useLocation } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { FileText, ExternalLink, Download } from "lucide-react"
-import { databases, storage } from "@/lib/appwrite"
+import { databases } from "@/lib/appwrite"
+import { getFileViewUrl } from "@/services/shared/storageAdapter"
+import { getPdfDownloadUrl } from "@/services/shared/storageService"
 import { Breadcrumbs } from "@/components"
 import { BackButton } from "@/components"
 import { formatFileSize } from "@/utils/formatFileSize"
@@ -59,10 +61,14 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
   const getSharePath = useShareLink({ programId, branchName: decodedBranch })
 
   const handleView     = (pyq) => {
-    if (isMobileDevice()) { window.open(storage.getFileView(pyq.bucketId, pyq.fileId), "_blank"); return }
+    const url = getFileViewUrl(pyq.fileId, pyq.storageProvider, "pyq", pyq.bucketId)
+    if (isMobileDevice()) { window.open(url, "_blank"); return }
     setPreviewPyq(pyq)
   }
-  const handleDownload = (pyq) => window.open(storage.getFileDownload(pyq.bucketId, pyq.fileId), "_blank")
+  const handleDownload = (pyq) => {
+    const url = getPdfDownloadUrl(pyq.fileId, pyq.storageProvider, "pyq", pyq.bucketId)
+    window.open(url, "_blank")
+  }
 
   if (!canFetch) return null
 
@@ -120,7 +126,11 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
                       <div className="flex flex-wrap items-center gap-2 mt-0.5">
                         {pyq.unit && <span className="text-[10px] font-medium px-1.5 py-px rounded bg-muted/60 text-muted-foreground">Unit {pyq.unit.order}: {pyq.unit.title}</span>}
                         {pyq.year && <span className="text-[11px] text-muted-foreground">{pyq.year}</span>}
-                        {pyq.fileSize && <span className="text-[11px] text-muted-foreground/60">{formatFileSize(pyq.fileSize)}</span>}
+                        {pyq.fileSize > 0 && (
+                          <span className="hidden sm:inline-block text-[11px] text-muted-foreground/60">
+                            {formatFileSize(pyq.fileSize)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

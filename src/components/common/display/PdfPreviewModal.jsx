@@ -8,7 +8,7 @@ import {
 import { FileText } from "lucide-react";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
-import { storage } from "@/lib/appwrite";
+import { getFileViewUrl } from "@/services/shared/storageAdapter";
 
 // 🔒 In-memory cache (per tab)
 const pdfViewCache = new Map();
@@ -17,6 +17,8 @@ export default function PdfPreviewModal({
   title,
   bucketId,
   fileId,
+  storageProvider,
+  type,
   open,
   onClose,
 }) {
@@ -27,7 +29,7 @@ export default function PdfPreviewModal({
   useEffect(() => {
     if (!open || !fileId || !bucketId) return;
 
-    const cacheKey = `${bucketId}:${fileId}`;
+    const cacheKey = `${storageProvider || "appwrite"}:${bucketId || "default"}:${fileId}`;
 
     setLoading(true);
     setError(false);
@@ -48,12 +50,10 @@ export default function PdfPreviewModal({
       return;
     }
 
-    // 3️⃣ Appwrite call (only once)
+    // 3️⃣ Adapter call
     try {
-      const url = `${storage.getFileView(
-        bucketId,
-        fileId
-      )}#zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`;
+      const baseUrl = getFileViewUrl(fileId, storageProvider, type, bucketId);
+      const url = `${baseUrl}#zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`;
 
       pdfViewCache.set(cacheKey, url);
       sessionStorage.setItem(cacheKey, url);

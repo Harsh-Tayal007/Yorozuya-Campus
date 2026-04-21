@@ -7,14 +7,13 @@ import {
 } from "lucide-react"
 
 import { getBranchesByProgram } from "@/services/university/branchService"
-import { ID, storage } from "@/lib/appwrite"
+import { ID } from "@/lib/appwrite"
 import {
   createSubject, getSubjectsBySyllabus, updateSubjectPdf,
 } from "@/services/syllabus/subjectService"
 import { updateSyllabus } from "@/services/syllabus/syllabusService"
 import { CustomSelect, GlassCard, SectionLabel } from "@/components/admin/CustomSelect"
-
-const SYLLABUS_BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID
+import { uploadFile as adapterUpload } from "@/services/shared/storageAdapter"
 
 const initialState = {
   title: "", semester: "", description: "", branch: "", subjects: [],
@@ -165,8 +164,14 @@ const SyllabusForm = ({
       const syllabusId = editingSyllabus ? editingSyllabus.$id : syllabus.$id
       if (!editingSyllabus) {
         for (const subject of formData.subjects) {
-          const file = await storage.createFile(SYLLABUS_BUCKET_ID, ID.unique(), subject.pdfFile)
-          await createSubject({ syllabusId, subjectName: subject.name, description: subject.description, pdfFileId: file.$id })
+          const uploadResult = await adapterUpload(subject.pdfFile, "syllabus")
+          await createSubject({
+            syllabusId,
+            subjectName: subject.name,
+            description: subject.description,
+            pdfFileId: uploadResult.fileId,
+            storageProvider: uploadResult.storageProvider,
+          })
           await updateSyllabus(syllabusId, {
             subjects: formData.subjects.map(s => s.name),
             subjectsCount: formData.subjects.length,

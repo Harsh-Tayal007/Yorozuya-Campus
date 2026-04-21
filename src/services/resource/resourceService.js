@@ -1,12 +1,12 @@
 // services/resourceService.js
-import { databases, storage } from "@/lib/appwrite";
+import { databases } from "@/lib/appwrite";
 import { ID } from "appwrite";
 import {
   DATABASE_ID,
   RESOURCES_COLLECTION_ID,
-  STORAGE_BUCKET_ID,
   ACTIVITIES_COLLECTION_ID,
 } from "@/config/appwrite";
+import { uploadFile as adapterUpload, deleteFile as adapterDelete } from "@/services/shared/storageAdapter";
 
 /**
  * CREATE resource
@@ -27,6 +27,7 @@ export async function createResource(data, currentUser) {
 
   let fileId = null;
   let resourceUrl = null;
+  let storageProvider = "appwrite";
 
   if (resourceType === "link") {
     if (!url) throw new Error("URL is required");
@@ -34,12 +35,9 @@ export async function createResource(data, currentUser) {
   } else {
     if (!file) throw new Error("File is required");
 
-    const uploaded = await storage.createFile(
-      STORAGE_BUCKET_ID,
-      ID.unique(),
-      file
-    );
-    fileId = uploaded.$id;
+    const uploadResult = await adapterUpload(file, "resource");
+    fileId = uploadResult.fileId;
+    storageProvider = uploadResult.storageProvider;
   }
 
   const resource = await databases.createDocument(
@@ -56,6 +54,7 @@ export async function createResource(data, currentUser) {
       subjectId,
       unitId,
       fileId,
+      storageProvider,
       url: resourceUrl,
       isPublic: true,
       status: "published",
@@ -89,7 +88,7 @@ export async function deleteResource(resource, currentUser) {
 
   if (type !== "link" && fileId) {
     try {
-      await storage.deleteFile(STORAGE_BUCKET_ID, fileId);
+      await adapterDelete(fileId, resource.storageProvider, "resource");
     } catch {
       // ignore file delete failure
     }

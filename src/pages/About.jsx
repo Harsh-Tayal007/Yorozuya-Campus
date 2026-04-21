@@ -109,7 +109,7 @@ const FEATURE_CARDS = [
     color: "bg-violet-500/10 text-violet-500",
     title: "PYQs and Resources",
     description:
-      "Past year questions and study materials organised in one place, making exam preparation faster and far less scattered.",
+      "Scalable multi-cloud storage (Appwrite + R2) bypassing the standard 2GB limit. Fast access to all past year papers and notes.",
   },
   {
     icon: MessageSquare,
@@ -202,18 +202,18 @@ const TECH_STACK = [
     items: ["React.js", "Tailwind CSS", "React Router", "Lucide Icons"],
   },
   {
-    category: "Backend and Infrastructure",
+    category: "Backend & Storage",
     icon: Server,
     color: "text-violet-500",
     bg: "bg-violet-500/10",
-    items: ["Appwrite", "Cloudflare Workers", "Serverless Functions"],
+    items: ["Appwrite", "Cloudflare R2 Storage", "Cloudflare Workers", "KV Configuration"],
   },
   {
     category: "Database",
     icon: Database,
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
-    items: ["Appwrite Database", "Structured Collections", "Real-Time Queries"],
+    items: ["Appwrite Database", "Structured Collections", "Dual-Storage Strategy"],
   },
   {
     category: "External APIs",
@@ -283,16 +283,17 @@ function ArchitectureDiagram() {
             </span>
           </div>
           <ArrowDown />
-          <div className="grid w-full grid-cols-3 gap-3">
-            <DiagBox color="violet" icon={Server} label="Appwrite Backend" sub="Auth, DB, Functions" />
-            <DiagBox color="orange" icon={Zap} label="Cloudflare Worker" sub="Notice Scraping, Proxy" />
-            <DiagBox color="emerald" icon={Code2} label="Contact Worker" sub="Form to Appwrite pipeline" />
+          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+            <DiagBox color="violet" icon={Server} label="Appwrite Backend" sub="Auth & Database" />
+            <DiagBox color="orange" icon={Zap} label="Storage Worker" sub="R2 Management" />
+            <DiagBox color="orange" icon={Zap} label="Notice Worker" sub="Univ. Scraping" />
+            <DiagBox color="emerald" icon={Code2} label="Contact Worker" sub="Proxy Pipeline" />
           </div>
           <ArrowDown />
           <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-400/20 dark:bg-emerald-500/10">
             <Database size={14} className="text-emerald-500" />
             <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-              Appwrite Database: Collections, Real-Time, Storage
+              Multi-Cloud Storage: Appwrite Bucket + Cloudflare R2
             </span>
           </div>
           <ArrowDown />

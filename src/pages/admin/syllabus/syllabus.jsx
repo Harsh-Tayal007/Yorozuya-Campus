@@ -16,12 +16,12 @@ import {
   createSyllabus, getSyllabusByProgram, updateSyllabus, deleteSyllabus,
 } from "@/services/syllabus/syllabusService"
 import { getSubjectsBySyllabusIds } from "@/services/syllabus/subjectService"
-import { storage } from "@/lib/appwrite"
 import { useAuth } from "@/context/AuthContext"
 import SyllabusForm from "./syllabusForm"
 import { CustomSelect, GlassCard, SectionLabel } from "@/components/admin/CustomSelect"
+import { getFileViewUrl } from "@/services/shared/storageAdapter"
 
-const BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID
+
 
 // ── Filter pill select (portal) ────────────────────────────────────────────────
 function FilterSelect({ value, onChange, options, placeholder, icon: Icon }) {
@@ -111,7 +111,8 @@ function FilterSelect({ value, onChange, options, placeholder, icon: Icon }) {
 function SyllabusCardModern({ syllabus, subjects, onEdit, onDelete, onView }) {
   const handleView = () => {
     if (!subjects.length) { toast.error("No subject PDF available"); return }
-    const url = storage.getFileView(BUCKET_ID, subjects[0].pdfFileId)
+    const sub = subjects[0]
+    const url = getFileViewUrl(sub.pdfFileId, sub.storageProvider, "syllabus", sub.bucketId)
     window.open(url, "_blank")
   }
 

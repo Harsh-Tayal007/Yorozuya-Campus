@@ -1,6 +1,6 @@
-﻿import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
-import { databases, storage } from "@/lib/appwrite"
+import { databases } from "@/lib/appwrite"
 import { Query } from "appwrite"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -10,6 +10,12 @@ import {
   BookOpen, GraduationCap, GitBranch, Layers, Calendar,
   ArrowRight,
 } from "lucide-react"
+import { 
+  getFileViewUrl, 
+  deleteFile as adapterDelete,
+  getFileMetadata 
+} from "@/services/shared/storageAdapter"
+import { formatFileSize } from "@/utils/formatFileSize"
 
 import {
   DATABASE_ID, PYQS_COLLECTION_ID,
@@ -98,7 +104,20 @@ async function fetchPyqsWithMeta({ limit, filters, searchTerm }) {
   const unitMap     = {}; unitRes.documents.forEach(u => { unitMap[u.$id] = u })
   const syllabusMap = {}; syllabusRes.documents.forEach(s => { syllabusMap[s.$id] = s })
 
-  return { docs, subjectMap, programMap, unitMap, syllabusMap }
+  // ── Enrich with file sizes ────────────────────────────────────────────────
+  const enrichedDocs = await Promise.all(docs.map(async (doc) => {
+    if (!doc.fileId || (doc.storageProvider !== "cloudflare" && !doc.bucketId)) {
+      return doc
+    }
+    try {
+      const meta = await getFileMetadata(doc.fileId, doc.storageProvider, "pyq", doc.bucketId)
+      return { ...doc, fileSize: meta.size }
+    } catch {
+      return doc
+    }
+  }))
+
+  return { docs: enrichedDocs, subjectMap, programMap, unitMap, syllabusMap }
 }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
@@ -135,7 +154,7 @@ function PyqCard({ pyq, programMap, subjectMap, syllabusMap, unitMap, onEdit, on
   const unit       = unitMap?.[pyq.unitId]?.title
 
   const handleView = () => {
-    const url = storage.getFileView(pyq.bucketId, pyq.fileId)
+    const url = getFileViewUrl(pyq.fileId, pyq.storageProvider, "pyq", pyq.bucketId)
     window.open(url, "_blank")
   }
 
@@ -175,6 +194,12 @@ function PyqCard({ pyq, programMap, subjectMap, syllabusMap, unitMap, onEdit, on
                   <span className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px]
                                    font-semibold bg-muted/60 text-muted-foreground">
                     <Calendar size={9} />{pyq.year}
+                  </span>
+                )}
+                {pyq.fileSize > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px]
+                                   font-semibold bg-muted/60 text-muted-foreground/80">
+                    {formatFileSize(pyq.fileSize)}
                   </span>
                 )}
               </div>
@@ -256,7 +281,9 @@ export default function PyqList({
           const id = toast.loading("Deleting…")
           try {
             await databases.deleteDocument(DATABASE_ID, PYQS_COLLECTION_ID, pyq.$id)
-            if (pyq.fileId && pyq.bucketId) await storage.deleteFile(pyq.bucketId, pyq.fileId)
+            if (pyq.fileId) {
+              await adapterDelete(pyq.fileId, pyq.storageProvider, "pyq", pyq.bucketId)
+            }
             // Invalidate so list refreshes after delete
             queryClient.invalidateQueries({ queryKey: ["pyqs"] })
             toast.success("PYQ deleted", { id })

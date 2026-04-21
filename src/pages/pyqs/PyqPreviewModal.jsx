@@ -1,4 +1,4 @@
-﻿import {
+import {
     Dialog,
     DialogContent,
     DialogHeader,
@@ -8,7 +8,7 @@
 import { FileText, X } from "lucide-react"
 import { DialogDescription } from "@radix-ui/react-dialog"
 import { useEffect, useState } from "react"
-import { storage } from "@/lib/appwrite"
+import { getFileViewUrl } from "@/services/shared/storageAdapter"
 
 
 
@@ -33,10 +33,8 @@ export default function PyqPreviewModal({ pyq, open, onClose }) {
         setError(false)
 
         try {
-            const url = `${storage.getFileView(
-                pyq.bucketId,
-                pyq.fileId
-            )}#zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`
+            const baseUrl = getFileViewUrl(pyq.fileId, pyq.storageProvider, "pyq", pyq.bucketId)
+            const url = `${baseUrl}#zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`
             setPdfUrl(url)
         } catch (err) {
             console.error("Failed to load PDF preview", err)

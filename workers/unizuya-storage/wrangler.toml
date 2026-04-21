@@ -1,0 +1,15 @@
+name = "unizuya-storage"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "unizuya-files"
+
+[[kv_namespaces]]
+binding = "STORAGE_KV"
+id = "a0d665c627bf4bb291640a7182f8c5bf"
+
+# Set via: npx wrangler secret put STORAGE_SECRET
+# [vars]
+# STORAGE_SECRET = "set-via-wrangler-secret"
