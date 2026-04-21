@@ -9,7 +9,7 @@ import {
   TrendingUp, Loader2, Info, ChevronDown, ChevronUp,
   DatabaseZap, CheckCircle2, AlertCircle, HardDrive, Server, Zap
 } from "lucide-react"
-import { databases, account } from "@/lib/appwrite"
+import { databases, functions } from "@/lib/appwrite"
 import { Query } from "appwrite"
 import { getAppwriteUsage, getCloudflareUsage } from "@/services/shared/storageAdapter"
 import { getStorageConfig, setStorageConfig } from "@/services/shared/storageConfigService"
@@ -253,10 +253,10 @@ function FlushButton({ onFlushed }) {
       className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg
                   border transition-colors disabled:opacity-50
                   ${state === "success"
-                    ? "border-emerald-500/40 text-emerald-500 bg-emerald-500/5"
-                    : state === "error"
-                    ? "border-red-500/40 text-red-500 bg-red-500/5"
-                    : "border-border hover:bg-muted text-foreground"}`}
+          ? "border-emerald-500/40 text-emerald-500 bg-emerald-500/5"
+          : state === "error"
+            ? "border-red-500/40 text-red-500 bg-red-500/5"
+            : "border-border hover:bg-muted text-foreground"}`}
     >
       {state === "loading" ? (
         <Loader2 size={13} className="animate-spin" />
@@ -349,6 +349,21 @@ function FlushButton({ onFlushed }) {
   )
 }
 
+// ── Fetch all live quotas via the Cloudflare Stats Worker (Proxy) ───────────
+async function fetchLiveQuotas() {
+  const SECRET = import.meta.env.VITE_FLUSH_SECRET
+  try {
+    const res = await fetch(`${WORKER}/admin/live-quotas`, {
+      headers: { Authorization: `Bearer ${SECRET}` },
+    })
+    if (!res.ok) throw new Error(`Worker Quotas ${res.status}`)
+    return await res.json()
+  } catch (e) {
+    console.error("Failed to fetch live quotas via worker:", e)
+    return null
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminStats() {
   const [today, setToday] = useState(null)
@@ -374,6 +389,13 @@ export default function AdminStats() {
   })
   const [storageLoading, setStorageLoading] = useState(true)
   const [storageToggling, setStorageToggling] = useState(false)
+
+  // External service quota stats — loaded in one batched Promise.all
+  const [resendStats, setResendStats] = useState({ monthly: 0, daily: 0, monthlyLimit: 3000, dailyLimit: 100, live: false })
+  const [improvMxStats, setImprovMxStats] = useState({ dailyLimit: 25, dailyUsed: 0, live: false })
+  const [cfWorkerStats, setCfWorkerStats] = useState({ today: 0, monthly: 0, dailyLimit: 100_000, live: false })
+  const [appwriteExecs, setAppwriteExecs] = useState({ count: 0, limit: 750_000, live: false })
+  const [quotasLoading, setQuotasLoading] = useState(true)
 
   const resolveUsernames = async (userIds) => {
     if (!userIds.length) return {}
@@ -463,6 +485,24 @@ export default function AdminStats() {
     }
   }, [])
 
+  // Single batch fetch for all external API quotas via Worker Proxy
+  const loadQuotas = useCallback(async () => {
+    setQuotasLoading(true)
+    try {
+      const data = await fetchLiveQuotas()
+      if (data) {
+        if (data.resend) setResendStats(prev => ({ ...prev, ...data.resend }))
+        if (data.cloudflare) setCfWorkerStats(prev => ({ ...prev, ...data.cloudflare }))
+        if (data.improvmx) setImprovMxStats(prev => ({ ...prev, ...data.improvmx }))
+        if (data.appwrite) setAppwriteExecs(prev => ({ ...prev, ...data.appwrite }))
+      }
+    } catch (e) {
+      console.warn("Quotas load failed:", e)
+    } finally {
+      setQuotasLoading(false)
+    }
+  }, [])
+
   const handleToggleStorage = async (provider) => {
     if (provider === storageStats.activeProvider) return
     setStorageToggling(true)
@@ -480,6 +520,7 @@ export default function AdminStats() {
 
   useEffect(() => { loadLimits() }, [loadLimits])
   useEffect(() => { loadStorageStats() }, [loadStorageStats])
+  useEffect(() => { loadQuotas() }, [loadQuotas])
 
   const saveLimits = async () => {
     setLimitsSaving(true)
@@ -577,7 +618,11 @@ export default function AdminStats() {
   const totalTokens = histTokens + todayTokens
   const totalEmails = histEmails + todayEmails
 
-  const totalWorkerReqs = history.reduce((s, d) => s + (d.page_views ?? 0), 0) + todayViews
+  // Keep the page_views-based estimate as a fallback when CF API token is absent
+  const totalWorkerReqsFallback = history.reduce((s, d) => s + (d.page_views ?? 0), 0) + todayViews
+  // Real CF worker today count: prefer GraphQL result, fall back to page_views proxy
+  const cfTodayReal = cfWorkerStats.today > 0 ? cfWorkerStats.today : todayViews
+  const cfMonthlyReal = cfWorkerStats.monthly > 0 ? cfWorkerStats.monthly : totalWorkerReqsFallback
 
   return (
     <div className="space-y-8 mx-auto max-w-7xl pb-10">
@@ -922,7 +967,7 @@ export default function AdminStats() {
               <p className="text-[11px] text-muted-foreground mt-1 mb-4">
                 Routing all new uploads to the selected backend. Deletions are cross-backend.
               </p>
-              
+
               <div className="space-y-2">
                 {[
                   { id: "appwrite", label: "Appwrite Bucket", icon: DatabaseZap, color: "#ef4444" },
@@ -933,9 +978,9 @@ export default function AdminStats() {
                     disabled={storageToggling || storageLoading}
                     onClick={() => handleToggleStorage(prov.id)}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all
-                                ${storageStats.activeProvider === prov.id 
-                                  ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(59,130,246,0.1)]" 
-                                  : "bg-card/40 border-border/40 hover:border-border hover:bg-card/60"}`}
+                                ${storageStats.activeProvider === prov.id
+                        ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                        : "bg-card/40 border-border/40 hover:border-border hover:bg-card/60"}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center`}
@@ -975,13 +1020,13 @@ export default function AdminStats() {
                 </div>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 uppercase">Limit: 2GB</span>
               </div>
-              
+
               <div className="space-y-3">
-                <QuotaBar 
-                  label="Storage Space" 
-                  used={storageStats.appwrite.totalSize / (1024 * 1024 * 1024)} 
-                  limit={2} 
-                  color="#ef4444" 
+                <QuotaBar
+                  label="Storage Space"
+                  used={storageStats.appwrite.totalSize / (1024 * 1024 * 1024)}
+                  limit={2}
+                  color="#ef4444"
                   note={formatFileSize(storageStats.appwrite.totalSize)}
                 />
                 <div className="pt-2 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -1001,13 +1046,13 @@ export default function AdminStats() {
                 </div>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 uppercase">Limit: 10GB</span>
               </div>
-              
+
               <div className="space-y-3">
-                <QuotaBar 
-                  label="Used Capacity" 
-                  used={storageStats.cloudflare.totalSize / (1024 * 1024 * 1024)} 
+                <QuotaBar
+                  label="Used Capacity"
+                  used={storageStats.cloudflare.totalSize / (1024 * 1024 * 1024)}
                   limit={10} // Cloudflare R2 Free Tier: 10GB
-                  color="#f59e0b" 
+                  color="#f59e0b"
                   note={formatFileSize(storageStats.cloudflare.totalSize)}
                 />
                 <div className="pt-2 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -1023,15 +1068,56 @@ export default function AdminStats() {
       {/* ── SERVICE QUOTAS ── */}
       <Section
         title="Service quotas - free tier limits"
-        hint="Worker requests estimated from page_views count. Gemini token limit is per day, others per month."
+        hint="Worker requests via CF GraphQL Analytics (falls back to page-view proxy if VITE_CF_API_TOKEN is absent). Resend + ImprovMX via live API. Appwrite shows real function execution count."
       >
         <div className="rounded-xl border border-border bg-card px-5 py-5 space-y-5">
-          <QuotaBar label="Cloudflare Worker requests" note="(estimated from page views, resets daily)" used={todayViews} limit={100000} color="#3b82f6" />
-          <QuotaBar label="Resend emails" note="(monthly)" used={totalEmails} limit={3000} color="#f59e0b" />
-          <QuotaBar label="Gemini 2.5 Flash tokens" note="(daily free limit)" used={todayTokens} limit={1000000} color="#ec4899" />
-          <QuotaBar label="Appwrite DB operations" note="(monthly free tier: 750k)" used={totalWorkerReqs * 2} limit={750000} color="#8b5cf6" />
+
+          <QuotaBar
+            label="Cloudflare Worker requests (today)"
+            note={cfWorkerStats.live ? "(live · CF GraphQL Analytics)" : "(est. from page views · add VITE_CF_API_TOKEN for live)"}
+            used={cfTodayReal} limit={100_000} color="#3b82f6"
+          />
+          <QuotaBar
+            label="Cloudflare Worker requests (this month)"
+            note={cfWorkerStats.live ? "(live · resets monthly)" : "(est. from page views history)"}
+            used={cfMonthlyReal} limit={1_000_000} color="#60a5fa"
+          />
+
+          {quotasLoading ? (
+            <div className="flex items-center gap-2 py-1">
+              <Loader2 size={11} className="animate-spin text-muted-foreground/60" />
+              <span className="text-[11px] text-muted-foreground/60">Loading email &amp; quota data…</span>
+            </div>
+          ) : (
+            <>
+              <QuotaBar
+                label="Resend emails (this month)"
+                note="(live · Resend API)"
+                used={resendStats.monthly} limit={resendStats.monthlyLimit} color="#f59e0b"
+              />
+              <QuotaBar
+                label="Resend emails (today)"
+                note="(live · daily limit)"
+                used={resendStats.daily} limit={resendStats.dailyLimit} color="#fbbf24"
+              />
+              <QuotaBar
+                label="ImprovMX forwards — daily limit"
+                note={improvMxStats.dailyUsed !== null ? "(live)" : "(plan limit · daily used unavailable via API)"}
+                used={improvMxStats.dailyUsed ?? 0} limit={improvMxStats.dailyLimit} color="#34d399"
+              />
+            </>
+          )}
+
+          <QuotaBar label="Gemini 2.5 Flash tokens" note="(daily free limit)" used={todayTokens} limit={1_000_000} color="#ec4899" />
+
+          <QuotaBar
+            label="Appwrite function executions (this month)"
+            note={appwriteExecs.live ? "(live · Appwrite SDK)" : "(est. · check worker credentials)"}
+            used={appwriteExecs.count} limit={appwriteExecs.limit} color="#8b5cf6"
+          />
+
           <p className="text-[11px] text-muted-foreground/50 pt-1 border-t border-border">
-            Cloudflare: 100k req/day · Resend: 3,000 emails/month · Gemini Flash: 1M tokens/day · Appwrite: 750k operations/month
+            CF Workers: 100k req/day · 1M/month · Resend: 3k/month, 100/day · ImprovMX: {improvMxStats.dailyLimit}/day · Gemini Flash: 1M tokens/day · Appwrite Functions: 750k exec/month
           </p>
         </div>
       </Section>
