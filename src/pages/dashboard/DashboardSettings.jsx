@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -10,7 +10,7 @@ import {
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
   KeyRound, AlertCircle,
   Trash2, AtSign, RefreshCw,
-  X
+  X, Sparkles
 } from "lucide-react"
 
 import { getUniversities } from "@/services/university/universityService"
@@ -919,6 +919,9 @@ const PreferencesTab = () => {
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains("dark")
   )
+  const [animatedBg, setAnimatedBg] = useState(() =>
+    localStorage.getItem("pref_animated_bg") === "1"
+  )
 
   // ── In-app notification prefs (Appwrite account prefs) ────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
@@ -1010,6 +1013,20 @@ const PreferencesTab = () => {
           hint="Switch between light and dark theme"
         >
           <Toggle checked={isDark} onChange={applyTheme} />
+        </PrefRow>
+        <PrefRow
+          icon={Sparkles}
+          label="Animated background"
+          hint="Show floating gradient blobs on the landing page. Off by default for better performance."
+        >
+          <Toggle
+            checked={animatedBg}
+            onChange={(v) => {
+              setAnimatedBg(v)
+              localStorage.setItem("pref_animated_bg", v ? "1" : "0")
+              toast.success(v ? "Background animations enabled" : "Background animations disabled")
+            }}
+          />
         </PrefRow>
       </Section>
 

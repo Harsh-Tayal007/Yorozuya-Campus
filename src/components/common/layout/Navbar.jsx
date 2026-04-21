@@ -1,11 +1,11 @@
-﻿// src/components/common/layout/Navbar.jsx
+// src/components/common/layout/Navbar.jsx
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import {
   Menu, User, LayoutDashboard, Settings,
   LogOut, ChevronDown, ShieldCheck, Users,
 } from "lucide-react"
-import { motion, useScroll, useMotionValueEvent } from "framer-motion"
+
 import { useState, useRef, useEffect } from "react"
 import { useSidebar } from "@/context/SidebarContext"
 import NotificationBell from "../navigation/NotificationBell"
@@ -98,7 +98,6 @@ const NavLogoMark = () => {
 const Navbar = () => {
   const navigate   = useNavigate()
   const sidebar    = useSidebar()
-  const { scrollY } = useScroll()
   const [isScrolled,       setIsScrolled]       = useState(false)
   const [dropdownOpen,     setDropdownOpen]     = useState(false)
   const [triggerRect,      setTriggerRect]      = useState(null)
@@ -108,7 +107,25 @@ const Navbar = () => {
 
   const { authStatus, currentUser, isLoading, logout, hasAnyPermission } = useAuth()
 
-  useMotionValueEvent(scrollY, "change", latest => setIsScrolled(latest > 20))
+  // Lightweight scroll detection - fires once at threshold, not every frame
+  useEffect(() => {
+    const sentinel = document.getElementById("nav-scroll-sentinel")
+    if (!sentinel) {
+      // Fallback: create sentinel if not found in layout
+      const s = document.createElement("div")
+      s.id = "nav-scroll-sentinel"
+      Object.assign(s.style, { position: "absolute", top: "20px", left: 0, width: "1px", height: "1px", pointerEvents: "none" })
+      document.body.prepend(s)
+    }
+    const target = document.getElementById("nav-scroll-sentinel")
+    if (!target) return
+    const obs = new IntersectionObserver(
+      ([e]) => setIsScrolled(!e.isIntersecting),
+      { threshold: 1 }
+    )
+    obs.observe(target)
+    return () => obs.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!dropdownOpen) return

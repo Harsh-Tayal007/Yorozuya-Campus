@@ -39,7 +39,9 @@ export default function Home() {
   const { currentUser, isLoading: authLoading } = useAuth()
   const [authModal, setAuthModal]     = useState({ open: false, mode: "signup" })
   const [roadmapOpen, setRoadmapOpen] = useState(false)
-  // Defer heavy background blobs until after first paint
+  // Animated blobs preference - off by default for performance
+  const blobsEnabled = useState(() => localStorage.getItem("pref_animated_bg") === "1")[0]
+  // Defer blob rendering until after first paint (only when enabled)
   const [blobsReady, setBlobsReady]   = useState(false)
   const featuresRef = useRef(null)
 
@@ -51,11 +53,12 @@ export default function Home() {
 
   // Defer blob rendering - don't block LCP
   useEffect(() => {
+    if (!blobsEnabled) return
     const id = requestIdleCallback
       ? requestIdleCallback(() => setBlobsReady(true), { timeout: 1500 })
       : setTimeout(() => setBlobsReady(true), 300)
     return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
-  }, [])
+  }, [blobsEnabled])
 
   // Lock scroll when roadmap open
   useEffect(() => {
@@ -78,8 +81,8 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* Blobs deferred - doesn't block LCP */}
-      {blobsReady && (
+      {/* Blobs - only rendered if user opted in via Settings > Preferences */}
+      {blobsEnabled && blobsReady && (
         <Suspense fallback={null}>
           <AnimatedBlobs />
         </Suspense>
