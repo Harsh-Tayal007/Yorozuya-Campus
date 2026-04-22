@@ -12,6 +12,7 @@ import { getFileMetadata, getFileViewUrl } from "@/services/shared/storageAdapte
 import { Breadcrumbs } from "@/components"
 import { BackButton } from "@/components"
 import { PdfPreviewModal } from "@/components"
+import GlowCard from "@/components/common/display/GlowCard"
 import { STORAGE_BUCKET_ID, SUBJECTS_COLLECTION_ID, SYLLABUS_COLLECTION_ID } from "@/config/appwrite"
 import { buildSyllabusFilename } from "@/utils/filenameUtils"
 import { downloadFileXHR } from "@/services/shared/downloadService"
@@ -155,10 +156,10 @@ export default function SyllabusUserView({
         ) : (
           <div className="space-y-2.5">
             {subjects.map(subject => (
-              <motion.div key={subject.$id} layout
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
-                           hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+              <GlowCard key={subject.$id}
+                disableGlare={true}
+                spotlightColor="rgba(6, 182, 212, 0.08)"
+                className="overflow-hidden"
               >
                 <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
                   style={{ background: "linear-gradient(90deg, transparent, #06b6d4, transparent)" }} />
@@ -222,7 +223,7 @@ export default function SyllabusUserView({
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </GlowCard>
             ))}
           </div>
         )}

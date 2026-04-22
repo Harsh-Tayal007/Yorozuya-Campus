@@ -1,4 +1,4 @@
-﻿// src/pages/dashboard/AdminDashboard.jsx
+// src/pages/dashboard/AdminDashboard.jsx
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { databases } from "@/lib/appwrite"
@@ -12,6 +12,7 @@ import {
   Activity, Clock,
   ClipboardCheck,
 } from "lucide-react"
+import SpotlightCard from "@/components/ui/SpotlightCard"
 
 const collections = {
   universities: import.meta.env.VITE_APPWRITE_UNIVERSITIES_COLLECTION_ID,
@@ -78,7 +79,8 @@ function StatCard({ config, value, disabled }) {
 
   return (
     <motion.div variants={itemVariants}>
-      <div
+      <SpotlightCard
+        spotlightColor={`${config.accent}12`}
         className={`
           group relative overflow-hidden rounded-2xl border border-border/60
           bg-card/60 backdrop-blur-sm
@@ -89,10 +91,6 @@ function StatCard({ config, value, disabled }) {
         <div
           className="absolute top-0 left-0 right-0 h-px opacity-40 group-hover:opacity-80 transition-opacity duration-300"
           style={{ background: `linear-gradient(90deg, transparent, ${config.accent}, transparent)` }}
-        />
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
-          style={{ background: `radial-gradient(ellipse at 50% 0%, ${config.accent}12 0%, transparent 70%)` }}
         />
 
         <div className="relative p-5">
@@ -116,7 +114,7 @@ function StatCard({ config, value, disabled }) {
             </p>
           </div>
         </div>
-      </div>
+      </SpotlightCard>
     </motion.div>
   )
 }
@@ -126,8 +124,9 @@ function ActionCard({ action, allowed, onClick }) {
   const Icon = action.icon
   return (
     <motion.div variants={itemVariants}>
-      <div
+      <SpotlightCard
         onClick={allowed ? onClick : undefined}
+        spotlightColor={`${action.accent}12`}
         className={`
           group relative overflow-hidden rounded-2xl border border-border/50
           bg-card/50 backdrop-blur-sm p-4
@@ -143,12 +142,6 @@ function ActionCard({ action, allowed, onClick }) {
                      origin-center transition-all duration-300"
           style={{ background: action.accent }}
         />
-        {allowed && (
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: `radial-gradient(ellipse at 0% 50%, ${action.accent}12 0%, transparent 60%)` }}
-          />
-        )}
         <div className="relative flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0
@@ -167,7 +160,7 @@ function ActionCard({ action, allowed, onClick }) {
                        translate-x-1 group-hover:translate-x-0 transition-all duration-200"
           />
         </div>
-      </div>
+      </SpotlightCard>
     </motion.div>
   )
 }

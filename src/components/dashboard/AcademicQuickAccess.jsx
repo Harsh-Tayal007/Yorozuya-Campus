@@ -61,6 +61,7 @@ const AcademicQuickAccess = ({
         <GlowCard
           key={key}
           onClick={() => handleClick({ key, label, description, icon: Icon, accent, ...card })}
+          disableGlare={true}
           className={`p-5 cursor-target ${!canNavigate ? "opacity-50 pointer-events-none" : ""}`}
         >
           <div className="flex items-start justify-between gap-3">

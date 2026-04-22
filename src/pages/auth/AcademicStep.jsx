@@ -1,10 +1,11 @@
-﻿import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronDown, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram } from "@/services/university/branchService"
+import Stepper, { Step } from "@/components/ui/Stepper"
 
 // ─────────────────────────────────────────────
 // Custom Select - no Radix, no body scroll lock
@@ -123,28 +124,18 @@ const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
   useEffect(() => {
     if (isTeacher || !data.universityId) { setPrograms([]); return }
     getProgramsByUniversity(data.universityId).then(res => setPrograms(res || [])).catch(() => {})
-    setData(prev => ({ ...prev, programId: "", branchId: "" }))
   }, [data.universityId]) // eslint-disable-line
   useEffect(() => {
     if (isTeacher || !data.programId) { setBranches([]); return }
     getBranchesByProgram(data.programId).then(res => setBranches(res || [])).catch(() => {})
-    setData(prev => ({ ...prev, branchId: "" }))
   }, [data.programId]) // eslint-disable-line
 
-  const validate = () => {
-    if (!data.universityId) { setError("Please select a university"); return false }
-    if (!isTeacher && (!data.programId || !data.branchId)) { setError("Please select all fields"); return false }
+  const validate = (step) => {
+    if (step === 1 && !data.universityId) { setError("Please select a university"); return false }
+    if (step === 2 && !data.programId) { setError("Please select a program"); return false }
+    if (step === 3 && !data.branchId) { setError("Please select a branch"); return false }
     setError(null)
     return true
-  }
-
-  const handleContinue = () => {
-    if (!validate()) return
-    // For teachers, clear program/branch before continuing
-    if (isTeacher) {
-      setData(prev => ({ ...prev, programId: null, branchId: null }))
-    }
-    onNext()
   }
 
   return (
@@ -158,64 +149,93 @@ const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
         </p>
       </div>
 
-      {isTeacher && (
-        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
-          <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
-            As a teacher, you only need to select your university. An admin will grant you teacher privileges after sign-up.
-          </p>
-        </div>
-      )}
-
-      <div className="space-y-1.5">
-        <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">University</Label>
-        <NativeSelect
-          value={data.universityId || ""}
-          onChange={val => setData(prev => ({ ...prev, universityId: val }))}
-          options={universities.map(u => ({ value: u.$id, label: u.name }))}
-          placeholder="Select university"
-        />
-      </div>
-
-      {!isTeacher && (
-        <>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Program</Label>
-            <NativeSelect
-              value={data.programId || ""}
-              onChange={val => setData(prev => ({ ...prev, programId: val }))}
-              options={programs.map(p => ({ value: p.$id, label: p.name }))}
-              placeholder="Select program"
-              disabled={!data.universityId}
-            />
+      <Stepper
+        initialStep={1}
+        disableStepIndicators={true} // Force sequential flow
+        onBeforeNext={validate}
+        onStepChange={(step) => {
+          // You could add logic here if needed
+        }}
+        onFinalStepCompleted={() => {
+          onNext()
+        }}
+        backButtonProps={{
+          className: "hidden" // We'll handle back to AccountStep via custom button if needed, or use Stepper's Back
+        }}
+        nextButtonText="Next"
+      >
+        <Step>
+          <div className="space-y-3.5 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">University</Label>
+              <NativeSelect
+                value={data.universityId || ""}
+                onChange={val => {
+                  setData(prev => ({ ...prev, universityId: val, programId: "", branchId: "" }))
+                  setError(null)
+                }}
+                options={universities.map(u => ({ value: u.$id, label: u.name }))}
+                placeholder="Select university"
+              />
+            </div>
+            {isTeacher && (
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                  As a teacher, you only need to select your university.
+                </p>
+              </div>
+            )}
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="pt-2">
+               <Button variant="ghost" onClick={onBack} className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 p-0 h-auto">
+                 ← Back to account details
+               </Button>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Branch</Label>
-            <NativeSelect
-              value={data.branchId || ""}
-              onChange={val => setData(prev => ({ ...prev, branchId: val }))}
-              options={branches.map(b => ({ value: b.$id, label: b.name }))}
-              placeholder="Select branch"
-              disabled={!data.programId}
-            />
-          </div>
-        </>
-      )}
+        </Step>
 
-      {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+        {!isTeacher && (
+          <Step>
+            <div className="space-y-3.5 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Program</Label>
+                <NativeSelect
+                  value={data.programId || ""}
+                  onChange={val => {
+                    setData(prev => ({ ...prev, programId: val, branchId: "" }))
+                    setError(null)
+                  }}
+                  options={programs.map(p => ({ value: p.$id, label: p.name }))}
+                  placeholder="Select program"
+                  disabled={!data.universityId}
+                />
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+            </div>
+          </Step>
+        )}
 
-      <div className="flex gap-2 pt-1">
-        <Button variant="outline" onClick={onBack}
-          className="flex-1 h-10 border-slate-200 dark:border-white/10
-            text-slate-700 dark:text-slate-300 text-sm">
-          Back
-        </Button>
-        <Button onClick={handleContinue}
-          className="flex-1 h-10 bg-gradient-to-r from-blue-600 to-indigo-600
-            hover:from-blue-500 hover:to-indigo-500 text-white font-semibold
-            shadow-lg shadow-blue-600/25 transition-all duration-200">
-          Continue
-        </Button>
-      </div>
+        {!isTeacher && (
+          <Step>
+            <div className="space-y-3.5 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Branch</Label>
+                <NativeSelect
+                  value={data.branchId || ""}
+                  onChange={val => {
+                    setData(prev => ({ ...prev, branchId: val }))
+                    setError(null)
+                  }}
+                  options={branches.map(b => ({ value: b.$id, label: b.name }))}
+                  placeholder="Select branch"
+                  disabled={!data.programId}
+                />
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+            </div>
+          </Step>
+        )}
+      </Stepper>
     </div>
   )
 }

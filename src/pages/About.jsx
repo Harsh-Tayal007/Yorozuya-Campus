@@ -38,6 +38,7 @@ import {
   Instagram,
 } from "lucide-react"
 import useSeoMeta from "@/hooks/useSeoMeta"
+import SpotlightCard from "@/components/ui/SpotlightCard"
 
 function DiscordIcon({ size = 14 }) {
   return (
@@ -56,11 +57,11 @@ function DiscordIcon({ size = 14 }) {
 // ─── Shared card ──────────────────────────────────────────────────────────────
 function Card({ children, className = "" }) {
   return (
-    <div
+    <SpotlightCard
       className={`rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5 ${className}`}
     >
       {children}
-    </div>
+    </SpotlightCard>
   )
 }
 
@@ -1079,7 +1080,7 @@ export default function About() {
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURE_CARDS.map(({ icon, color, title, description }) => (
-              <article
+              <SpotlightCard
                 key={title}
                 className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 dark:border-white/10 dark:bg-white/5 dark:hover:border-indigo-400/40"
               >
@@ -1094,7 +1095,7 @@ export default function About() {
                 <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                   {description}
                 </p>
-              </article>
+              </SpotlightCard>
             ))}
           </div>
         </section>

@@ -1,11 +1,9 @@
-// src/components/home/StatsSection.jsx
-import { useState, useEffect, useRef } from "react"
-import { useCountUp } from "@/hooks/useCountUp"
+import { useEffect, useRef } from "react"
+import CountUp from "@/components/ui/CountUp"
+import ScrollReveal from "@/components/ui/ScrollReveal"
 
 function StatCard({ value, label, index }) {
-  const [started, setStarted] = useState(false)
   const ref = useRef(null)
-  const animated = useCountUp(value ?? 0, started)
 
   useEffect(() => {
     const el = ref.current
@@ -19,7 +17,6 @@ function StatCard({ value, label, index }) {
       ([entry]) => {
         if (entry.isIntersecting) {
           el.classList.add("revealed")
-          setStarted(true)
           obs.disconnect()
         }
       },
@@ -31,14 +28,18 @@ function StatCard({ value, label, index }) {
 
   return (
     <div ref={ref}>
-      <div className="bg-white dark:bg-white/[0.03]
+      <div className="bg-white dark:bg-slate-900/80
                       border border-slate-200 dark:border-white/8
                       rounded-2xl px-4 py-6 sm:py-8 text-center shadow-sm
                       hover:border-indigo-400/40 hover:shadow-md
                       transition-[border-color,box-shadow] duration-200 ease-out">
         <p className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500
                       bg-clip-text text-transparent tabular-nums">
-          {animated}
+          <CountUp
+            to={value ?? 0}
+            separator=","
+            duration={1.5}
+          />
         </p>
         <p className="text-xs uppercase tracking-wider text-muted-foreground mt-2 font-medium">
           {label}
@@ -64,12 +65,25 @@ export default function StatsSection({ stats, isLoading }) {
         <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">
           Our impact
         </p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+        <ScrollReveal
+          as="h2"
+          containerClassName="inline-block"
+          textClassName="text-2xl sm:text-3xl font-bold text-foreground"
+          baseRotation={2}
+          blurStrength={3}
+        >
           Growing every week
-        </h2>
-        <p className="text-sm text-muted-foreground mt-2">
+        </ScrollReveal>
+        <ScrollReveal
+          as="p"
+          containerClassName="mt-2"
+          textClassName="text-sm text-muted-foreground"
+          baseOpacity={0.2}
+          baseRotation={0}
+          blurStrength={2}
+        >
           Real numbers from the platform, updated in real time.
-        </p>
+        </ScrollReveal>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">

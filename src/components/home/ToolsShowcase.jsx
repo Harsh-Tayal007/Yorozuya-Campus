@@ -1,6 +1,7 @@
 // src/components/home/ToolsShowcase.jsx
 import { Calculator, ListChecks, Calendar, ScanLine, FileDown, Bell } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
+import ScrollReveal from "@/components/ui/ScrollReveal"
 
 const TOOLS = [
   {
@@ -45,7 +46,7 @@ function ToolCard({ icon: Icon, accent, glow, border, title, desc, highlights, i
   const ref = useReveal(index * 80)
   return (
     <div ref={ref}
-      className={`group bg-white dark:bg-white/[0.03]
+      className={`group bg-white dark:bg-slate-900/80
                   border border-slate-200 dark:border-white/8
                   rounded-2xl p-5 shadow-sm
                   transition-[border-color,box-shadow,transform] duration-200 ease-out
@@ -81,12 +82,25 @@ export default function ToolsShowcase() {
         <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">
           Productivity tools
         </p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+        <ScrollReveal
+          as="h2"
+          containerClassName="inline-block"
+          textClassName="text-2xl sm:text-3xl font-bold text-foreground"
+          baseRotation={2}
+          blurStrength={3}
+        >
           Tools built for how students actually plan
-        </h2>
-        <p className="text-sm text-muted-foreground mt-2 max-w-lg mx-auto">
+        </ScrollReveal>
+        <ScrollReveal
+          as="p"
+          containerClassName="mt-2 max-w-lg mx-auto"
+          textClassName="text-sm text-muted-foreground"
+          baseOpacity={0.2}
+          baseRotation={0}
+          blurStrength={2}
+        >
           Three purpose-built tools with AI assistance and export options, all synced to your account.
-        </p>
+        </ScrollReveal>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

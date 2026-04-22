@@ -27,7 +27,11 @@ const RolesSection        = lazy(() => import("@/components/home/RolesSection"))
 const TestimonialsSection = lazy(() => import("@/components/home/TestimonialsSection"))
 const FAQSection          = lazy(() => import("@/components/home/FAQSection"))
 const TargetCursor         = lazy(() => import("@/components/home/TargetCursor"))
+const DotField             = lazy(() => import("@/components/home/DotField"))
 import GlareHover from "@/components/ui/glare-hover"
+import SpotlightCard from "@/components/ui/SpotlightCard"
+import RotatingText from "@/components/ui/RotatingText"
+import ScrollReveal from "@/components/ui/ScrollReveal"
 
 
 // -- Lightweight inline constants --
@@ -52,6 +56,7 @@ export default function Home() {
   const levitatingEnabled  = useState(() => localStorage.getItem("pref_levitating_bg") === "1")[0]
   const targetCursorEnabled = useState(() => localStorage.getItem("pref_target_cursor") === "1")[0]
   const glareEnabled = useState(() => localStorage.getItem("pref_glare_hover") === "1")[0]
+  const dotFieldEnabled = useState(() => localStorage.getItem("pref_dot_field") === "1")[0]
   
   // Track hover states for manual GlareHover buttons
   const [heroHover1, setHeroHover1] = useState(false)
@@ -66,6 +71,8 @@ export default function Home() {
   const [antigravityReady, setAntigravityReady] = useState(false)
   const [levitatingReady, setLevitatingReady] = useState(false)
   const [targetCursorReady, setTargetCursorReady] = useState(false)
+  const [dotFieldReady, setDotFieldReady] = useState(false)
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
   const featuresRef = useRef(null)
 
   useSeoMeta({
@@ -114,6 +121,23 @@ export default function Home() {
       : setTimeout(() => setTargetCursorReady(true), 300)
     return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
   }, [targetCursorEnabled])
+  
+  useEffect(() => {
+    if (!dotFieldEnabled) return
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => setDotFieldReady(true), { timeout: 1200 })
+      : setTimeout(() => setDotFieldReady(true), 400)
+    return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
+  }, [dotFieldEnabled])
+
+  // Listen for theme changes to update DotField colors
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
 
   // Lock scroll when roadmap open
   useEffect(() => {
@@ -162,6 +186,26 @@ export default function Home() {
           <TargetCursor />
         </Suspense>
       )}
+      {dotFieldEnabled && dotFieldReady && (
+        <div className="fixed inset-0 -z-20 pointer-events-none">
+          <Suspense fallback={null}>
+            <DotField 
+              dotRadius={1.5}
+              dotSpacing={14}
+              bulgeStrength={67}
+              glowRadius={160}
+              sparkle={false}
+              waveAmplitude={0}
+              cursorRadius={500}
+              cursorForce={0.1}
+              bulgeOnly
+              gradientFrom={isDark ? "#A855F7" : "#8B5CF6"}
+              gradientTo={isDark ? "#B497CF" : "#C084FC"}
+              glowColor={isDark ? "rgba(168, 85, 247, 0.15)" : "rgba(18, 15, 23, 0.08)"}
+            />
+          </Suspense>
+        </div>
+      )}
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 space-y-20">
 
@@ -177,11 +221,23 @@ export default function Home() {
           </div>
 
           <div className="animate-fade-up" style={{ animationDelay: "70ms" }}>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.12] tracking-tight">
-              Your campus life,<br />
-              <span className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
-                all in one place
-              </span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.2] tracking-tight flex flex-col items-center">
+              <span>Your campus life,</span>
+              <RotatingText
+                texts={['all in one place', 'simplified', 'organised', 'in your pocket']}
+                mainClassName="px-4 sm:px-6 py-1 sm:py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white overflow-hidden rounded-2xl justify-center mt-2 sm:mt-3 shadow-xl shadow-blue-500/20"
+                staggerFrom="last"
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "-120%", opacity: 0 }}
+                staggerDuration={0.02}
+                splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
+                transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                rotationInterval={3000}
+                splitBy="characters"
+                auto
+                loop
+              />
             </h1>
             <p className="mt-4 text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
               Unizuya brings together syllabus, past year questions, study resources and a student
@@ -262,27 +318,51 @@ export default function Home() {
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-5 leading-tight">
                 One platform, everything you need
               </h2>
-              <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
-                <p>
+              <div className="space-y-4 text-muted-foreground leading-relaxed">
+                <ScrollReveal 
+                  baseOpacity={0.1} 
+                  enableBlur={true} 
+                  baseRotation={1} 
+                  blurStrength={2}
+                  textClassName="text-sm font-medium"
+                >
                   The name is inspired by the idea of a one-stop shop that handles many different
                   needs, like that one place in the neighbourhood that somehow does it all.
-                </p>
-                <p>
+                </ScrollReveal>
+
+                <ScrollReveal 
+                  baseOpacity={0.1} 
+                  enableBlur={true} 
+                  baseRotation={1} 
+                  blurStrength={2}
+                  textClassName="text-sm font-medium"
+                >
                   Students switch between four or five different platforms just to find syllabus,
                   past papers, notes and a place to ask questions. Unizuya puts all of that in one
                   spot, organised by university, branch and course.
-                </p>
-                <p>
+                </ScrollReveal>
+
+                <ScrollReveal 
+                  baseOpacity={0.1} 
+                  enableBlur={true} 
+                  baseRotation={1} 
+                  blurStrength={2}
+                  textClassName="text-sm font-medium"
+                >
                   Think of it as your academic companion, built by students who were tired of the
                   same scattered mess.
-                </p>
+                </ScrollReveal>
               </div>
             </div>
 
-            <div className="rounded-2xl p-6 sm:p-7"
+            <SpotlightCard className="rounded-2xl p-6 sm:p-7"
               style={{
-                background: "linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(99,102,241,0.11) 100%)",
-                border: "1px solid rgba(99,102,241,0.18)",
+                background: isDark 
+                  ? "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.9) 100%)"
+                  : "linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(99,102,241,0.11) 100%)",
+                border: isDark 
+                  ? "1px solid rgba(99,102,241,0.25)"
+                  : "1px solid rgba(99,102,241,0.18)",
               }}>
               {FEATURES_SUMMARY.map((item, i) => (
                 <div key={item}
@@ -294,7 +374,7 @@ export default function Home() {
                   {item}
                 </div>
               ))}
-            </div>
+            </SpotlightCard>
           </div>
         </section>
 
@@ -343,7 +423,7 @@ export default function Home() {
         <div className="flex justify-center">
           <button onClick={() => setRoadmapOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full
-                       border border-border bg-white dark:bg-white/[0.03] shadow-sm
+                       border border-border bg-white dark:bg-slate-900/60 shadow-sm
                        text-sm text-muted-foreground hover:text-foreground
                        hover:border-indigo-400/50 hover:shadow-md transition-all duration-200 cursor-target">
             <Zap size={13} className="text-indigo-500" />

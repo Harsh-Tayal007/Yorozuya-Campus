@@ -2,8 +2,8 @@
 import { ArrowUpRight, BookOpen } from "lucide-react"
 import GlowCard from "@/components/common/display/GlowCard"
 
-const SemesterCard = ({ semester, onClick, description = "View content" }) => (
-  <GlowCard onClick={onClick} className="p-5 cursor-target">
+const SemesterCard = ({ semester, onClick, description = "View content", disableGlare = true }) => (
+  <GlowCard onClick={onClick} disableGlare={disableGlare} className="p-5 cursor-target">
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20

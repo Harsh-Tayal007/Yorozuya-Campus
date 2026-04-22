@@ -53,11 +53,20 @@ export default function TestimonialsSection() {
   const [paused, setPaused] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [usePixelTransition, setUsePixelTransition] = useState(false)
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
   const sectionRef = useReveal()
 
   useEffect(() => {
     const pref = localStorage.getItem("pref_pixel_testimonials") === "1"
     setUsePixelTransition(pref)
+  }, [])
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
   }, [])
 
   const changeTo = useCallback((i) => {
@@ -102,8 +111,12 @@ export default function TestimonialsSection() {
 
       <div className="relative rounded-3xl overflow-hidden group/card"
         style={{
-          background: "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(99,102,241,0.1) 50%, rgba(139,92,246,0.06) 100%)",
-          border: "1px solid rgba(99,102,241,0.15)",
+          background: isDark
+            ? "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.9) 50%, rgba(15, 23, 42, 0.9) 100%)"
+            : "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(99,102,241,0.1) 50%, rgba(139,92,246,0.06) 100%)",
+          border: isDark 
+            ? "1px solid rgba(99,102,241,0.25)" 
+            : "1px solid rgba(99,102,241,0.15)",
         }}>
 
         {/* Decorative background quote icon */}

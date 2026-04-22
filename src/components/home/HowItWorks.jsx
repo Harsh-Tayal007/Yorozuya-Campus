@@ -1,6 +1,7 @@
 // src/components/home/HowItWorks.jsx
 import { UserPlus, GraduationCap, Rocket } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
+import ScrollReveal from "@/components/ui/ScrollReveal"
 
 const STEPS = [
   {
@@ -55,9 +56,15 @@ export default function HowItWorks() {
         <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">
           How it works
         </p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+        <ScrollReveal
+          as="h2"
+          containerClassName="inline-block"
+          textClassName="text-2xl sm:text-3xl font-bold text-foreground"
+          baseRotation={2}
+          blurStrength={3}
+        >
           Up and running in three steps
-        </h2>
+        </ScrollReveal>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 relative">

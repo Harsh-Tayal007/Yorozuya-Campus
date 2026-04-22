@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@/components"
 import { BackButton } from "@/components"
 import { formatFileSize } from "@/utils/formatFileSize"
 import PyqPreviewModal from "./PyqPreviewModal"
+import GlowCard from "@/components/common/display/GlowCard"
 import { getPyqsForSubject } from "@/services/syllabus/pyqService"
 import { getProgramById } from "@/services/university/programService"
 import { DATABASE_ID, SUBJECTS_COLLECTION_ID } from "@/config/appwrite"
@@ -111,10 +112,10 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
         ) : (
           <div className="space-y-2.5">
             {pyqs.map(pyq => (
-              <motion.div key={pyq.$id} layout
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
-                           hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+              <GlowCard key={pyq.$id}
+                disableGlare={true}
+                spotlightColor="rgba(239, 68, 68, 0.08)"
+                className="overflow-hidden"
               >
                 <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
                   style={{ background: "linear-gradient(90deg, transparent, #ef4444, transparent)" }} />
@@ -148,7 +149,7 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </GlowCard>
             ))}
           </div>
         )}

@@ -939,6 +939,8 @@ const PreferencesTab = () => {
   )
   const [pixelTestimonials, setPixelTestimonials] = useState(() => localStorage.getItem("pref_pixel_testimonials") === "1")
   const [glareHover, setGlareHover] = useState(() => localStorage.getItem("pref_glare_hover") === "1")
+  const [dotField, setDotField] = useState(() => localStorage.getItem("pref_dot_field") === "1")
+  const [animatedFaq, setAnimatedFaq] = useState(() => localStorage.getItem("pref_animated_faq") === "1")
 
   // ── In-app notification prefs (Appwrite account prefs) ────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
@@ -1126,6 +1128,34 @@ const PreferencesTab = () => {
               setGlareHover(v)
               localStorage.setItem("pref_glare_hover", v ? "1" : "0")
               toast.success(v ? "Glare effect enabled" : "Glare effect disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={LayoutGrid}
+          label="Interactive Dots"
+          hint="Subtle dot grid background that reacts to your cursor. Off by default for better performance."
+        >
+          <Toggle
+            checked={dotField}
+            onChange={(v) => {
+              setDotField(v)
+              localStorage.setItem("pref_dot_field", v ? "1" : "0")
+              toast.success(v ? "Interactive dots enabled" : "Interactive dots disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={Sparkles}
+          label="Animated FAQ"
+          hint="Use a more dynamic, scrollable list for the FAQ section on the home page."
+        >
+          <Toggle
+            checked={animatedFaq}
+            onChange={(v) => {
+              setAnimatedFaq(v)
+              localStorage.setItem("pref_animated_faq", v ? "1" : "0")
+              toast.success(v ? "Animated FAQ enabled" : "Animated FAQ disabled")
             }}
           />
         </PrefRow>

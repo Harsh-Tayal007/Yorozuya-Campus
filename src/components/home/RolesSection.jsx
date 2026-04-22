@@ -4,6 +4,7 @@ import {
   Calendar, ClipboardList, BarChart2, FileDown, Users
 } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
+import SpotlightCard from "@/components/ui/SpotlightCard"
 
 const ROLES = [
   {
@@ -43,36 +44,39 @@ const ROLES = [
 function RoleCard({ role, icon: Icon, gradient, glowColor, borderHover, desc, features, index }) {
   const ref = useReveal(index * 100)
   return (
-    <div ref={ref}
-      className={`group bg-white dark:bg-white/[0.03]
-                  border border-slate-200 dark:border-white/8
-                  rounded-2xl p-6 shadow-sm
-                  transition-[border-color,box-shadow,transform] duration-200 ease-out
-                  hover:-translate-y-0.5 hover:shadow-md ${borderHover}`}>
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient}
-                        flex items-center justify-center shadow-md
-                        group-hover:scale-105 transition-transform duration-200 ease-out`}>
-          <Icon size={18} className="text-white" />
+    <div ref={ref}>
+      <SpotlightCard
+        className={`group bg-white dark:bg-slate-900/80
+                    border border-slate-200 dark:border-white/8
+                    rounded-2xl p-6 shadow-sm
+                    transition-all duration-200 ease-out
+                    hover:-translate-y-0.5 hover:shadow-md ${borderHover}`}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient}
+                          flex items-center justify-center shadow-md
+                          group-hover:scale-105 transition-transform duration-200 ease-out`}>
+            <Icon size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-foreground">{role}</h3>
+            <p className="text-[11px] text-muted-foreground">{desc}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-base font-bold text-foreground">{role}</h3>
-          <p className="text-[11px] text-muted-foreground">{desc}</p>
-        </div>
-      </div>
 
-      <div className="h-px bg-slate-100 dark:bg-white/[0.06] mb-4" />
+        <div className="h-px bg-slate-100 dark:bg-white/[0.06] mb-4" />
 
-      <ul className="space-y-2.5">
-        {features.map(({ icon: FIcon, text }) => (
-          <li key={text} className="flex items-center gap-2.5">
-            <div className={`w-6 h-6 rounded-lg ${glowColor} flex items-center justify-center flex-shrink-0`}>
-              <FIcon size={12} className="text-foreground/70" />
-            </div>
-            <span className="text-xs text-foreground/80">{text}</span>
-          </li>
-        ))}
-      </ul>
+        <ul className="space-y-2.5">
+          {features.map(({ icon: FIcon, text }) => (
+            <li key={text} className="flex items-center gap-2.5">
+              <div className={`w-6 h-6 rounded-lg ${glowColor} flex items-center justify-center flex-shrink-0`}>
+                <FIcon size={12} className="text-foreground/70" />
+              </div>
+              <span className="text-xs text-foreground/80">{text}</span>
+            </li>
+          ))}
+        </ul>
+      </SpotlightCard>
     </div>
   )
 }

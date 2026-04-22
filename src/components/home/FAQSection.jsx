@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
+import AnimatedList from "./AnimatedList"
 
 const FAQS = [
   {
@@ -48,8 +49,8 @@ function FAQItem({ q, a, index }) {
     <div ref={revealRef}
       className={`rounded-xl border transition-colors duration-200
         ${open
-          ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-white/[0.04]"
-          : "border-slate-200 dark:border-white/8 bg-white dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/12"
+          ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-slate-900/90"
+          : "border-slate-200 dark:border-white/8 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-white/12"
         }`}
     >
       <button
@@ -88,6 +89,8 @@ function FAQItem({ q, a, index }) {
 
 export default function FAQSection() {
   const headRef = useReveal()
+  const [animatedEnabled] = useState(() => localStorage.getItem("pref_animated_faq") === "1")
+  const [activeFaq, setActiveFaq] = useState(null)
 
   return (
     <section>
@@ -100,11 +103,53 @@ export default function FAQSection() {
         </h2>
       </div>
 
-      <div className="space-y-2">
-        {FAQS.map((faq, i) => (
-          <FAQItem key={i} {...faq} index={i} />
-        ))}
-      </div>
+      {animatedEnabled ? (
+        <AnimatedList
+          items={FAQS}
+          onItemSelect={(item, index) => setActiveFaq(activeFaq === index ? null : index)}
+          renderItem={(faq, index, isSelected) => (
+            <div className={`rounded-xl border transition-all duration-300 overflow-hidden
+              ${activeFaq === index
+                ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-slate-900/90"
+                : isSelected
+                  ? "border-slate-300 dark:border-white/15 bg-white/50 dark:bg-slate-900/60"
+                  : "border-slate-200 dark:border-white/8 bg-white dark:bg-slate-900/40"
+              }`}
+            >
+              <div className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left">
+                <span className={`text-sm font-medium transition-colors duration-150
+                  ${activeFaq === index ? "text-foreground" : "text-foreground/80"}`}>
+                  {faq.q}
+                </span>
+                <ChevronDown
+                  size={15}
+                  className={`flex-shrink-0 text-muted-foreground transition-transform duration-200
+                    ${activeFaq === index ? "rotate-180" : ""}`}
+                />
+              </div>
+              
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-out`}
+                style={{
+                  maxHeight: activeFaq === index ? "200px" : "0px",
+                  opacity: activeFaq === index ? 1 : 0,
+                }}
+              >
+                <div className="px-5 pb-4">
+                  <div className="h-px bg-slate-100 dark:bg-white/[0.06] mb-3" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">{faq.a}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        />
+      ) : (
+        <div className="space-y-2">
+          {FAQS.map((faq, i) => (
+            <FAQItem key={i} {...faq} index={i} />
+          ))}
+        </div>
+      )}
     </section>
   )
 }

@@ -1,4 +1,4 @@
-// src/components/dashboard/UniversityNoticesWidget.jsx
+﻿// src/components/dashboard/UniversityNoticesWidget.jsx
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Bell, ExternalLink, ArrowUpRight, RefreshCw, AlertCircle } from "lucide-react"
 import { fetchUniversityNotices } from "@/services/university/noticesService"
 import { useAcademicIdentity } from "@/hooks/useAcademicIdentity"
-import SpotlightCard from "@/components/ui/SpotlightCard"
 
 const CATEGORIES = ["All", "Examination", "Event", "Admission", "Recruitment", "Tender", "General"]
 
@@ -63,7 +62,10 @@ export default function UniversityNoticesWidget() {
   const usingFallback = Boolean(data?.fallbackReason)
 
   return (
-    <SpotlightCard
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.1 }}
       className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden"
     >
       {/* Header */}
@@ -191,6 +193,6 @@ export default function UniversityNoticesWidget() {
           </div>
         )}
       </div>
-    </SpotlightCard>
+    </motion.div>
   )
 }

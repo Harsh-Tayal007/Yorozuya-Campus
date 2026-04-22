@@ -199,7 +199,7 @@ export default function ResourcesUserView({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {availableSemesters.map(sem => (
-                <GlowCard key={sem} onClick={() => navigate(`${baseResourcesPath}/semester/${sem}`)} className="p-5 cursor-target">
+                <GlowCard key={sem} onClick={() => navigate(`${baseResourcesPath}/semester/${sem}`)} disableGlare={true} className="p-5 cursor-target">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -234,7 +234,7 @@ export default function ResourcesUserView({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {subjects.map(subject => (
                 <GlowCard key={subject.$id}
-                  onClick={() => navigate(`${baseResourcesPath}/semester/${semester}/subject/${subject.$id}`)}
+                  disableGlare={true}
                   className="p-5 cursor-target">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -265,10 +265,10 @@ export default function ResourcesUserView({
           ) : (
             <div className="space-y-2.5">
               {resources.map(resource => (
-                <motion.div key={resource.$id} layout
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                  className="group relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm
-                             hover:border-border hover:bg-card/80 transition-all duration-200 overflow-hidden"
+                <GlowCard key={resource.$id}
+                  disableGlare={true}
+                  spotlightColor="rgba(245, 158, 11, 0.08)"
+                  className="overflow-hidden"
                 >
                   <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-60 transition-opacity duration-300"
                     style={{ background: "linear-gradient(90deg, transparent, #f59e0b, transparent)" }} />
@@ -339,7 +339,7 @@ export default function ResourcesUserView({
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </GlowCard>
               ))}
             </div>
           )}
