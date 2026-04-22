@@ -1,4 +1,4 @@
-﻿import React from "react"
+import React from "react"
 import ReactDOM from "react-dom/client"
 import App from "./App"
 import "./index.css"
@@ -70,16 +70,18 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       </AuthProvider>
     </QueryClientProvider>
     <Toaster 
-      position="top-center" 
+      position="bottom-right" 
       toastOptions={{ 
         duration: 3500, 
-        className: "border-border/50 shadow-2xl backdrop-blur-xl bg-card/80 text-foreground",
+        className: "border-border shadow-2xl backdrop-blur-xl bg-card text-foreground",
         classNames: {
-          toast: "group !bg-card/70 !backdrop-blur-xl !border-border/50 !shadow-2xl rounded-xl flex items-center p-4 gap-3 text-sm font-medium",
+          toast: "group !bg-card !backdrop-blur-xl !border-border !shadow-2xl rounded-2xl flex items-center p-4 gap-3 text-sm font-medium !text-foreground",
           success: "!text-emerald-400 [&>svg]:!text-emerald-400",
           error: "!text-destructive [&>svg]:!text-destructive",
           info: "!text-sky-400 [&>svg]:!text-sky-400",
-          warning: "!text-amber-400 [&>svg]:!text-amber-400"
+          warning: "!text-amber-400 [&>svg]:!text-amber-400",
+          actionButton: "!bg-primary !text-primary-foreground !rounded-xl !px-3 !py-1.5 !text-xs !font-bold hover:!opacity-90 transition-opacity",
+          cancelButton: "!bg-muted !text-muted-foreground !rounded-xl !px-3 !py-1.5 !text-xs !font-bold hover:!bg-muted/80 transition-colors"
         }
       }} 
     />

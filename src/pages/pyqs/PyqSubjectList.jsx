@@ -120,7 +120,7 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
                   style={{ background: "linear-gradient(90deg, transparent, #ef4444, transparent)" }} />
                 <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0">
-                    <FileTypeBadge fileType={pyq.fileType} onPreview={() => handleView(pyq)} />
+                    <FileTypeBadge fileType={pyq.fileType} onPreview={() => handleView(pyq)} className="cursor-target" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{pyq.title}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-0.5">
@@ -138,11 +138,11 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
                     <button onClick={() => handleView(pyq)}
                       className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
                                  border border-border/60 bg-muted/30 text-muted-foreground
-                                 hover:border-border hover:text-foreground hover:bg-muted/60 transition-all active:scale-95">
+                                 hover:border-border hover:text-foreground hover:bg-muted/60 transition-all active:scale-95 cursor-target">
                       <ExternalLink size={11} /> View
                     </button>
                     <button onClick={() => handleDownload(pyq)}
-                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium text-white transition-all active:scale-95"
+                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium text-white transition-all active:scale-95 cursor-target"
                       style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}>
                       <Download size={11} /> Download
                     </button>

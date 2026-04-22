@@ -199,7 +199,7 @@ export default function ResourcesUserView({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {availableSemesters.map(sem => (
-                <GlowCard key={sem} onClick={() => navigate(`${baseResourcesPath}/semester/${sem}`)} className="p-5">
+                <GlowCard key={sem} onClick={() => navigate(`${baseResourcesPath}/semester/${sem}`)} className="p-5 cursor-target">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -235,7 +235,7 @@ export default function ResourcesUserView({
               {subjects.map(subject => (
                 <GlowCard key={subject.$id}
                   onClick={() => navigate(`${baseResourcesPath}/semester/${semester}/subject/${subject.$id}`)}
-                  className="p-5">
+                  className="p-5 cursor-target">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
@@ -300,7 +300,7 @@ export default function ResourcesUserView({
                       }}
                         className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
                                    border border-border/60 bg-muted/30 text-muted-foreground
-                                   hover:border-border hover:text-foreground hover:bg-muted/60 transition-all active:scale-95">
+                                   hover:border-border hover:text-foreground hover:bg-muted/60 transition-all active:scale-95 cursor-target">
                         <ExternalLink size={11} /> View
                       </button>
                       {resource.type === "pdf" && (
@@ -320,7 +320,7 @@ export default function ResourcesUserView({
                               setActiveDownload(ctrl)
                             }}
                             className="relative h-8 px-3 rounded-xl text-xs font-medium text-white overflow-hidden
-                                       flex items-center gap-1 transition-all active:scale-95"
+                                       flex items-center gap-1 transition-all active:scale-95 cursor-target"
                             style={{ background: "linear-gradient(135deg, #d97706, #b45309)" }}
                           >
                             {downloadingId === resource.$id && (

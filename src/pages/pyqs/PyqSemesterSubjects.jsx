@@ -80,7 +80,7 @@ const PyqSemesterSubjects = ({ programId: propProgramId, branchName: propBranchN
             {subjects.map(subject => (
               <GlowCard key={subject.$id}
                 onClick={() => navigate(`${basePyqPath}/semester/${semester}/subject/${subject.$id}`, { state: { subjectName: subject.subjectName } })}
-                className="p-5">
+                className="p-5 cursor-target">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">

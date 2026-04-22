@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -10,7 +10,7 @@ import {
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
   KeyRound, AlertCircle,
   Trash2, AtSign, RefreshCw,
-  X, Sparkles, Orbit, Shapes, Globe
+  X, Sparkles, Orbit, Shapes, Globe, Target, LayoutGrid
 } from "lucide-react"
 
 import { getUniversities } from "@/services/university/universityService"
@@ -22,6 +22,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { usePush } from "@/context/PushNotificationContext"
 import DeleteAccountModal from "@/components/modals/DeleteAccountModal"
 import { deleteAccountPermanently } from "@/services/user/deleteAccountService"
+
 
 import { changeUsername } from "@/services/user/changeUsernameService"
 import { generateUsernameCandidate, isUsernameAvailable } from "@/services/admin/authService"
@@ -84,7 +85,7 @@ const Dropdown = ({ value, onChange, options, disabled, placeholder }) => {
     <div ref={ref} className="relative">
       <button type="button" disabled={disabled} onClick={() => !disabled && setOpen(v => !v)}
         className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl
-                    border text-sm text-left transition-all duration-150 outline-none
+                    border text-sm text-left transition-all duration-150 outline-none cursor-target
                     ${disabled ? "border-border/40 bg-muted/20 text-muted-foreground/50 cursor-not-allowed"
             : open ? "border-primary bg-background ring-2 ring-primary/20"
               : "border-border bg-background hover:border-primary/40"}`}>
@@ -103,7 +104,7 @@ const Dropdown = ({ value, onChange, options, disabled, placeholder }) => {
                 : options.map(opt => (
                   <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false) }}
                     className={`flex items-center justify-between w-full px-4 py-2.5 text-sm
-                                transition-colors hover:bg-muted text-left
+                                transition-colors hover:bg-muted text-left cursor-target
                                 ${opt.value === value ? "text-primary font-semibold bg-primary/5" : "text-foreground"}`}>
                     {opt.label}
                     {opt.value === value && <Check size={13} className="text-primary shrink-0" />}
@@ -119,7 +120,7 @@ const Dropdown = ({ value, onChange, options, disabled, placeholder }) => {
 
 const Toggle = ({ checked, onChange }) => (
   <button type="button" onClick={() => onChange(!checked)}
-    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${checked ? "bg-primary" : "bg-border"}`}>
+    className={`relative w-11 h-6 rounded-full transition-colors duration-200 cursor-target ${checked ? "bg-primary" : "bg-border"}`}>
     <motion.div animate={{ x: checked ? 20 : 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
       className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm" />
   </button>
@@ -133,7 +134,7 @@ const SaveBtn = ({ saving, disabled, label = "Save changes", onClick, type = "su
     className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
                bg-primary text-primary-foreground text-sm font-semibold
                hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed
-               transition-colors duration-150 shadow-sm">
+               transition-colors duration-150 shadow-sm cursor-target">
     {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : label}
   </motion.button>
 )
@@ -146,15 +147,17 @@ const Section = ({ title, children }) => (
 )
 
 const PrefRow = ({ icon: Icon, label, hint, children }) => (
-  <div className="flex items-center justify-between py-3.5 border-b border-border/50 last:border-0">
-    <div className="flex items-start gap-3">
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 border-b border-border/50 last:border-0 gap-3">
+    <div className="flex items-start gap-3 min-w-0">
       {Icon && <Icon size={15} className="text-muted-foreground mt-0.5 shrink-0" />}
-      <div>
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground truncate sm:whitespace-normal">{label}</p>
+        {hint && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{hint}</p>}
       </div>
     </div>
-    {children}
+    <div className="shrink-0 self-end sm:self-auto">
+      {children}
+    </div>
   </div>
 )
 
@@ -177,7 +180,7 @@ const AccountRow = ({ icon: Icon, label, value, formKey, activeForm, setActiveFo
         disabled={disabled}
         onClick={() => !disabled && setActiveForm(isOpen ? null : formKey)}
         className={`flex items-center justify-between w-full py-3.5 transition-colors
-                   rounded-lg px-1 -mx-1 group
+                   rounded-lg px-1 -mx-1 group cursor-target
                    ${disabled ? "cursor-not-allowed opacity-60" : "hover:text-primary"}`}>
         <div className="flex items-center gap-3">
           {Icon && <Icon size={15} className={`text-muted-foreground transition-colors ${!disabled ? "group-hover:text-primary" : ""}`} />}
@@ -281,7 +284,7 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
             )}
             <button type="button" onClick={() => fileInputRef.current?.click()}
               className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary border-2 border-background
-                         flex items-center justify-center text-primary-foreground hover:bg-primary/90 active:scale-90 transition-all">
+                         flex items-center justify-center text-primary-foreground hover:bg-primary/90 active:scale-90 transition-all cursor-target">
               <Camera size={11} />
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -290,7 +293,7 @@ const ProfileTab = ({ user, updateProfile, queryClient, navigate }) => {
             <p className="text-sm font-semibold text-foreground truncate">{user?.name}</p>
             <p className="text-xs text-muted-foreground mb-1">@{user?.username}</p>
             <button type="button" onClick={() => fileInputRef.current?.click()}
-              className="text-xs text-primary hover:text-primary/80 transition-colors">Change photo</button>
+              className="text-xs text-primary hover:text-primary/80 transition-colors cursor-target">Change photo</button>
           </div>
         </div>
         <div className="py-3.5 border-b border-border/50 space-y-1.5">
@@ -450,7 +453,7 @@ const AccountTab = ({ user }) => {
 
   const showHideBtn = (visible, toggle) => (
     <button type="button" onClick={() => toggle(v => !v)}
-      className="text-muted-foreground hover:text-foreground transition-colors">
+      className="text-muted-foreground hover:text-foreground transition-colors cursor-target">
       {visible ? <EyeOff size={14} /> : <Eye size={14} />}
     </button>
   )
@@ -700,7 +703,7 @@ const AccountTab = ({ user }) => {
                   onClick={rollUsername}
                   title="Generate a random username"
                   className="absolute right-3 top-1/2 -translate-y-1/2
-                             text-muted-foreground hover:text-primary transition-colors"
+                             text-muted-foreground hover:text-primary transition-colors cursor-target"
                 >
                   <RefreshCw size={13} />
                 </button>
@@ -725,7 +728,7 @@ const AccountTab = ({ user }) => {
               <button
                 type="button"
                 onClick={() => { setActiveForm(null); setNewUsername(""); setUsernameStatus("idle") }}
-                className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+                className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors cursor-target"
               >
                 Cancel
               </button>
@@ -760,7 +763,7 @@ const AccountTab = ({ user }) => {
                 whileHover={{ scale: saving ? 1 : 1.01 }} whileTap={{ scale: saving ? 1 : 0.98 }}
                 className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-border
                            text-sm font-medium text-foreground hover:bg-muted hover:border-primary/30
-                           disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+                           disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 cursor-target"
               >
                 {saving
                   ? <><Loader2 size={13} className="animate-spin" /> Sending…</>
@@ -931,6 +934,11 @@ const PreferencesTab = () => {
   const [levitatingBg, setLevitatingBg] = useState(() =>
     localStorage.getItem("pref_levitating_bg") === "1"
   )
+  const [targetCursor, setTargetCursor] = useState(() =>
+    localStorage.getItem("pref_target_cursor") === "1"
+  )
+  const [pixelTestimonials, setPixelTestimonials] = useState(() => localStorage.getItem("pref_pixel_testimonials") === "1")
+  const [glareHover, setGlareHover] = useState(() => localStorage.getItem("pref_glare_hover") === "1")
 
   // ── In-app notification prefs (Appwrite account prefs) ────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
@@ -1079,6 +1087,48 @@ const PreferencesTab = () => {
             }}
           />
         </PrefRow>
+        <PrefRow
+          icon={Target}
+          label="Target cursor"
+          hint="Animated custom cursor with lock-on effect for interactive elements. Off by default."
+        >
+          <Toggle
+            checked={targetCursor}
+            onChange={(v) => {
+              setTargetCursor(v)
+              localStorage.setItem("pref_target_cursor", v ? "1" : "0")
+              toast.success(v ? "Target cursor enabled" : "Target cursor disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={LayoutGrid}
+          label="Pixel Testimonials"
+          hint="Use a pixelated transition effect to flip between builder testimonials on the home page."
+        >
+          <Toggle
+            checked={pixelTestimonials}
+            onChange={(v) => {
+              setPixelTestimonials(v)
+              localStorage.setItem("pref_pixel_testimonials", v ? "1" : "0")
+              toast.success(v ? "Pixel testimonials enabled" : "Pixel testimonials disabled")
+            }}
+          />
+        </PrefRow>
+        <PrefRow
+          icon={Sparkles}
+          label="Glare Effect"
+          hint="Add a light sweep/glare effect when hovering over buttons and interactive elements. Off by default."
+        >
+          <Toggle
+            checked={glareHover}
+            onChange={(v) => {
+              setGlareHover(v)
+              localStorage.setItem("pref_glare_hover", v ? "1" : "0")
+              toast.success(v ? "Glare effect enabled" : "Glare effect disabled")
+            }}
+          />
+        </PrefRow>
       </Section>
 
       <Section title="Notifications">
@@ -1169,6 +1219,32 @@ const PreferencesTab = () => {
   )
 }
 
+const SettingsTabButton = ({ tab, isActive, onClick }) => {
+  const Icon = tab.icon
+  
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5
+                  text-xs sm:text-sm font-medium whitespace-nowrap
+                  transition-colors duration-150 relative shrink-0 cursor-target
+                  ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+    >
+      <Icon size={13} />
+      <span>{tab.label}</span>
+
+      {isActive && (
+        <motion.div 
+          layoutId="settings-tab-indicator"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }} 
+        />
+      )}
+    </button>
+  )
+}
+
+
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -1185,25 +1261,15 @@ const DashboardSettings = () => {
       <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6">Settings</h1>
       <div className="-mx-4 sm:mx-0 border-b border-border mb-4 sm:mb-6">
         <div className="flex overflow-x-auto scrollbar-none px-4 sm:px-0" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          {TABS.map(tab => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.key
-            return (
-              <button key={tab.key} onClick={() => setTab(tab.key)}
-                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5
-                            text-xs sm:text-sm font-medium whitespace-nowrap
-                            transition-colors duration-150 relative shrink-0
-                            ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                <Icon size={13} />
-                {tab.label}
-                {isActive && (
-                  <motion.div layoutId="settings-tab-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }} />
-                )}
-              </button>
-            )
-          })}
+          {TABS.map(tab => (
+            <SettingsTabButton
+              key={tab.key}
+              tab={tab}
+              isActive={activeTab === tab.key}
+              onClick={() => setTab(tab.key)}
+            />
+          ))}
+
         </div>
       </div>
       <AnimatePresence mode="wait">

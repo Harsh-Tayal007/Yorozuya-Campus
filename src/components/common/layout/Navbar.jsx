@@ -197,14 +197,14 @@ const Navbar = () => {
           onClick={sidebar.toggleSidebar}
           className="p-2 rounded-lg text-muted-foreground
                      hover:text-foreground hover:bg-muted
-                     transition-colors duration-150 shrink-0"
+                     transition-colors duration-150 shrink-0 cursor-target"
           aria-label="Toggle sidebar"
         >
           <Menu size={18} />
         </button>
 
         {/* Logo mark + wordmark */}
-        <Link to="/" className="flex items-center gap-2 group">
+        <Link to="/" className="flex items-center gap-2 group cursor-target">
           <NavLogoMark />
           <span className="text-lg font-semibold tracking-tight text-foreground
                            group-hover:text-indigo-500 transition-colors duration-150">
@@ -228,7 +228,7 @@ const Navbar = () => {
                          bg-white/60 dark:bg-white/5
                          hover:bg-white/80 dark:hover:bg-white/10
                          border border-white/20 dark:border-white/5
-                         transition-colors duration-150"
+                         transition-colors duration-150 cursor-target"
             >
               <Avatar size="w-7 h-7" />
               <span className="hidden sm:block text-sm font-medium text-foreground max-w-[100px] truncate">
@@ -243,7 +243,7 @@ const Navbar = () => {
           <Link to="/login"
             className="rounded-full px-4 py-1.5 text-sm font-medium
                        bg-foreground text-background
-                       hover:opacity-90 transition-opacity duration-150">
+                       hover:opacity-90 transition-opacity duration-150 cursor-target">
             Login
           </Link>
         )}
@@ -329,7 +329,7 @@ const Navbar = () => {
 const DropItem = ({ to, icon: Icon, label, onClose }) => (
   <Link to={to} onClick={onClose}
     className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl
-               text-sm text-foreground hover:bg-muted transition-colors duration-150">
+               text-sm text-foreground hover:bg-muted transition-colors duration-150 cursor-target">
     <Icon size={14} className="text-muted-foreground shrink-0" />
     {label}
   </Link>

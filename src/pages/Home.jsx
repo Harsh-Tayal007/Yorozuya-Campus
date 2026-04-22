@@ -26,6 +26,9 @@ const ToolsShowcase       = lazy(() => import("@/components/home/ToolsShowcase")
 const RolesSection        = lazy(() => import("@/components/home/RolesSection"))
 const TestimonialsSection = lazy(() => import("@/components/home/TestimonialsSection"))
 const FAQSection          = lazy(() => import("@/components/home/FAQSection"))
+const TargetCursor         = lazy(() => import("@/components/home/TargetCursor"))
+import GlareHover from "@/components/ui/glare-hover"
+
 
 // -- Lightweight inline constants --
 const FEATURES_SUMMARY = [
@@ -47,11 +50,22 @@ export default function Home() {
   const confettiEnabled    = useState(() => localStorage.getItem("pref_confetti_bg") === "1")[0]
   const antigravityEnabled = useState(() => localStorage.getItem("pref_antigravity_bg") === "1")[0]
   const levitatingEnabled  = useState(() => localStorage.getItem("pref_levitating_bg") === "1")[0]
+  const targetCursorEnabled = useState(() => localStorage.getItem("pref_target_cursor") === "1")[0]
+  const glareEnabled = useState(() => localStorage.getItem("pref_glare_hover") === "1")[0]
+  
+  // Track hover states for manual GlareHover buttons
+  const [heroHover1, setHeroHover1] = useState(false)
+  const [heroHover2, setHeroHover2] = useState(false)
+  const [heroHover3, setHeroHover3] = useState(false)
+  const [ctaHover, setCtaHover] = useState(false)
+
+
   // Defer rendering until after first paint (only when enabled)
   const [blobsReady, setBlobsReady]           = useState(false)
   const [confettiReady, setConfettiReady]     = useState(false)
   const [antigravityReady, setAntigravityReady] = useState(false)
   const [levitatingReady, setLevitatingReady] = useState(false)
+  const [targetCursorReady, setTargetCursorReady] = useState(false)
   const featuresRef = useRef(null)
 
   useSeoMeta({
@@ -92,6 +106,14 @@ export default function Home() {
       : setTimeout(() => setLevitatingReady(true), 200)
     return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
   }, [levitatingEnabled])
+
+  useEffect(() => {
+    if (!targetCursorEnabled) return
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => setTargetCursorReady(true), { timeout: 1000 })
+      : setTimeout(() => setTargetCursorReady(true), 300)
+    return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
+  }, [targetCursorEnabled])
 
   // Lock scroll when roadmap open
   useEffect(() => {
@@ -135,6 +157,11 @@ export default function Home() {
           <LevitatingSphere />
         </Suspense>
       )}
+      {targetCursorEnabled && targetCursorReady && (
+        <Suspense fallback={null}>
+          <TargetCursor />
+        </Suspense>
+      )}
 
       <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 space-y-20">
 
@@ -167,26 +194,42 @@ export default function Home() {
               <Skeleton className="h-11 w-40 rounded-xl" />
             ) : currentUser ? (
               <Link to="/dashboard"
+                onMouseEnter={() => setHeroHover1(true)}
+                onMouseLeave={() => setHeroHover1(false)}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
                            bg-gradient-to-r from-blue-500 to-indigo-500 text-white
                            text-sm font-semibold shadow-lg shadow-blue-500/25
-                           hover:opacity-90 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150">
-                Go to Dashboard <ChevronRight size={14} />
+                           hover:opacity-90 hover:-translate-y-0.5 active:scale-[0.98] 
+                           transition-all duration-150 cursor-target relative overflow-hidden">
+                <GlareHover enabled={glareEnabled} active={heroHover1} />
+                <span className="relative z-10 flex items-center gap-2">
+                  Go to Dashboard <ChevronRight size={14} />
+                </span>
               </Link>
             ) : (
               <>
                 <Link to="/universities"
+                  onMouseEnter={() => setHeroHover2(true)}
+                  onMouseLeave={() => setHeroHover2(false)}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
                              bg-gradient-to-r from-blue-500 to-indigo-500 text-white
                              text-sm font-semibold shadow-lg shadow-blue-500/25
-                             hover:opacity-90 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150">
-                  Browse content <ChevronRight size={14} />
+                             hover:opacity-90 hover:-translate-y-0.5 active:scale-[0.98] 
+                             transition-all duration-150 cursor-target relative overflow-hidden">
+                  <GlareHover enabled={glareEnabled} active={heroHover2} />
+                  <span className="relative z-10 flex items-center gap-2">
+                    Browse content <ChevronRight size={14} />
+                  </span>
                 </Link>
                 <button onClick={scrollToFeatures}
+                  onMouseEnter={() => setHeroHover3(true)}
+                  onMouseLeave={() => setHeroHover3(false)}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
                              border border-border bg-background/80 text-sm font-medium text-foreground
-                             hover:bg-muted hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150">
-                  See what's inside
+                             hover:bg-muted hover:-translate-y-0.5 active:scale-[0.98] 
+                             transition-all duration-150 cursor-target relative overflow-hidden">
+                  <GlareHover enabled={glareEnabled} active={heroHover3} />
+                  <span className="relative z-10">See what's inside</span>
                 </button>
               </>
             )}
@@ -302,7 +345,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full
                        border border-border bg-white dark:bg-white/[0.03] shadow-sm
                        text-sm text-muted-foreground hover:text-foreground
-                       hover:border-indigo-400/50 hover:shadow-md transition-all duration-200">
+                       hover:border-indigo-400/50 hover:shadow-md transition-all duration-200 cursor-target">
             <Zap size={13} className="text-indigo-500" />
             View roadmap - see what's done and what's next
             <ChevronRight size={13} />
@@ -344,10 +387,15 @@ export default function Home() {
                   ))}
                 </div>
                 <button onClick={() => openAuth("signup")}
+                  onMouseEnter={() => setCtaHover(true)}
+                  onMouseLeave={() => setCtaHover(false)}
                   className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-white text-[#312e81]
                              text-sm font-bold hover:bg-white/90 hover:scale-[1.02]
-                             active:scale-[0.98] transition-all duration-150 shadow-lg">
-                  Create a free account <ArrowRight size={14} />
+                             active:scale-[0.98] transition-all duration-150 shadow-lg cursor-target relative overflow-hidden">
+                  <GlareHover enabled={glareEnabled} active={ctaHover} glareColor="#312e81" glareOpacity={0.15} />
+                  <span className="relative z-10 flex items-center gap-2">
+                    Create a free account <ArrowRight size={14} />
+                  </span>
                 </button>
                 <p className="mt-4 text-xs text-white/30">
                   Already have an account?{" "}

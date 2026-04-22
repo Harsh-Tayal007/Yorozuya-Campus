@@ -72,7 +72,7 @@ const PyqUserView = ({ programId: propProgramId, branchName: propBranchName, isD
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {semesters.map(sem => (
-              <GlowCard key={sem} onClick={() => navigate(`${basePyqPath}/semester/${sem}`)} className="p-5">
+              <GlowCard key={sem} onClick={() => navigate(`${basePyqPath}/semester/${sem}`)} className="p-5 cursor-target">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">

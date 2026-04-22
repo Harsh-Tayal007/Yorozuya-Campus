@@ -174,7 +174,7 @@ export default function SyllabusUserView({
                         type: "syllabus",
                         title: subject.subjectName
                       })
-                    }} />
+                    }} className="cursor-target" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{subject.subjectName}</p>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -190,32 +190,32 @@ export default function SyllabusUserView({
                     </div>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
-                    <button
-                      onClick={() => {
-                        const url = getFileViewUrl(subject.pdfFileId, subject.storageProvider, "syllabus", subject.bucketId)
-                        if (isMobile()) { window.open(url, "_blank"); return }
-                        setPreviewFile({
-                          fileId: subject.pdfFileId,
-                          bucketId: subject.bucketId || SYLLABUS_BUCKET_ID,
-                          storageProvider: subject.storageProvider,
-                          type: "syllabus",
-                          title: subject.subjectName
-                        })
-                      }}
-                      className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
-                                 border border-border/60 bg-muted/30 text-muted-foreground
-                                 hover:border-border hover:text-foreground hover:bg-muted/60
-                                 transition-all active:scale-95"
-                    >
-                      <ExternalLink size={11} /> View
-                    </button>
+                      <button
+                        onClick={() => {
+                          const url = getFileViewUrl(subject.pdfFileId, subject.storageProvider, "syllabus", subject.bucketId)
+                          if (isMobile()) { window.open(url, "_blank"); return }
+                          setPreviewFile({
+                            fileId: subject.pdfFileId,
+                            bucketId: subject.bucketId || SYLLABUS_BUCKET_ID,
+                            storageProvider: subject.storageProvider,
+                            type: "syllabus",
+                            title: subject.subjectName
+                          })
+                        }}
+                        className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
+                                   border border-border/60 bg-muted/30 text-muted-foreground
+                                   hover:border-border hover:text-foreground hover:bg-muted/60
+                                   transition-all active:scale-95 cursor-target"
+                      >
+                        <ExternalLink size={11} /> View
+                      </button>
                     <button
                       onClick={() => downloadFileXHR({
                         url: getPdfDownloadUrl(subject.pdfFileId, subject.storageProvider, "syllabus", subject.bucketId),
                         fileName: buildSyllabusFilename({ subjectName: subject.subjectName, semester }),
                       })}
                       className="flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium
-                                 text-white transition-all active:scale-95"
+                                 text-white transition-all active:scale-95 cursor-target"
                       style={{ background: "linear-gradient(135deg, #0891b2, #0e7490)" }}
                     >
                       <Download size={11} /> Download

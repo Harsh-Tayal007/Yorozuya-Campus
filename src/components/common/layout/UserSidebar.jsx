@@ -13,6 +13,8 @@ import {
 } from "@/config/dashboardSidebarConfig"
 import LoginGateSheet from "@/components/common/auth/LoginGateSheet"
 import UserSearchModal from "@/components/profile/UserSearchModal"
+import GlareHover from "@/components/ui/glare-hover"
+
 
 const NAVBAR_H  = 68
 const SIDEBAR_W = 256
@@ -134,7 +136,7 @@ export default function UserSidebar() {
             title={isMobile ? "Close" : isPinned ? "Unpin sidebar" : "Pin sidebar"}
             className="p-1.5 rounded-lg text-muted-foreground
                        hover:text-foreground hover:bg-muted
-                       transition-colors duration-150 shrink-0"
+                       transition-colors duration-150 shrink-0 cursor-target"
           >
             {isMobile
               ? <X size={15} />
@@ -153,7 +155,7 @@ export default function UserSidebar() {
                        text-sm text-muted-foreground
                        hover:text-foreground hover:bg-muted
                        border border-border/50
-                       transition-colors duration-150 group"
+                       transition-colors duration-150 group cursor-target"
           >
             <Search size={13} className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
             <span className="flex-1 text-left text-xs opacity-60 group-hover:opacity-100 transition-opacity">
@@ -305,42 +307,64 @@ export default function UserSidebar() {
 }
 
 function SidebarLink({ to, icon: Icon, label, isActive, small }) {
+  const [glareEnabled, setGlareEnabled] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  useEffect(() => {
+    setGlareEnabled(localStorage.getItem("pref_glare_hover") === "1")
+  }, [])
+
+
   return (
     <Link
       to={to}
       className={`group relative flex items-center gap-2.5 rounded-lg
-                  transition-colors duration-150 whitespace-nowrap
+                  transition-colors duration-150 whitespace-nowrap cursor-target
                   ${small ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm font-medium"}
                   ${isActive
                     ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
+      <GlareHover enabled={glareEnabled} active={isHovered} />
+
       {isActive && (
         <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5
                          rounded-r bg-indigo-500" />
       )}
-      <Icon size={small ? 14 : 16} className="shrink-0" />
-      {label}
+      <Icon size={small ? 14 : 16} className="shrink-0 relative z-20" />
+      <span className="relative z-20">{label}</span>
     </Link>
   )
 }
 
 function SidebarLinkLocked({ icon: Icon, label, onLockClick }) {
+  const [glareEnabled, setGlareEnabled] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  useEffect(() => {
+    setGlareEnabled(localStorage.getItem("pref_glare_hover") === "1")
+  }, [])
+
+
   return (
     <button
       onClick={onLockClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="w-full group relative flex items-center justify-between gap-2.5
                  rounded-lg px-3 py-2 text-sm font-medium
                  text-muted-foreground/50 hover:text-muted-foreground
-                 hover:bg-muted/50 transition-colors duration-150 cursor-pointer"
+                 hover:bg-muted/50 transition-colors duration-150 cursor-pointer cursor-target"
     >
-      <div className="flex items-center gap-2.5">
+      <GlareHover enabled={glareEnabled} active={isHovered} />
+
+      <div className="flex items-center gap-2.5 relative z-20">
         <Icon size={16} className="shrink-0 opacity-50" />
         <span className="opacity-50">{label}</span>
       </div>
       <Lock size={12} className="shrink-0 opacity-40 group-hover:opacity-70
-                                  transition-opacity duration-150" />
+                                  transition-opacity duration-150 relative z-20" />
     </button>
   )
 }

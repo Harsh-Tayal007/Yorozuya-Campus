@@ -1,4 +1,4 @@
-﻿// src/components/dashboard/AcademicQuickAccess.jsx
+// src/components/dashboard/AcademicQuickAccess.jsx
 import { useNavigate } from "react-router-dom"
 import { BookOpen, Library, FileText, ArrowUpRight } from "lucide-react"
 import GlowCard from "@/components/common/display/GlowCard"
@@ -61,7 +61,7 @@ const AcademicQuickAccess = ({
         <GlowCard
           key={key}
           onClick={() => handleClick({ key, label, description, icon: Icon, accent, ...card })}
-          className={`p-5 ${!canNavigate ? "opacity-50 pointer-events-none" : ""}`}
+          className={`p-5 cursor-target ${!canNavigate ? "opacity-50 pointer-events-none" : ""}`}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">

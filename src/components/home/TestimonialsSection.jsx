@@ -1,7 +1,7 @@
-// src/components/home/TestimonialsSection.jsx
 import { useState, useEffect, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Quote } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
+import PixelTransition from "@/components/ui/pixel-transition"
 
 const TESTIMONIALS = [
   {
@@ -24,16 +24,45 @@ const TESTIMONIALS = [
 
 const AUTOPLAY_MS = 6000
 
+function TestimonialCard({ t, transitioning = false }) {
+  return (
+    <div
+      className="space-y-6 transition-opacity duration-250 ease-out"
+      style={{ opacity: transitioning ? 0 : 1 }}
+    >
+      <blockquote className="text-base sm:text-lg font-medium text-foreground/90 leading-relaxed max-w-xl">
+        &ldquo;{t.quote}&rdquo;
+      </blockquote>
+
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient}
+                        flex items-center justify-center shadow-md`}>
+          <span className="text-white text-xs font-bold">{t.initials}</span>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">{t.name}</p>
+          <p className="text-xs text-muted-foreground">{t.role}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TestimonialsSection() {
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
+  const [usePixelTransition, setUsePixelTransition] = useState(false)
   const sectionRef = useReveal()
+
+  useEffect(() => {
+    const pref = localStorage.getItem("pref_pixel_testimonials") === "1"
+    setUsePixelTransition(pref)
+  }, [])
 
   const changeTo = useCallback((i) => {
     if (transitioning) return
     setTransitioning(true)
-    // Fade out, then swap, then fade in
     setTimeout(() => {
       setCurrent(i)
       setTransitioning(false)
@@ -50,10 +79,10 @@ export default function TestimonialsSection() {
   )
 
   useEffect(() => {
-    if (paused) return
+    if (paused || usePixelTransition) return
     const id = setInterval(next, AUTOPLAY_MS)
     return () => clearInterval(id)
-  }, [paused, next])
+  }, [paused, next, usePixelTransition])
 
   const t = TESTIMONIALS[current]
 
@@ -71,81 +100,92 @@ export default function TestimonialsSection() {
         </h2>
       </div>
 
-      <div className="relative rounded-2xl overflow-hidden"
+      <div className="relative rounded-3xl overflow-hidden group/card"
         style={{
           background: "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(99,102,241,0.1) 50%, rgba(139,92,246,0.06) 100%)",
           border: "1px solid rgba(99,102,241,0.15)",
         }}>
 
-        {/* Decorative quote icon */}
-        <div className="absolute top-5 right-6 opacity-[0.06] pointer-events-none">
+        {/* Decorative background quote icon */}
+        <div className="absolute top-5 right-6 opacity-[0.06] pointer-events-none z-0">
           <Quote size={80} />
         </div>
 
-        <div className="relative z-10 px-6 sm:px-10 py-10 sm:py-12">
-          {/* Quote content - CSS transition instead of AnimatePresence */}
-          <div
-            className="space-y-6 transition-opacity duration-250 ease-out"
-            style={{ opacity: transitioning ? 0 : 1 }}
-          >
-            <blockquote className="text-base sm:text-lg font-medium text-foreground/90 leading-relaxed max-w-xl">
-              &ldquo;{t.quote}&rdquo;
-            </blockquote>
+        <div className="relative z-10">
+          {usePixelTransition ? (
+            <PixelTransition
+              firstContent={
+                <div className="px-6 sm:px-10 py-10 sm:py-12 h-full flex flex-col justify-center">
+                  <TestimonialCard t={TESTIMONIALS[0]} />
+                </div>
+              }
+              secondContent={
+                <div className="px-6 sm:px-10 py-10 sm:py-12 h-full flex flex-col justify-center bg-indigo-500/5 backdrop-blur-sm">
+                  <TestimonialCard t={TESTIMONIALS[1]} />
+                </div>
+              }
+              gridSize={10}
+              pixelColor="#6366f1"
+              animationStepDuration={0.4}
+              aspectRatio="40%" // Adjust based on content height
+              className="w-full !rounded-none !border-0 bg-transparent min-h-[300px]"
+              enableAutoplay={true}
+              autoplayInterval={5000}
+            />
+          ) : (
+            <div className="px-6 sm:px-10 py-10 sm:py-12">
+              <TestimonialCard t={t} transitioning={transitioning} />
 
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient}
-                              flex items-center justify-center shadow-md`}>
-                <span className="text-white text-xs font-bold">{t.initials}</span>
+              {/* Carousel Controls */}
+              <div className="flex items-center justify-between mt-8">
+                <div className="flex items-center gap-2">
+                  {TESTIMONIALS.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => changeTo(i)}
+                      aria-label={`Go to testimonial ${i + 1}`}
+                      className={`h-1.5 rounded-full transition-all duration-300
+                        ${i === current
+                          ? "w-6 bg-indigo-500"
+                          : "w-1.5 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/30"
+                        }`}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={prev}
+                    aria-label="Previous testimonial"
+                    className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10
+                               bg-white dark:bg-white/5 flex items-center justify-center
+                               text-muted-foreground hover:text-foreground hover:border-indigo-400/50
+                               transition-all duration-150"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    onClick={next}
+                    aria-label="Next testimonial"
+                    className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10
+                               bg-white dark:bg-white/5 flex items-center justify-center
+                               text-muted-foreground hover:text-foreground hover:border-indigo-400/50
+                               transition-all duration-150"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                <p className="text-xs text-muted-foreground">{t.role}</p>
-              </div>
             </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center justify-between mt-8">
-            <div className="flex items-center gap-2">
-              {TESTIMONIALS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => changeTo(i)}
-                  aria-label={`Go to testimonial ${i + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300
-                    ${i === current
-                      ? "w-6 bg-indigo-500"
-                      : "w-1.5 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/30"
-                    }`}
-                />
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={prev}
-                aria-label="Previous testimonial"
-                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10
-                           bg-white dark:bg-white/5 flex items-center justify-center
-                           text-muted-foreground hover:text-foreground hover:border-indigo-400/50
-                           transition-all duration-150"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button
-                onClick={next}
-                aria-label="Next testimonial"
-                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10
-                           bg-white dark:bg-white/5 flex items-center justify-center
-                           text-muted-foreground hover:text-foreground hover:border-indigo-400/50
-                           transition-all duration-150"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
+      
+      {usePixelTransition && (
+        <p className="text-[10px] text-center text-muted-foreground/40 mt-3 uppercase tracking-tighter">
+          Automatic builder perspective transition active
+        </p>
+      )}
     </section>
   )
 }

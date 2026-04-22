@@ -2,12 +2,29 @@ import { Navbar, UserSidebar } from "@/components"
 import { useAuth } from "@/context/AuthContext"
 import { useSidebar } from "@/context/SidebarContext"
 import { useTrackActivity } from "@/hooks/useTrackActivity"
-import { Outlet } from "react-router-dom"
+import { Outlet, useLocation } from "react-router-dom"
+import { lazy, Suspense, useState, useEffect } from "react"
+
+const TargetCursor = lazy(() => import("@/components/home/TargetCursor"))
 
 const UserLayout = () => {
   useTrackActivity()
   const { user } = useAuth()
   const { handleEdgeHover } = useSidebar()
+  const { pathname } = useLocation()
+
+  // Target cursor preference logic
+  const targetCursorEnabled = useState(() => localStorage.getItem("pref_target_cursor") === "1")[0]
+  const [targetCursorReady, setTargetCursorReady] = useState(false)
+  const isDashboardRoute = pathname.startsWith("/dashboard")
+
+  useEffect(() => {
+    if (!targetCursorEnabled || !isDashboardRoute) return
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => setTargetCursorReady(true), { timeout: 1000 })
+      : setTimeout(() => setTargetCursorReady(true), 300)
+    return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
+  }, [targetCursorEnabled, isDashboardRoute])
 
   return (
     <div
@@ -24,6 +41,12 @@ const UserLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {targetCursorEnabled && isDashboardRoute && targetCursorReady && (
+        <Suspense fallback={null}>
+          <TargetCursor />
+        </Suspense>
+      )}
     </div>
   )
 }

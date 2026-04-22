@@ -19,7 +19,7 @@ export default function ShareButton({ path, className = "" }) {
         "flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium",
         "border border-border/60 bg-muted/30 text-muted-foreground",
         "hover:border-border hover:text-foreground hover:bg-muted/60",
-        "transition-all active:scale-95 shrink-0",
+        "transition-all active:scale-95 shrink-0 cursor-target",
         className,
       ].join(" ")}
     >
