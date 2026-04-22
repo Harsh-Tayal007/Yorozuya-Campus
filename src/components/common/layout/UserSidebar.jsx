@@ -14,6 +14,7 @@ import {
 import LoginGateSheet from "@/components/common/auth/LoginGateSheet"
 import UserSearchModal from "@/components/profile/UserSearchModal"
 import GlareHover from "@/components/ui/glare-hover"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 
 const NAVBAR_H  = 68
@@ -307,11 +308,9 @@ export default function UserSidebar() {
 }
 
 function SidebarLink({ to, icon: Icon, label, isActive, small }) {
-  const [glareEnabled, setGlareEnabled] = useState(false)
+  const { resolved } = useUIPrefs()
+  const glareEnabled = resolved.glareHover
   const [isHovered, setIsHovered] = useState(false)
-  useEffect(() => {
-    setGlareEnabled(localStorage.getItem("pref_glare_hover") === "1")
-  }, [])
 
 
   return (
@@ -340,11 +339,9 @@ function SidebarLink({ to, icon: Icon, label, isActive, small }) {
 }
 
 function SidebarLinkLocked({ icon: Icon, label, onLockClick }) {
-  const [glareEnabled, setGlareEnabled] = useState(false)
+  const { resolved } = useUIPrefs()
+  const glareEnabled = resolved.glareHover
   const [isHovered, setIsHovered] = useState(false)
-  useEffect(() => {
-    setGlareEnabled(localStorage.getItem("pref_glare_hover") === "1")
-  }, [])
 
 
   return (

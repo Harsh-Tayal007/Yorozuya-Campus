@@ -2,15 +2,13 @@
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import GlareHover from "@/components/ui/glare-hover"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 const GlowCard = ({ children, className = "", onClick, spotlightColor = "rgba(139, 92, 246, 0.12)", disableGlare = false, ...props }) => {
-  const [glareEnabled, setGlareEnabled] = useState(false)
+  const { resolved } = useUIPrefs()
+  const glareEnabled = resolved.glareHover
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [opacity, setOpacity] = useState(0)
-  
-  useEffect(() => {
-    setGlareEnabled(localStorage.getItem("pref_glare_hover") === "1")
-  }, [])
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()

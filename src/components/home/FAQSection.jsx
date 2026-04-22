@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
 import AnimatedList from "./AnimatedList"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 const FAQS = [
   {
@@ -89,7 +90,8 @@ function FAQItem({ q, a, index }) {
 
 export default function FAQSection() {
   const headRef = useReveal()
-  const [animatedEnabled] = useState(() => localStorage.getItem("pref_animated_faq") === "1")
+  const { resolved } = useUIPrefs()
+  const animatedEnabled = resolved.animatedFaq
   const [activeFaq, setActiveFaq] = useState(null)
 
   return (

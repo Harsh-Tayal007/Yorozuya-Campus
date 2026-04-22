@@ -1,4 +1,4 @@
-﻿// src/layouts/AdminLayout.jsx
+// src/layouts/AdminLayout.jsx
 import { Outlet, NavLink, Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect, useRef } from "react"
@@ -8,7 +8,7 @@ import {
   Activity, Menu, Users, GitBranch, Upload, ClipboardList,
   ChevronDown, LogOut, User as UserIcon, BarChart2, ShieldX,
   Megaphone,
-  ClipboardCheck, Mail
+  ClipboardCheck, Mail, Palette
 } from "lucide-react"
 import { useTrackActivity } from "@/hooks/useTrackActivity"
 
@@ -32,6 +32,7 @@ const adminNav = [
   { label: "Updates", to: "/admin/updates", icon: Megaphone, permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
   { label: "Attendance", to: "/admin/attendance", icon: ClipboardCheck, permission: PERMISSIONS.VIEW_ATTENDANCE_REPORTS },
   { label: "Contact Messages", to: "/admin/contact-messages", icon: Mail, permission: PERMISSIONS.VIEW_CONTACT_MESSAGES },
+  { label: "UI Config", to: "/admin/ui-config", icon: Palette, permission: PERMISSIONS.MANAGE_UI_CONFIG },
 ]
 
 function AdminTopBar({ sidebarOpen, setSidebarOpen }) {

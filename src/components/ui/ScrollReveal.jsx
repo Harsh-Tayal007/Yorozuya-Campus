@@ -1,5 +1,5 @@
 // src/components/ui/ScrollReveal.jsx
-import React, { useEffect, useRef, useMemo } from 'react';
+import * as React from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -18,9 +18,9 @@ const ScrollReveal = ({
   rotationEnd = 'bottom bottom',
   wordAnimationEnd = 'bottom bottom'
 }) => {
-  const containerRef = useRef(null);
+  const containerRef = React.useRef(null);
 
-  const splitText = useMemo(() => {
+  const splitText = React.useMemo(() => {
     const text = typeof children === 'string' ? children : '';
     // Handle multiple lines/paragraphs if passed as a string
     return text.split(/(\s+)/).map((word, index) => {
@@ -33,7 +33,7 @@ const ScrollReveal = ({
     });
   }, [children]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Quote } from "lucide-react"
 import { useReveal } from "@/hooks/useReveal"
 import PixelTransition from "@/components/ui/pixel-transition"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 const TESTIMONIALS = [
   {
@@ -56,10 +57,11 @@ export default function TestimonialsSection() {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
   const sectionRef = useReveal()
 
+  const { resolved } = useUIPrefs()
+
   useEffect(() => {
-    const pref = localStorage.getItem("pref_pixel_testimonials") === "1"
-    setUsePixelTransition(pref)
-  }, [])
+    setUsePixelTransition(resolved.pixelTestimonials)
+  }, [resolved.pixelTestimonials])
 
   useEffect(() => {
     const observer = new MutationObserver(() => {

@@ -1,4 +1,4 @@
-﻿// src/pages/admin/moderation/AdminModeration.jsx
+// src/pages/admin/moderation/AdminModeration.jsx
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -519,11 +519,13 @@ export default function AdminModeration() {
   const bans    = bansData?.bans ?? []
 
   const filteredReports = reports.filter(r =>
-    !search ||
-    r.targetAuthorUsername?.toLowerCase().includes(search.toLowerCase()) ||
-    r.reporterUsername?.toLowerCase().includes(search.toLowerCase()) ||
-    r.reason?.toLowerCase().includes(search.toLowerCase()) ||
-    (r.targetType === "broken_link" && extractPath(r.contentPreview)?.toLowerCase().includes(search.toLowerCase()))
+    r.targetType !== "ui_complaint" &&
+    (!search ||
+      r.targetAuthorUsername?.toLowerCase().includes(search.toLowerCase()) ||
+      r.reporterUsername?.toLowerCase().includes(search.toLowerCase()) ||
+      r.reason?.toLowerCase().includes(search.toLowerCase()) ||
+      (r.targetType === "broken_link" && extractPath(r.contentPreview)?.toLowerCase().includes(search.toLowerCase()))
+    )
   )
 
   const filteredBans = bans.filter(b =>

@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from "react"
+import { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from "react"
 import {
   loginUser,
   logoutUser,
@@ -27,21 +27,24 @@ const SESSION_CACHE_KEY = "uz_session_v1"
 // ── Build currentUser shape ──────────────────────────────────────────────────
 const buildCurrentUser = (accountUser, userDoc) => ({
   ...accountUser,
-  username:         userDoc.username,
-  universityId:     userDoc.universityId     ?? null,
-  programId:        userDoc.programId        ?? null,
-  branchId:         userDoc.branchId         ?? null,
-  profileCompleted: userDoc.profileCompleted ?? false,
-  emailVerified:    userDoc.emailVerified    ?? accountUser.emailVerification ?? false,
-  avatarUrl:        userDoc.avatarUrl        ?? null,
-  avatarPublicId:   userDoc.avatarPublicId   ?? null,
-  bio:              userDoc.bio              ?? null,
-  yearOfStudy:      userDoc.yearOfStudy      ?? null,
-  name:             userDoc.name             ?? accountUser.name,
-  karma:            userDoc.karma            ?? 0,
-  followerCount:    userDoc.followerCount    ?? 0,
-  followingCount:   userDoc.followingCount   ?? 0,
-  accountType:      userDoc.accountType      ?? "student",
+  username:           userDoc.username,
+  universityId:       userDoc.universityId     ?? null,
+  programId:          userDoc.programId        ?? null,
+  branchId:           userDoc.branchId         ?? null,
+  profileCompleted:   userDoc.profileCompleted ?? false,
+  emailVerified:      userDoc.emailVerified    ?? accountUser.emailVerification ?? false,
+  avatarUrl:          userDoc.avatarUrl        ?? null,
+  avatarPublicId:     userDoc.avatarPublicId   ?? null,
+  bio:                userDoc.bio              ?? null,
+  yearOfStudy:        userDoc.yearOfStudy      ?? null,
+  name:               userDoc.name             ?? accountUser.name,
+  karma:              userDoc.karma            ?? 0,
+  followerCount:      userDoc.followerCount    ?? 0,
+  followingCount:     userDoc.followingCount   ?? 0,
+  accountType:        userDoc.accountType      ?? "student",
+  // UI customization admin controls
+  ui_prefs_locked:    userDoc.ui_prefs_locked    ?? false,
+  ui_prefs_reset_at:  userDoc.ui_prefs_reset_at  ?? null,
 })
 
 // ── Defer SW registration completely off critical path ───────────────────────

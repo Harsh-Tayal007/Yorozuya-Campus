@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense } from "react"
+import { lazy, Suspense } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 
 /* ─── Layouts (always needed, not lazy) ─── */
@@ -89,6 +89,7 @@ const AdminModeration       = lazy(() => import("@/pages/admin/moderation/AdminM
 const AdminUpdates          = lazy(() => import("@/pages/admin/updates/AdminUpdates"))
 const AdminAttendance       = lazy(() => import("@/pages/admin/attendance/AdminAttendance"))
 const AdminContactMessages  = lazy(() => import("@/pages/admin/contact/AdminContactMessages"))
+const AdminUIConfig         = lazy(() => import("@/pages/admin/ui-config/AdminUIConfig"))
 const Programs              = lazy(() => import("@/pages/admin/Programs"))
 const UniversityPrograms    = lazy(() => import("@/pages/admin/UniversityPrograms"))
 const ResourcesUpload       = lazy(() => import("@/pages/admin/resources/ResourcesUpload"))
@@ -251,6 +252,7 @@ const AppRoutes = () => (
           <Route path="pyqs"       element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_PYQS}><AdminPyqsPage /></RequirePermissionRoute>} />
           <Route path="moderation" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_REPORTS}><AdminModeration /></RequirePermissionRoute>} />
           <Route path="updates"    element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ADMIN_DASHBOARD}><AdminUpdates /></RequirePermissionRoute>} />
+          <Route path="ui-config"  element={<RequirePermissionRoute permission={PERMISSIONS.MANAGE_UI_CONFIG}><AdminUIConfig /></RequirePermissionRoute>} />
           <Route path="attendance" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_ATTENDANCE_REPORTS}><AdminAttendance /></RequirePermissionRoute>} />
           <Route path="contact-messages" element={<RequirePermissionRoute permission={PERMISSIONS.VIEW_CONTACT_MESSAGES}><AdminContactMessages /></RequirePermissionRoute>} />
         </Route>

@@ -1,4 +1,4 @@
-﻿// src/config/permissions.js
+// src/config/permissions.js
 
 export const PERMISSIONS = {
   // ─── Admin access ────────────────────────────────────────────────────────
@@ -65,6 +65,11 @@ export const PERMISSIONS = {
 
   // ───Contact Messages ────────────────────────────────────────────────────
   VIEW_CONTACT_MESSAGES: "view_contact_messages",
+
+  // ─── UI Customization ─────────────────────────────────────────────────────
+  MANAGE_UI_CONFIG:      "manage:ui-config",
+  RESET_USER_UI_PREFS:   "reset:user-ui-prefs",
+  ROLLBACK_UI_FEATURE:   "rollback:ui-feature",
 }
 
 
@@ -100,6 +105,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CREATE_ATTENDANCE_SESSION,
     PERMISSIONS.VIEW_ATTENDANCE_REPORTS,
     PERMISSIONS.VIEW_CONTACT_MESSAGES,
+    PERMISSIONS.MANAGE_UI_CONFIG,
+    PERMISSIONS.RESET_USER_UI_PREFS,
+    PERMISSIONS.ROLLBACK_UI_FEATURE,
   ],
 
   moderator: [

@@ -4,6 +4,7 @@ import { cva } from "class-variance-authority";
 
 import { cn } from "@/lib/utils"
 import GlareHover from "@/components/ui/glare-hover"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 
 const buttonVariants = cva(
@@ -46,12 +47,9 @@ function Button({
   ...props
 }) {
   const Comp = asChild ? Slot : "button"
-  const [glareEnabled, setGlareEnabled] = React.useState(false)
+  const { resolved } = useUIPrefs()
+  const glareEnabled = resolved.glareHover
   const [isHovered, setIsHovered] = React.useState(false)
-
-  React.useEffect(() => {
-    setGlareEnabled(localStorage.getItem("pref_glare_hover") === "1")
-  }, [])
 
   return (
     <Comp

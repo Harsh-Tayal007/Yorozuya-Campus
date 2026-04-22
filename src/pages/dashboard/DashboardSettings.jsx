@@ -6,12 +6,16 @@ import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import {
   Camera, Loader2, ChevronDown, ChevronRight, Check,
-  User, GraduationCap, BookOpen, GitBranch, Calendar,
+  User, GraduationCap, BookOpen, GitBranch,
   Mail, Lock, Moon, Sun, Bell, Shield, Eye, EyeOff,
   KeyRound, AlertCircle,
   Trash2, AtSign, RefreshCw,
-  X, Sparkles, Orbit, Shapes, Globe, Target, LayoutGrid
+  X, Sparkles, Orbit, Shapes, Globe, Target, LayoutGrid,
+  Palette, Zap, MonitorSmartphone, Laptop2, LockKeyhole,
+  Wind, Info
 } from "lucide-react"
+import { useUIPrefs } from "@/context/UIPrefsContext"
+import ReportUIIssueButton from "@/components/ui/ReportUIIssueButton"
 
 import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
@@ -35,10 +39,11 @@ const YEAR_OPTIONS = [
 ]
 
 const TABS = [
-  { key: "profile", label: "Profile", icon: User },
-  { key: "account", label: "Account", icon: Shield },
-  { key: "academic", label: "Academic", icon: GraduationCap },
-  { key: "preferences", label: "Preferences", icon: Bell },
+  { key: "profile",        label: "Profile",        icon: User },
+  { key: "account",        label: "Account",         icon: Shield },
+  { key: "academic",       label: "Academic",        icon: GraduationCap },
+  { key: "preferences",    label: "Preferences",     icon: Bell },
+  { key: "customization",  label: "Customization",   icon: Palette },
 ]
 
 // ── Reusable primitives ───────────────────────────────────────────────────────
@@ -915,32 +920,13 @@ const AcademicTab = ({ user, completeAcademicProfile, queryClient }) => {
 }
 
 // =============================================================================
-// TAB: PREFERENCES
+// TAB: PREFERENCES  (Dark mode + Notifications only)
 // =============================================================================
 
 const PreferencesTab = () => {
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains("dark")
   )
-  const [animatedBg, setAnimatedBg] = useState(() =>
-    localStorage.getItem("pref_animated_bg") === "1"
-  )
-  const [confettiBg, setConfettiBg] = useState(() =>
-    localStorage.getItem("pref_confetti_bg") === "1"
-  )
-  const [antigravityBg, setAntigravityBg] = useState(() =>
-    localStorage.getItem("pref_antigravity_bg") === "1"
-  )
-  const [levitatingBg, setLevitatingBg] = useState(() =>
-    localStorage.getItem("pref_levitating_bg") === "1"
-  )
-  const [targetCursor, setTargetCursor] = useState(() =>
-    localStorage.getItem("pref_target_cursor") === "1"
-  )
-  const [pixelTestimonials, setPixelTestimonials] = useState(() => localStorage.getItem("pref_pixel_testimonials") === "1")
-  const [glareHover, setGlareHover] = useState(() => localStorage.getItem("pref_glare_hover") === "1")
-  const [dotField, setDotField] = useState(() => localStorage.getItem("pref_dot_field") === "1")
-  const [animatedFaq, setAnimatedFaq] = useState(() => localStorage.getItem("pref_animated_faq") === "1")
 
   // ── In-app notification prefs (Appwrite account prefs) ────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
@@ -1033,132 +1019,6 @@ const PreferencesTab = () => {
         >
           <Toggle checked={isDark} onChange={applyTheme} />
         </PrefRow>
-        <PrefRow
-          icon={Sparkles}
-          label="Animated background"
-          hint="Show floating gradient blobs on the landing page. Off by default for better performance."
-        >
-          <Toggle
-            checked={animatedBg}
-            onChange={(v) => {
-              setAnimatedBg(v)
-              localStorage.setItem("pref_animated_bg", v ? "1" : "0")
-              toast.success(v ? "Background animations enabled" : "Background animations disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={Orbit}
-          label="Confetti particles"
-          hint="Scattered colorful particles that react to your cursor. Off by default for better performance."
-        >
-          <Toggle
-            checked={confettiBg}
-            onChange={(v) => {
-              setConfettiBg(v)
-              localStorage.setItem("pref_confetti_bg", v ? "1" : "0")
-              toast.success(v ? "Confetti particles enabled" : "Confetti particles disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={Shapes}
-          label="Antigravity shapes"
-          hint="Floating geometric shapes with physics and cursor interaction. Off by default for better performance."
-        >
-          <Toggle
-            checked={antigravityBg}
-            onChange={(v) => {
-              setAntigravityBg(v)
-              localStorage.setItem("pref_antigravity_bg", v ? "1" : "0")
-              toast.success(v ? "Antigravity shapes enabled" : "Antigravity shapes disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={Globe}
-          label="Levitating sphere"
-          hint="Elastic liquid particles with advanced interactions. Click to repel, scroll to resize influence. Full touch & mobile support."
-        >
-          <Toggle
-            checked={levitatingBg}
-            onChange={(v) => {
-              setLevitatingBg(v)
-              localStorage.setItem("pref_levitating_bg", v ? "1" : "0")
-              toast.success(v ? "Levitating sphere enabled" : "Levitating sphere disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={Target}
-          label="Target cursor"
-          hint="Animated custom cursor with lock-on effect for interactive elements. Off by default."
-        >
-          <Toggle
-            checked={targetCursor}
-            onChange={(v) => {
-              setTargetCursor(v)
-              localStorage.setItem("pref_target_cursor", v ? "1" : "0")
-              toast.success(v ? "Target cursor enabled" : "Target cursor disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={LayoutGrid}
-          label="Pixel Testimonials"
-          hint="Use a pixelated transition effect to flip between builder testimonials on the home page."
-        >
-          <Toggle
-            checked={pixelTestimonials}
-            onChange={(v) => {
-              setPixelTestimonials(v)
-              localStorage.setItem("pref_pixel_testimonials", v ? "1" : "0")
-              toast.success(v ? "Pixel testimonials enabled" : "Pixel testimonials disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={Sparkles}
-          label="Glare Effect"
-          hint="Add a light sweep/glare effect when hovering over buttons and interactive elements. Off by default."
-        >
-          <Toggle
-            checked={glareHover}
-            onChange={(v) => {
-              setGlareHover(v)
-              localStorage.setItem("pref_glare_hover", v ? "1" : "0")
-              toast.success(v ? "Glare effect enabled" : "Glare effect disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={LayoutGrid}
-          label="Interactive Dots"
-          hint="Subtle dot grid background that reacts to your cursor. Off by default for better performance."
-        >
-          <Toggle
-            checked={dotField}
-            onChange={(v) => {
-              setDotField(v)
-              localStorage.setItem("pref_dot_field", v ? "1" : "0")
-              toast.success(v ? "Interactive dots enabled" : "Interactive dots disabled")
-            }}
-          />
-        </PrefRow>
-        <PrefRow
-          icon={Sparkles}
-          label="Animated FAQ"
-          hint="Use a more dynamic, scrollable list for the FAQ section on the home page."
-        >
-          <Toggle
-            checked={animatedFaq}
-            onChange={(v) => {
-              setAnimatedFaq(v)
-              localStorage.setItem("pref_animated_faq", v ? "1" : "0")
-              toast.success(v ? "Animated FAQ enabled" : "Animated FAQ disabled")
-            }}
-          />
-        </PrefRow>
       </Section>
 
       <Section title="Notifications">
@@ -1249,6 +1109,369 @@ const PreferencesTab = () => {
   )
 }
 
+// =============================================================================
+// TAB: CUSTOMIZATION
+// =============================================================================
+
+// Scope badge pill
+const ScopeBadge = ({ label, color = "default" }) => {
+  const colors = {
+    default:  "bg-muted text-muted-foreground",
+    blue:     "bg-blue-500/10 text-blue-500 dark:text-blue-400",
+    amber:    "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    purple:   "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  }
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ${colors[color]}`}>
+      {label}
+    </span>
+  )
+}
+
+// A pref row that is aware of disabled/locked state from the context
+const CustomPrefRow = ({ icon: Icon, label, hint, scopeLabel, scopeColor, prefKey, disabled: forceDisabled, locked }) => {
+  const { userPrefs, setUserPref, resolved } = useUIPrefs()
+
+  const isDisabled = forceDisabled || locked
+  const currentVal = resolved[prefKey] ?? false
+
+  const handleChange = (v) => {
+    if (isDisabled) return
+    setUserPref(prefKey === "minimalist" ? "minimalist" : prefKey.replace(/([A-Z])/g, m => `_${m.toLowerCase()}`), v)
+    toast.success(v ? `${label} enabled` : `${label} disabled`)
+  }
+
+  return (
+    <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                    border-b border-border/50 last:border-0 gap-3
+                    ${isDisabled ? "opacity-50" : ""}`}>
+      <div className="flex items-start gap-3 min-w-0">
+        {Icon && <Icon size={15} className="text-muted-foreground mt-0.5 shrink-0" />}
+        <div className="min-w-0 space-y-0.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-sm font-medium text-foreground">{label}</p>
+            {scopeLabel && <ScopeBadge label={scopeLabel} color={scopeColor} />}
+          </div>
+          {hint && <p className="text-xs text-muted-foreground leading-relaxed">{hint}</p>}
+          {locked && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+              <LockKeyhole size={10} /> Managed by site admin
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 self-end sm:self-auto">
+        <Toggle checked={currentVal} onChange={handleChange} />
+      </div>
+    </div>
+  )
+}
+
+const CustomizationTab = () => {
+  const {
+    resolved, disabled, userLocked, globallyLocked, adminLoading, setUserPref
+  } = useUIPrefs()
+
+  const isLocked = userLocked || globallyLocked
+
+  // localStorage-backed minimalist state
+  const [isMinimalist, setIsMinimalist] = useState(() =>
+    localStorage.getItem("pref_minimalist") === "1"
+  )
+
+  const handleMinimalist = (v) => {
+    setIsMinimalist(v)
+    setUserPref("minimalist", v)
+    toast.success(v ? "Minimalist mode enabled — all animations paused" : "Minimalist mode disabled")
+  }
+
+  if (adminLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 size={20} className="animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Helper: build pref key from camelCase to snake_case for localStorage
+  const prefKey = (k) => {
+    const map = {
+      animatedBg: "animated_bg", dotField: "dot_field", confettiBg: "confetti_bg",
+      antigravityBg: "antigravity_bg", levitatingBg: "levitating_bg",
+      targetCursor: "target_cursor", pixelTestimonials: "pixel_testimonials",
+      glareHover: "glare_hover", animatedFaq: "animated_faq",
+    }
+    return map[k] ?? k
+  }
+
+  const rowProps = (camelKey, label, hint, icon, scope, scopeColor = "blue") => ({
+    label, hint, icon,
+    scopeLabel: scope,
+    scopeColor,
+    prefKey: camelKey,
+    disabled: disabled[camelKey],
+    locked: !disabled[camelKey] && isLocked,
+    // direct toggle handler using snake_case key
+    _key: prefKey(camelKey),
+  })
+
+  return (
+    <div className="space-y-1">
+
+      {/* ── Admin lock notice ──────────────────────────────────────────────── */}
+      {isLocked && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200
+                     dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/10 px-4 py-3"
+        >
+          <LockKeyhole size={14} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+            <span className="font-semibold">Customization managed by admin.</span>{" "}
+            Your personal preferences are currently paused. Contact support if you have questions.
+          </p>
+        </motion.div>
+      )}
+
+      {/* ── Minimalist Mode card ───────────────────────────────────────────── */}
+      <div className="mb-5 rounded-2xl border border-amber-200/60 dark:border-amber-500/20
+                      bg-gradient-to-br from-amber-50/80 to-orange-50/40
+                      dark:from-amber-500/5 dark:to-orange-500/5 px-4 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/20
+                            flex items-center justify-center shrink-0 mt-0.5">
+              <Wind size={15} className="text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-sm font-semibold text-foreground">Minimalist Mode</p>
+                <ScopeBadge label="Personal" color="amber" />
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
+                Pauses all animations for a faster, distraction-free experience.
+                Ideal for older devices or low-power situations.
+              </p>
+              {isMinimalist && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                  <Zap size={10} /> Active — all animations are paused
+                </p>
+              )}
+            </div>
+          </div>
+          <Toggle checked={isMinimalist} onChange={handleMinimalist} />
+        </div>
+      </div>
+
+      {/* ── Backgrounds ───────────────────────────────────────────────────── */}
+      <Section title="Backgrounds · Homepage only">
+        {!disabled.animatedBg && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Sparkles size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Animated Background</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                  <ScopeBadge label="Desktop recommended" color="purple" />
+                </div>
+                <p className="text-xs text-muted-foreground">Soft floating gradient blobs behind the landing page.</p>
+                {(isLocked || isMinimalist) && !disabled.animatedBg && (
+                  <p className="text-[11px] text-muted-foreground/60 flex items-center gap-1">
+                    <LockKeyhole size={10} /> {isMinimalist ? "Paused by Minimalist Mode" : "Managed by admin"}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.animatedBg}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("animated_bg", v); toast.success(v ? "Animated background enabled" : "Animated background disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.dotField && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <LayoutGrid size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Interactive Dot Field</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                  <ScopeBadge label="Desktop recommended" color="purple" />
+                </div>
+                <p className="text-xs text-muted-foreground">Reactive dot grid that follows your cursor across the landing page.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.dotField}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("dot_field", v); toast.success(v ? "Dot field enabled" : "Dot field disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.confettiBg && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Orbit size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Confetti Particles</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                  <ScopeBadge label="Desktop recommended" color="purple" />
+                </div>
+                <p className="text-xs text-muted-foreground">Colorful cursor-reactive particles floating on the landing page.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.confettiBg}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("confetti_bg", v); toast.success(v ? "Confetti particles enabled" : "Confetti particles disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.antigravityBg && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Shapes size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Antigravity Shapes</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                  <ScopeBadge label="Desktop recommended" color="purple" />
+                </div>
+                <p className="text-xs text-muted-foreground">Physics-based floating geometry that reacts to your cursor.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.antigravityBg}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("antigravity_bg", v); toast.success(v ? "Antigravity shapes enabled" : "Antigravity shapes disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.levitatingBg && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Globe size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Levitating Sphere</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                  <ScopeBadge label="All devices" color="default" />
+                </div>
+                <p className="text-xs text-muted-foreground">Elastic particle sphere, mobile-optimized with touch and scroll interaction.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.levitatingBg}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("levitating_bg", v); toast.success(v ? "Levitating sphere enabled" : "Levitating sphere disabled") } }}
+            />
+          </div>
+        )}
+        {/* If all background features are disabled by admin */}
+        {disabled.animatedBg && disabled.dotField && disabled.confettiBg && disabled.antigravityBg && disabled.levitatingBg && (
+          <div className="py-5 text-center text-xs text-muted-foreground">
+            Background effects are temporarily unavailable.
+          </div>
+        )}
+      </Section>
+
+      {/* ── Effects & Animations ───────────────────────────────────────────── */}
+      <Section title="Effects & Animations">
+        {!disabled.glareHover && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Sparkles size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Glare Effect</p>
+                  <ScopeBadge label="All pages" color="default" />
+                </div>
+                <p className="text-xs text-muted-foreground">Subtle light-sweep effect when hovering buttons and interactive elements.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.glareHover}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("glare_hover", v); toast.success(v ? "Glare effect enabled" : "Glare effect disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.targetCursor && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Target size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Target Cursor</p>
+                  <ScopeBadge label="All pages" color="default" />
+                  <ScopeBadge label="Desktop only" color="purple" />
+                </div>
+                <p className="text-xs text-muted-foreground">Animated lock-on cursor for interactive elements. Auto-disabled on touch screens.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.targetCursor}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("target_cursor", v); toast.success(v ? "Target cursor enabled" : "Target cursor disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.pixelTestimonials && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          border-b border-border/50 gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <MonitorSmartphone size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Pixel Testimonials</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                </div>
+                <p className="text-xs text-muted-foreground">Pixelated flip transition between testimonial cards on the homepage.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.pixelTestimonials}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("pixel_testimonials", v); toast.success(v ? "Pixel testimonials enabled" : "Pixel testimonials disabled") } }}
+            />
+          </div>
+        )}
+        {!disabled.animatedFaq && (
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between py-3.5
+                          gap-3 ${isLocked || isMinimalist ? "opacity-50" : ""}`}>
+            <div className="flex items-start gap-3 min-w-0">
+              <Laptop2 size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Animated FAQ</p>
+                  <ScopeBadge label="Homepage" color="blue" />
+                </div>
+                <p className="text-xs text-muted-foreground">Scrollable animated list for the FAQ section on the homepage.</p>
+              </div>
+            </div>
+            <Toggle
+              checked={resolved.animatedFaq}
+              onChange={v => { if (!isLocked && !isMinimalist) { setUserPref("animated_faq", v); toast.success(v ? "Animated FAQ enabled" : "Animated FAQ disabled") } }}
+            />
+          </div>
+        )}
+        {disabled.glareHover && disabled.targetCursor && disabled.pixelTestimonials && disabled.animatedFaq && (
+          <div className="py-5 text-center text-xs text-muted-foreground">
+            Effect options are temporarily unavailable.
+          </div>
+        )}
+      </Section>
+
+      {/* ── Report footer ─────────────────────────────────────────────────── */}
+      <div className="mt-2 flex items-center justify-end">
+        <ReportUIIssueButton />
+      </div>
+    </div>
+  )
+}
+
 const SettingsTabButton = ({ tab, isActive, onClick }) => {
   const Icon = tab.icon
   
@@ -1305,10 +1528,11 @@ const DashboardSettings = () => {
       <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
-          {activeTab === "profile" && <ProfileTab user={user} updateProfile={updateProfile} queryClient={queryClient} navigate={navigate} />}
-          {activeTab === "account" && <AccountTab user={user} />}
-          {activeTab === "academic" && <AcademicTab user={user} completeAcademicProfile={completeAcademicProfile} queryClient={queryClient} />}
-          {activeTab === "preferences" && <PreferencesTab />}
+          {activeTab === "profile"       && <ProfileTab user={user} updateProfile={updateProfile} queryClient={queryClient} navigate={navigate} />}
+          {activeTab === "account"        && <AccountTab user={user} />}
+          {activeTab === "academic"       && <AcademicTab user={user} completeAcademicProfile={completeAcademicProfile} queryClient={queryClient} />}
+          {activeTab === "preferences"    && <PreferencesTab />}
+          {activeTab === "customization"  && <CustomizationTab />}
         </motion.div>
       </AnimatePresence>
     </div>

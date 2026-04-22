@@ -2,7 +2,7 @@
 // Lightweight CSS-only scroll reveal - replaces framer-motion whileInView.
 // Adds "reveal" class on mount, then "revealed" when element enters viewport.
 // Uses a single shared IntersectionObserver for all elements on the page.
-import { useEffect, useRef } from "react"
+import * as React from "react"
 
 let observer = null
 const callbacks = new Map()
@@ -25,9 +25,9 @@ function getObserver() {
 }
 
 export function useReveal(delay = 0) {
-  const ref = useRef(null)
+  const ref = React.useRef(null)
 
-  useEffect(() => {
+  React.useEffect(() => {
     const el = ref.current
     if (!el) return
 

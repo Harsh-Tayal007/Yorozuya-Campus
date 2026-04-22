@@ -36,6 +36,7 @@ import {
   Github,
   Linkedin,
   Instagram,
+  Palette,
 } from "lucide-react"
 import useSeoMeta from "@/hooks/useSeoMeta"
 import SpotlightCard from "@/components/ui/SpotlightCard"
@@ -176,6 +177,13 @@ const FEATURE_CARDS = [
       "A granular permission system covering students, teachers, and admins ensures each user sees and can do exactly what they are supposed to.",
   },
   {
+    icon: Palette,
+    color: "bg-indigo-500/10 text-indigo-500",
+    title: "UI Customization Engine",
+    description:
+      "A 7-layer priority system for animations, cursor effects, and themes. Admins manage site-wide defaults while users enjoy full personal autonomy.",
+  },
+  {
     icon: Megaphone,
     color: "bg-cyan-500/10 text-cyan-500",
     title: "Changelog and Updates",
@@ -200,7 +208,7 @@ const TECH_STACK = [
     icon: Monitor,
     color: "text-blue-500",
     bg: "bg-blue-500/10",
-    items: ["React.js", "Tailwind CSS", "React Router", "Lucide Icons"],
+    items: ["React.js", "Tailwind CSS", "React Router", "Priority-Based UI Resolution"],
   },
   {
     category: "Backend & Storage",
@@ -537,6 +545,46 @@ function TimetableFlowDiagram() {
           ))}
         </div>
       </ScrollDiagram>
+    </Card>
+  )
+}
+
+// ─── UI Customization Logic Diagram ──────────────────────────────────────────
+function UICustomizationDiagram() {
+  const layers = [
+    { p: "P1", label: "Global Rollback", desc: "Admin kill-switch for buggy features", color: "bg-red-500 text-white" },
+    { p: "P2", label: "Global Lock", desc: "Forcing site-wide defaults for consistency", color: "bg-amber-500 text-white" },
+    { p: "P3", label: "Stale Prefs Reset", desc: "Forced reset after major UI updates", color: "bg-orange-500 text-white" },
+    { p: "P4", label: "Minimalist Mode", desc: "One-tap toggle to disable all animations", color: "bg-indigo-500 text-white" },
+    { p: "P5", label: "User Preference", desc: "Individual choices in Dashboard Settings", color: "bg-blue-500 text-white" },
+    { p: "P6", label: "Site Default", desc: "Admin-defined defaults for the platform", color: "bg-slate-500 text-white" },
+    { p: "P7", label: "Hardcoded Fallback", desc: "Safety net if database is unreachable", color: "bg-slate-400 text-white" },
+  ]
+  return (
+    <Card>
+      <div className="mb-1 flex items-center gap-2">
+        <Palette size={15} className="text-indigo-500" />
+        <p className="text-base font-semibold text-slate-900 dark:text-white">UI Priority Engine</p>
+      </div>
+      <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
+        How the system resolves conflicting UI settings through a 7-layer priority chain.
+      </p>
+      <div className="flex flex-col items-center gap-0">
+        {layers.map((layer, i) => (
+          <div key={layer.p} className="flex w-full max-w-md flex-col items-center">
+            <div className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-white/5">
+              <div className={`flex h-8 w-12 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${layer.color}`}>
+                {layer.p}
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{layer.label}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">{layer.desc}</p>
+              </div>
+            </div>
+            {i < layers.length - 1 && <ArrowDown />}
+          </div>
+        ))}
+      </div>
     </Card>
   )
 }
@@ -984,6 +1032,43 @@ const GUIDE_ITEMS = [
     ),
   },
   {
+    icon: Palette,
+    iconBg: "bg-indigo-500/10",
+    iconColor: "text-indigo-500",
+    title: "Customizing your experience",
+    subtitle: "Animations, effects, and theme management",
+    content: (
+      <div className="space-y-3">
+        <GuideStep
+          number="1"
+          text="Open Customization from the settings menu."
+          sub="Visit Settings then the Customization tab to see all available UI effects."
+        />
+        <GuideStep
+          number="2"
+          text="Toggle individual animations."
+          sub="Enable or disable effects like the Dot Field, Confetti, Antigravity shapes, and the Target Cursor independently."
+        />
+        <GuideStep
+          number="3"
+          text="Use Minimalist Mode for peak performance."
+          sub="The Minimalist Mode toggle at the top of the tab instantly disables all non-essential animations, ideal for low-end devices or saving battery."
+        />
+        <GuideStep
+          number="4"
+          text="Reporting UI issues."
+          sub="If an effect is causing layout lag or visibility problems, use the 'Report Issue' button. This sends a direct complaint to admins who can then roll back the feature globally if needed."
+        />
+        <GuideStep
+          number="5"
+          text="Administrative Overrides."
+          sub="Admins can globally lock preferences to site defaults during high-traffic periods or disable specific features if they are found to be buggy."
+        />
+        <GuideTip text="Customization settings are saved to your account and sync across devices. If you are not logged in, they are stored in your browser's local storage." />
+      </div>
+    ),
+  },
+  {
     icon: Flag,
     iconBg: "bg-red-500/10",
     iconColor: "text-red-500",
@@ -1154,6 +1239,7 @@ export default function About() {
               <DataFlowDiagram />
               <AttendanceFlowDiagram />
             </div>
+            <UICustomizationDiagram />
             <ModuleInteractionDiagram />
           </div>
         </section>

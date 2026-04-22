@@ -1,4 +1,4 @@
-﻿// src/config/dashboardSidebarConfig.js
+// src/config/dashboardSidebarConfig.js
 // CHANGES: added  lockedForPublic: true  to tools and preferences sections
 import {
   LayoutDashboard,
@@ -19,6 +19,7 @@ import {
   Bell,
   Megaphone,
   ClipboardCheck,
+  Palette,
 } from "lucide-react"
 
 export const dashboardRootLink = {
@@ -55,7 +56,6 @@ export const dashboardSidebarSections = [
     label: "Academics",
     icon: BookOpen,
     lockedForPublic: true,
-    // Academics stays unlocked - public users can browse syllabus/pyqs via public routes
     children: [
       { id: "syllabus",   label: "Syllabus",   path: "/dashboard/syllabus",   icon: FileText },
       { id: "resources",  label: "Resources",  path: "/dashboard/resources",  icon: ClipboardList },
@@ -68,7 +68,7 @@ export const dashboardSidebarSections = [
     label: "Tools",
     icon: Wrench,
     badge: "new",
-    lockedForPublic: true,          // ← NEW: show but lock for logged-out users
+    lockedForPublic: true,
     children: [
       { id: "cgpa",       label: "CGPA Calculator",  path: "/dashboard/cgpa",       icon: Calculator      },
       { id: "tasks",      label: "Task Tracker",     path: "/dashboard/tasks",      icon: CheckSquare     },
@@ -78,33 +78,35 @@ export const dashboardSidebarSections = [
   },
 
   {
-  id: "attendance",
-  label: "Attendance",
-  icon: ClipboardCheck,
-  lockedForPublic: true,
-  children: [
-    { id: "attendance-home", label: "My Attendance", path: "/dashboard/attendance", icon: ClipboardCheck },
-  ],
-},
+    id: "attendance",
+    label: "Attendance",
+    icon: ClipboardCheck,
+    lockedForPublic: true,
+    children: [
+      { id: "attendance-home", label: "My Attendance", path: "/dashboard/attendance", icon: ClipboardCheck },
+    ],
+  },
 
   {
-  id: "account",          // was "preferences" or similar
-  label: "Account",       // rename from "Preferences"
-  icon: UserCircle,       // or whatever fits
-  lockedForPublic: true,
-  children: [
-    {
-      id: "notifications",
-      label: "Notifications",
-      path: "/dashboard/notifications",
-      icon: Bell,
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      path: "/dashboard/settings",
-      icon: Settings,
-    },
-  ]
-}
+    id: "account",
+    label: "Account",
+    icon: UserCircle,
+    lockedForPublic: true,
+    children: [
+      { id: "notifications", label: "Notifications", path: "/dashboard/notifications", icon: Bell },
+      { id: "settings",      label: "Settings",      path: "/dashboard/settings",      icon: Settings },
+    ],
+  },
+]
+
+// ── Admin-only sidebar entries (rendered by the admin layout sidebar) ─────────
+export const adminSidebarSections = [
+  {
+    id: "site-settings",
+    label: "Site Settings",
+    icon: SlidersHorizontal,
+    children: [
+      { id: "ui-config", label: "UI Config", path: "/admin/ui-config", icon: Palette },
+    ],
+  },
 ]

@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query"
 import { getPublicStats } from "@/services/admin/statsService"
 import { Skeleton } from "@/components/ui/skeleton"
 import useSeoMeta from "@/hooks/useSeoMeta"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 // -- Lazy heavy chunks (only downloaded when needed) --
 const AnimatedBlobs = lazy(() => import("@/components/home/AnimatedBlobs"))
@@ -49,14 +50,14 @@ export default function Home() {
   const { currentUser, isLoading: authLoading } = useAuth()
   const [authModal, setAuthModal] = useState({ open: false, mode: "signup" })
   const [roadmapOpen, setRoadmapOpen] = useState(false)
-  // Background animation preferences - all off by default for performance
-  const blobsEnabled = useState(() => localStorage.getItem("pref_animated_bg") === "1")[0]
-  const confettiEnabled = useState(() => localStorage.getItem("pref_confetti_bg") === "1")[0]
-  const antigravityEnabled = useState(() => localStorage.getItem("pref_antigravity_bg") === "1")[0]
-  const levitatingEnabled = useState(() => localStorage.getItem("pref_levitating_bg") === "1")[0]
-  const targetCursorEnabled = useState(() => localStorage.getItem("pref_target_cursor") === "1")[0]
-  const glareEnabled = useState(() => localStorage.getItem("pref_glare_hover") === "1")[0]
-  const dotFieldEnabled = useState(() => localStorage.getItem("pref_dot_field") === "1")[0]
+  const { resolved } = useUIPrefs()
+  const blobsEnabled = resolved.animatedBg
+  const confettiEnabled = resolved.confettiBg
+  const antigravityEnabled = resolved.antigravityBg
+  const levitatingEnabled = resolved.levitatingBg
+  const targetCursorEnabled = resolved.targetCursor
+  const glareEnabled = resolved.glareHover
+  const dotFieldEnabled = resolved.dotField
 
   // Track hover states for manual GlareHover buttons
   const [heroHover1, setHeroHover1] = useState(false)

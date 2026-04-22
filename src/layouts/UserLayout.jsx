@@ -4,6 +4,7 @@ import { useSidebar } from "@/context/SidebarContext"
 import { useTrackActivity } from "@/hooks/useTrackActivity"
 import { Outlet, useLocation } from "react-router-dom"
 import { lazy, Suspense, useState, useEffect } from "react"
+import { useUIPrefs } from "@/context/UIPrefsContext"
 
 const TargetCursor = lazy(() => import("@/components/home/TargetCursor"))
 
@@ -13,8 +14,8 @@ const UserLayout = () => {
   const { handleEdgeHover } = useSidebar()
   const { pathname } = useLocation()
 
-  // Target cursor preference logic
-  const targetCursorEnabled = useState(() => localStorage.getItem("pref_target_cursor") === "1")[0]
+  const { resolved } = useUIPrefs()
+  const targetCursorEnabled = resolved.targetCursor
   const [targetCursorReady, setTargetCursorReady] = useState(false)
   const isDashboardRoute = pathname.startsWith("/dashboard")
 

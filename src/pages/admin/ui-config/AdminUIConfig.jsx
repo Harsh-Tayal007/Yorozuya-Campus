@@ -1,0 +1,510 @@
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  Palette, AlertTriangle, LockKeyhole, Search, RotateCcw,
+  Sparkles, LayoutGrid, Orbit, Shapes, Globe, Target,
+  MonitorSmartphone, Laptop2, Check, X, Shield, Settings,
+  EyeOff, Sun, Moon
+} from "lucide-react"
+import { toast } from "sonner"
+import { useUIPrefs } from "@/context/UIPrefsContext"
+import {
+  updateSiteConfig,
+  disableFeature,
+  enableFeature,
+  setGlobalPrefsLock,
+  findUserDocByUsername,
+  resetUserPrefs
+} from "@/services/ui/uiConfigService"
+import { listReports, resolveReport } from "@/services/moderation/reportService"
+import { formatDistanceToNow } from "date-fns"
+
+// ── Icons mapping ────────────────────────────────────────────────────────────
+const ICONS = {
+  animatedBg: Sparkles,
+  dotField: LayoutGrid,
+  confettiBg: Orbit,
+  antigravityBg: Shapes,
+  levitatingBg: Globe,
+  targetCursor: Target,
+  pixelTestimonials: MonitorSmartphone,
+  glareHover: Sparkles,
+  animatedFaq: Laptop2,
+  darkMode: Moon,
+}
+
+// ── Reusable Toggle ──────────────────────────────────────────────────────────
+const Toggle = ({ checked, onChange, disabled, danger }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={() => onChange(!checked)}
+    className={`relative inline-flex h-5 w-9 shrink-0 cursor-target items-center rounded-full
+                border-2 border-transparent transition-colors duration-200 ease-in-out
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+                ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+                ${checked ? (danger ? "bg-red-500" : "bg-primary") : "bg-muted-foreground/30"}`}
+  >
+    <span
+      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-background shadow ring-0
+                  transition duration-200 ease-in-out ${checked ? "translate-x-4" : "translate-x-0"}`}
+    />
+  </button>
+)
+
+export default function AdminUIConfig() {
+  const { adminDefaults, refreshSiteConfig } = useUIPrefs()
+  const [loading, setLoading] = useState(false)
+
+  // Sub-tab state
+  const [activeTab, setActiveTab] = useState("defaults")
+
+  // Theme state
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  )
+
+  const toggleTheme = () => {
+    const next = !isDark
+    const apply = () => {
+      document.documentElement.classList.toggle("dark", next)
+      localStorage.setItem("theme", next ? "dark" : "light")
+      setIsDark(next)
+    }
+    if (document.startViewTransition) document.startViewTransition(apply)
+    else apply()
+  }
+
+  // --- Actions ---
+  const handleToggleDefault = async (key, val) => {
+    try {
+      setLoading(true)
+      await updateSiteConfig({ [`pref_${key}`]: val })
+      refreshSiteConfig()
+      toast.success(`Default for ${key} updated`)
+    } catch (err) {
+      toast.error(err?.message || "Failed to update default")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleToggleRollback = async (key, currentlyDisabled) => {
+    const action = currentlyDisabled ? "restore" : "disable"
+    if (action === "disable") {
+      if (!window.confirm(`Are you sure you want to completely disable and hide this feature for all users?`)) return
+    }
+
+    try {
+      setLoading(true)
+      if (currentlyDisabled) {
+        await enableFeature(key)
+        toast.success("Feature restored")
+      } else {
+        await disableFeature(key)
+        toast.warning("Feature rolled back and hidden")
+      }
+      refreshSiteConfig()
+    } catch (err) {
+      toast.error(err?.message || "Failed to update feature state")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGlobalLock = async (locked) => {
+    try {
+      setLoading(true)
+      await setGlobalPrefsLock(locked)
+      refreshSiteConfig()
+      toast.success(locked ? "Global lock enabled" : "Global lock disabled")
+    } catch (err) {
+      toast.error(err?.message || "Failed to update global lock")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // --- UI Row Component ---
+  const ConfigRow = ({ label, desc, prefKey, camelKey }) => {
+    const Icon = ICONS[camelKey] || Settings
+    const isDefaultOn = !!adminDefaults[`pref_${prefKey}`]
+    const isDisabled = !!adminDefaults[`disabled_${prefKey}`]
+
+    return (
+      <div className={`p-4 rounded-xl border transition-colors
+                      ${isDisabled ? "bg-red-500/5 border-red-500/20" : "bg-card border-border"}`}>
+        <div className="flex flex-col sm:flex-row gap-4 justify-between sm:items-center">
+          
+          {/* Info */}
+          <div className="flex items-start gap-3">
+            <div className={`mt-0.5 p-2 rounded-lg ${isDisabled ? "bg-red-500/10 text-red-500" : "bg-muted text-muted-foreground"}`}>
+              <Icon size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+                {isDisabled && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 tracking-wider">
+                    ROLLED BACK
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 max-w-sm leading-relaxed">{desc}</p>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-6 self-start sm:self-auto pl-11 sm:pl-0">
+            {/* Default toggle */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase">Default</span>
+              <Toggle
+                checked={isDefaultOn}
+                disabled={loading || isDisabled}
+                onChange={(v) => handleToggleDefault(prefKey, v)}
+              />
+            </div>
+            
+            {/* Rollback toggle */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-medium text-red-500 uppercase">Rollback</span>
+              <Toggle
+                checked={isDisabled}
+                danger
+                disabled={loading}
+                onChange={() => handleToggleRollback(prefKey, isDisabled)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600
+                        flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+            <Palette size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">UI Configuration</h1>
+            <p className="text-sm text-muted-foreground">Manage global UI defaults and feature availability</p>
+          </div>
+        </div>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border
+                   bg-background hover:bg-muted transition-colors text-sm font-medium shadow-sm"
+        >
+          {isDark ? (
+            <>
+              <Sun size={15} className="text-amber-500" />
+              <span>Light Mode</span>
+            </>
+          ) : (
+            <>
+              <Moon size={15} className="text-indigo-500" />
+              <span>Dark Mode</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 bg-muted/50 p-1 rounded-xl w-fit">
+        {["defaults", "user_control", "complaints"].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors
+                       ${activeTab === tab ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {tab.replace("_", " ")}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="mt-6">
+        
+        {/* --- DEFAULTS TAB --- */}
+        {activeTab === "defaults" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider pl-1">Backgrounds</h2>
+              <div className="grid gap-3">
+                <ConfigRow label="Animated Background" prefKey="animated_bg" camelKey="animatedBg" desc="Floating gradient blobs on the home page." />
+                <ConfigRow label="Interactive Dot Field" prefKey="dot_field" camelKey="dotField" desc="Reactive dot grid on the home page." />
+                <ConfigRow label="Confetti Particles" prefKey="confetti_bg" camelKey="confettiBg" desc="Cursor-reactive colorful particles." />
+                <ConfigRow label="Antigravity Shapes" prefKey="antigravity_bg" camelKey="antigravityBg" desc="Physics-based floating geometry." />
+                <ConfigRow label="Levitating Sphere" prefKey="levitating_bg" camelKey="levitatingBg" desc="Elastic particle sphere, mobile-optimized." />
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider pl-1">Effects & Animations</h2>
+              <div className="grid gap-3">
+                <ConfigRow label="Glare Effect" prefKey="glare_hover" camelKey="glareHover" desc="Light sweep effect on interactive elements." />
+                <ConfigRow label="Target Cursor" prefKey="target_cursor" camelKey="targetCursor" desc="Animated lock-on cursor (desktop only)." />
+                <ConfigRow label="Pixel Testimonials" prefKey="pixel_testimonials" camelKey="pixelTestimonials" desc="Pixelated flip transition for testimonials." />
+                <ConfigRow label="Animated FAQ" prefKey="animated_faq" camelKey="animatedFaq" desc="Scrollable animated FAQ list." />
+                <ConfigRow label="Default Theme" prefKey="dark_mode" camelKey="darkMode" desc="Initial theme for new users (Dark if enabled)." />
+              </div>
+            </section>
+          </motion.div>
+        )}
+
+        {/* --- USER CONTROL TAB --- */}
+        {activeTab === "user_control" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            
+            {/* Global Lock */}
+            <div className="p-5 rounded-2xl border border-border bg-card">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
+                  <LockKeyhole size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground">Global Preferences Lock</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-2xl">
+                    When enabled, all users will be forced to see the site defaults. Their personal customizations will be paused (but not deleted).
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Toggle
+                      checked={!!adminDefaults.user_prefs_globally_locked}
+                      disabled={loading}
+                      onChange={handleGlobalLock}
+                    />
+                    <span className="text-sm font-medium">
+                      {adminDefaults.user_prefs_globally_locked ? "Lock is Active" : "Lock is Off"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Per-User Reset */}
+            <PerUserResetControl />
+
+          </motion.div>
+        )}
+
+        {/* --- COMPLAINTS TAB --- */}
+        {activeTab === "complaints" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <UIComplaintsView />
+          </motion.div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+function PerUserResetControl() {
+  const [username, setUsername] = useState("")
+  const [searching, setSearching] = useState(false)
+  const [foundUser, setFoundUser] = useState(null)
+  
+  const handleSearch = async (e) => {
+    e.preventDefault()
+    if (!username.trim()) return
+    setSearching(true)
+    setFoundUser(null)
+    try {
+      const cleanUsername = username.trim().replace(/^@/, "")
+      const userDoc = await findUserDocByUsername(cleanUsername)
+      setFoundUser(userDoc)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleReset = async () => {
+    if (!foundUser) return
+    try {
+      setSearching(true)
+      await resetUserPrefs(foundUser.$id)
+      toast.success(`Reset UI preferences for @${foundUser.username}`)
+      setFoundUser(prev => ({ ...prev, ui_prefs_locked: true }))
+    } catch (err) {
+      toast.error("Failed to reset user preferences")
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  return (
+    <div className="p-5 rounded-2xl border border-border bg-card">
+      <div className="flex items-start gap-4">
+        <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+          <RotateCcw size={24} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-base font-semibold text-foreground">Per-User Reset</h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-2xl">
+            Reset a specific user's UI preferences to site defaults. This overrides their current choices until they change them again.
+          </p>
+          
+          <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <input
+                type="text"
+                placeholder="Search username (e.g. @john)"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={searching || !username.trim()}
+              className="px-4 py-2 bg-secondary text-secondary-foreground font-medium text-sm rounded-lg hover:bg-secondary/80 disabled:opacity-50"
+            >
+              Search
+            </button>
+          </form>
+
+          {foundUser && (
+            <div className="mt-4 p-4 border border-border rounded-xl bg-background flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                  {foundUser.avatarUrl ? (
+                    <img src={foundUser.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-muted-foreground font-semibold uppercase">{foundUser.username[0]}</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{foundUser.name}</p>
+                  <p className="text-xs text-muted-foreground">@{foundUser.username}</p>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleReset}
+                disabled={searching}
+                className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 font-medium text-sm rounded-lg transition-colors"
+              >
+                Reset Preferences
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UIComplaintsView() {
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchReports = async () => {
+    setLoading(true)
+    try {
+      const { reports: data } = await listReports({ 
+        status: "pending", 
+        targetType: "ui_complaint",
+        limit: 50 
+      })
+      setReports(data)
+    } catch (err) {
+      toast.error("Failed to load complaints")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchReports()
+  }, [])
+
+  const handleAction = async (report, actionType) => {
+    try {
+      if (actionType === "reset") {
+        // Need to find user doc ID first from reporterId (auth ID)
+        const userRes = await findUserDocByUsername(report.reporterUsername)
+        await resetUserPrefs(userRes.$id)
+        toast.success(`Reset preferences for @${report.reporterUsername}`)
+      }
+      
+      // Mark resolved
+      await resolveReport({
+        reportId: report.$id,
+        resolvedBy: "admin",
+        resolution: actionType === "reset" ? "Reset user preferences" : "Dismissed",
+        dismiss: actionType === "dismiss"
+      })
+      toast.success("Report handled")
+      setReports(prev => prev.filter(r => r.$id !== report.$id))
+    } catch (err) {
+      toast.error("Failed to handle report: " + err.message)
+    }
+  }
+
+  if (loading) return <div className="py-8 text-center text-muted-foreground text-sm">Loading complaints...</div>
+  
+  if (reports.length === 0) return (
+    <div className="py-12 text-center border border-dashed border-border rounded-2xl flex flex-col items-center">
+      <Check size={32} className="text-emerald-500 mb-3" />
+      <p className="text-foreground font-medium">All clear!</p>
+      <p className="text-sm text-muted-foreground">No pending UI complaints.</p>
+    </div>
+  )
+
+  return (
+    <div className="space-y-3">
+      {reports.map(report => (
+        <div key={report.$id} className="p-4 border border-border bg-card rounded-xl">
+          <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500">
+                  {report.details || "UI Issue"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Reported by <span className="font-medium text-foreground">@{report.reporterUsername}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  • {formatDistanceToNow(new Date(report.$createdAt))} ago
+                </span>
+              </div>
+              <p className="text-sm text-foreground">{report.reason}</p>
+            </div>
+            
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <button
+                onClick={() => handleAction(report, "dismiss")}
+                className="px-3 py-1.5 text-xs font-medium border border-border text-muted-foreground rounded-lg hover:bg-muted"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => handleAction(report, "reset")}
+                className="px-3 py-1.5 text-xs font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-1.5"
+              >
+                <RotateCcw size={12} /> Reset Prefs
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}

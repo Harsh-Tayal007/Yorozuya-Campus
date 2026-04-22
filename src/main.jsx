@@ -4,6 +4,7 @@ import App from "./App"
 import "./index.css"
 
 import { AuthProvider }            from "@/context/AuthContext"
+import { UIPrefsProvider }         from "@/context/UIPrefsContext"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster }                 from "sonner"
 import { PushNotificationProvider } from "./context/PushNotificationContext"
@@ -64,9 +65,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PushNotificationProvider>
-          <App />
-        </PushNotificationProvider>
+        <UIPrefsProvider>
+          <PushNotificationProvider>
+            <App />
+          </PushNotificationProvider>
+        </UIPrefsProvider>
       </AuthProvider>
     </QueryClientProvider>
     <Toaster 

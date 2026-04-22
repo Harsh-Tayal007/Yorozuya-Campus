@@ -62,10 +62,12 @@ export async function createReport({
 /**
  * List reports for admin panel.
  * @param {'pending'|'resolved'|'dismissed'|null} status - null = all
+ * @param {string|null} targetType - filter by targetType
  */
-export async function listReports({ status = "pending", limit = 50, offset = 0 } = {}) {
+export async function listReports({ status = "pending", targetType = null, limit = 50, offset = 0 } = {}) {
   const filters = []
   if (status) filters.push(Query.equal("status", status))
+  if (targetType) filters.push(Query.equal("targetType", targetType))
 
   const res = await databases.listDocuments(DATABASE_ID, REPORTS_COL, [
     ...filters,
@@ -151,4 +153,43 @@ export async function bulkDeleteReports(reportIds) {
   await Promise.all(
     reportIds.map(id => databases.deleteDocument(DATABASE_ID, REPORTS_COL, id))
   )
+}
+
+/**
+ * Submit a UI/animation complaint report from the user's Customization settings.
+ * targetType = "ui_complaint" — no Appwrite schema change needed (plain string field).
+ */
+export async function createUIComplaintReport({
+  reporterId,
+  reporterUsername,
+  description,
+  affectedPage = "Homepage",
+}) {
+  // Deduplicate: don't create another pending complaint from the same user
+  const existing = await databases.listDocuments(DATABASE_ID, REPORTS_COL, [
+    Query.equal("reporterId",  reporterId),
+    Query.equal("targetType",  "ui_complaint"),
+    Query.equal("status",      "pending"),
+    Query.limit(1),
+  ])
+  if (existing.total > 0) {
+    throw new Error("You already have a pending UI issue report. Please wait for it to be reviewed.")
+  }
+
+  return databases.createDocument(DATABASE_ID, REPORTS_COL, ID.unique(), {
+    reporterId,
+    reporterUsername,
+    targetType:           "ui_complaint",
+    targetId:             "site-ui",
+    targetAuthorId:       "admin",
+    targetAuthorUsername: "admin",
+    reason:               description,
+    details:              affectedPage,
+    contentPreview:       affectedPage,
+    threadId:             null,
+    status:               "pending",
+    resolvedBy:           null,
+    resolvedAt:           null,
+    resolution:           null,
+  })
 }
