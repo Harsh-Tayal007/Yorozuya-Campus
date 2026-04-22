@@ -28,8 +28,8 @@ function StatCard({ value, label, index }) {
 
   return (
     <div ref={ref}>
-      <div className="bg-white dark:bg-slate-900/80
-                      border border-slate-200 dark:border-white/8
+      <div className="bg-white dark:bg-[#0a0a10]
+                      border border-slate-200 dark:border-white/12
                       rounded-2xl px-4 py-6 sm:py-8 text-center shadow-sm
                       hover:border-indigo-400/40 hover:shadow-md
                       transition-[border-color,box-shadow] duration-200 ease-out">

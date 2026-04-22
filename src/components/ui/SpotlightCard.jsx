@@ -44,7 +44,7 @@ const SpotlightCard = ({
       onBlur={handleBlur}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`relative rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] overflow-hidden ${className}`}
+      className={`relative rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a10] overflow-hidden ${className}`}
       {...props}
     >
       <div

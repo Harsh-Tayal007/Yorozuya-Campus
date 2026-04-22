@@ -49,8 +49,8 @@ function FAQItem({ q, a, index }) {
     <div ref={revealRef}
       className={`rounded-xl border transition-colors duration-200
         ${open
-          ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-slate-900/90"
-          : "border-slate-200 dark:border-white/8 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-white/12"
+          ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-slate-950"
+          : "border-slate-200 dark:border-white/10 bg-white dark:bg-[#0f172a]/80 hover:border-slate-300 dark:hover:border-white/20"
         }`}
     >
       <button
@@ -110,10 +110,10 @@ export default function FAQSection() {
           renderItem={(faq, index, isSelected) => (
             <div className={`rounded-xl border transition-all duration-300 overflow-hidden
               ${activeFaq === index
-                ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-slate-900/90"
+                ? "border-indigo-300/50 dark:border-indigo-500/25 bg-white dark:bg-slate-950"
                 : isSelected
-                  ? "border-slate-300 dark:border-white/15 bg-white/50 dark:bg-slate-900/60"
-                  : "border-slate-200 dark:border-white/8 bg-white dark:bg-slate-900/40"
+                  ? "border-slate-300 dark:border-white/20 bg-white/50 dark:bg-slate-900"
+                  : "border-slate-200 dark:border-white/10 bg-white dark:bg-[#0f172a]/60"
               }`}
             >
               <div className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left">

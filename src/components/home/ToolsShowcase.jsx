@@ -46,8 +46,8 @@ function ToolCard({ icon: Icon, accent, glow, border, title, desc, highlights, i
   const ref = useReveal(index * 80)
   return (
     <div ref={ref}
-      className={`group bg-white dark:bg-slate-900/80
-                  border border-slate-200 dark:border-white/8
+      className={`group bg-white dark:bg-[#0a0a10]
+                  border border-slate-200 dark:border-white/12
                   rounded-2xl p-5 shadow-sm
                   transition-[border-color,box-shadow,transform] duration-200 ease-out
                   hover:-translate-y-0.5 hover:shadow-md ${border}`}>

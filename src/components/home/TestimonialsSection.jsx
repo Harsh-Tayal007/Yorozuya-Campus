@@ -112,10 +112,10 @@ export default function TestimonialsSection() {
       <div className="relative rounded-3xl overflow-hidden group/card"
         style={{
           background: isDark
-            ? "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.9) 50%, rgba(15, 23, 42, 0.9) 100%)"
+            ? "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)"
             : "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(99,102,241,0.1) 50%, rgba(139,92,246,0.06) 100%)",
           border: isDark 
-            ? "1px solid rgba(99,102,241,0.25)" 
+            ? "1px solid rgba(99,102,241,0.3)" 
             : "1px solid rgba(99,102,241,0.15)",
         }}>
 

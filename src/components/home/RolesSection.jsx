@@ -46,8 +46,8 @@ function RoleCard({ role, icon: Icon, gradient, glowColor, borderHover, desc, fe
   return (
     <div ref={ref}>
       <SpotlightCard
-        className={`group bg-white dark:bg-slate-900/80
-                    border border-slate-200 dark:border-white/8
+        className={`group bg-white dark:bg-[#0a0a10]
+                    border border-slate-200 dark:border-white/12
                     rounded-2xl p-6 shadow-sm
                     transition-all duration-200 ease-out
                     hover:-translate-y-0.5 hover:shadow-md ${borderHover}`}

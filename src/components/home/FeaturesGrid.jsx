@@ -46,7 +46,7 @@ function FeatureCard({ icon: Icon, color, title, desc, index }) {
   return (
     <div ref={ref} className="h-full">
       <SpotlightCard
-        className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/8
+        className="bg-white dark:bg-[#0a0a10] border border-slate-200 dark:border-white/12
                    rounded-2xl p-5 h-full shadow-sm
                    hover:border-indigo-400/40 hover:-translate-y-0.5 hover:shadow-md
                    transition-all duration-200 ease-out group"

@@ -234,6 +234,7 @@ export default function ResourcesUserView({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {subjects.map(subject => (
                 <GlowCard key={subject.$id}
+                  onClick={() => navigate(`${baseResourcesPath}/semester/${semester}/subject/${subject.$id}`)}
                   disableGlare={true}
                   className="p-5 cursor-target">
                   <div className="flex items-center justify-between gap-2">

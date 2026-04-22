@@ -13,21 +13,21 @@ import { Skeleton } from "@/components/ui/skeleton"
 import useSeoMeta from "@/hooks/useSeoMeta"
 
 // -- Lazy heavy chunks (only downloaded when needed) --
-const AnimatedBlobs       = lazy(() => import("@/components/home/AnimatedBlobs"))
-const ParticleSphere      = lazy(() => import("@/components/home/ParticleSphere"))
-const AntigravityShapes   = lazy(() => import("@/components/home/AntigravityShapes"))
-const LevitatingSphere    = lazy(() => import("@/components/home/LevitatingSphere"))
-const AuthModal           = lazy(() => import("@/components/home/AuthModal"))
-const RoadmapModal        = lazy(() => import("@/components/home/RoadmapModal"))
-const FeaturesGrid        = lazy(() => import("@/components/home/FeaturesGrid"))
-const HowItWorks          = lazy(() => import("@/components/home/HowItWorks"))
-const StatsSection        = lazy(() => import("@/components/home/StatsSection"))
-const ToolsShowcase       = lazy(() => import("@/components/home/ToolsShowcase"))
-const RolesSection        = lazy(() => import("@/components/home/RolesSection"))
+const AnimatedBlobs = lazy(() => import("@/components/home/AnimatedBlobs"))
+const ParticleSphere = lazy(() => import("@/components/home/ParticleSphere"))
+const AntigravityShapes = lazy(() => import("@/components/home/AntigravityShapes"))
+const LevitatingSphere = lazy(() => import("@/components/home/LevitatingSphere"))
+const AuthModal = lazy(() => import("@/components/home/AuthModal"))
+const RoadmapModal = lazy(() => import("@/components/home/RoadmapModal"))
+const FeaturesGrid = lazy(() => import("@/components/home/FeaturesGrid"))
+const HowItWorks = lazy(() => import("@/components/home/HowItWorks"))
+const StatsSection = lazy(() => import("@/components/home/StatsSection"))
+const ToolsShowcase = lazy(() => import("@/components/home/ToolsShowcase"))
+const RolesSection = lazy(() => import("@/components/home/RolesSection"))
 const TestimonialsSection = lazy(() => import("@/components/home/TestimonialsSection"))
-const FAQSection          = lazy(() => import("@/components/home/FAQSection"))
-const TargetCursor         = lazy(() => import("@/components/home/TargetCursor"))
-const DotField             = lazy(() => import("@/components/home/DotField"))
+const FAQSection = lazy(() => import("@/components/home/FAQSection"))
+const TargetCursor = lazy(() => import("@/components/home/TargetCursor"))
+const DotField = lazy(() => import("@/components/home/DotField"))
 import GlareHover from "@/components/ui/glare-hover"
 import SpotlightCard from "@/components/ui/SpotlightCard"
 import RotatingText from "@/components/ui/RotatingText"
@@ -47,17 +47,17 @@ const FEATURES_SUMMARY = [
 
 export default function Home() {
   const { currentUser, isLoading: authLoading } = useAuth()
-  const [authModal, setAuthModal]     = useState({ open: false, mode: "signup" })
+  const [authModal, setAuthModal] = useState({ open: false, mode: "signup" })
   const [roadmapOpen, setRoadmapOpen] = useState(false)
   // Background animation preferences - all off by default for performance
-  const blobsEnabled       = useState(() => localStorage.getItem("pref_animated_bg") === "1")[0]
-  const confettiEnabled    = useState(() => localStorage.getItem("pref_confetti_bg") === "1")[0]
+  const blobsEnabled = useState(() => localStorage.getItem("pref_animated_bg") === "1")[0]
+  const confettiEnabled = useState(() => localStorage.getItem("pref_confetti_bg") === "1")[0]
   const antigravityEnabled = useState(() => localStorage.getItem("pref_antigravity_bg") === "1")[0]
-  const levitatingEnabled  = useState(() => localStorage.getItem("pref_levitating_bg") === "1")[0]
+  const levitatingEnabled = useState(() => localStorage.getItem("pref_levitating_bg") === "1")[0]
   const targetCursorEnabled = useState(() => localStorage.getItem("pref_target_cursor") === "1")[0]
   const glareEnabled = useState(() => localStorage.getItem("pref_glare_hover") === "1")[0]
   const dotFieldEnabled = useState(() => localStorage.getItem("pref_dot_field") === "1")[0]
-  
+
   // Track hover states for manual GlareHover buttons
   const [heroHover1, setHeroHover1] = useState(false)
   const [heroHover2, setHeroHover2] = useState(false)
@@ -66,8 +66,8 @@ export default function Home() {
 
 
   // Defer rendering until after first paint (only when enabled)
-  const [blobsReady, setBlobsReady]           = useState(false)
-  const [confettiReady, setConfettiReady]     = useState(false)
+  const [blobsReady, setBlobsReady] = useState(false)
+  const [confettiReady, setConfettiReady] = useState(false)
   const [antigravityReady, setAntigravityReady] = useState(false)
   const [levitatingReady, setLevitatingReady] = useState(false)
   const [targetCursorReady, setTargetCursorReady] = useState(false)
@@ -121,7 +121,7 @@ export default function Home() {
       : setTimeout(() => setTargetCursorReady(true), 300)
     return () => (requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
   }, [targetCursorEnabled])
-  
+
   useEffect(() => {
     if (!dotFieldEnabled) return
     const id = requestIdleCallback
@@ -152,7 +152,7 @@ export default function Home() {
     gcTime: 1000 * 60 * 60 * 24,
   })
 
-  const openAuth  = (mode = "signup") => setAuthModal({ open: true, mode })
+  const openAuth = (mode = "signup") => setAuthModal({ open: true, mode })
   const closeAuth = () => setAuthModal(a => ({ ...a, open: false }))
   const switchAuth = (mode) => setAuthModal({ open: true, mode })
   const scrollToFeatures = () => featuresRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -189,7 +189,7 @@ export default function Home() {
       {dotFieldEnabled && dotFieldReady && (
         <div className="fixed inset-0 -z-20 pointer-events-none">
           <Suspense fallback={null}>
-            <DotField 
+            <DotField
               dotRadius={1.5}
               dotSpacing={14}
               bulgeStrength={67}
@@ -319,10 +319,10 @@ export default function Home() {
                 One platform, everything you need
               </h2>
               <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <ScrollReveal 
-                  baseOpacity={0.1} 
-                  enableBlur={true} 
-                  baseRotation={1} 
+                <ScrollReveal
+                  baseOpacity={0.1}
+                  enableBlur={true}
+                  baseRotation={1}
                   blurStrength={2}
                   textClassName="text-sm font-medium"
                 >
@@ -330,10 +330,10 @@ export default function Home() {
                   needs, like that one place in the neighbourhood that somehow does it all.
                 </ScrollReveal>
 
-                <ScrollReveal 
-                  baseOpacity={0.1} 
-                  enableBlur={true} 
-                  baseRotation={1} 
+                <ScrollReveal
+                  baseOpacity={0.1}
+                  enableBlur={true}
+                  baseRotation={1}
                   blurStrength={2}
                   textClassName="text-sm font-medium"
                 >
@@ -342,10 +342,10 @@ export default function Home() {
                   spot, organised by university, branch and course.
                 </ScrollReveal>
 
-                <ScrollReveal 
-                  baseOpacity={0.1} 
-                  enableBlur={true} 
-                  baseRotation={1} 
+                <ScrollReveal
+                  baseOpacity={0.1}
+                  enableBlur={true}
+                  baseRotation={1}
                   blurStrength={2}
                   textClassName="text-sm font-medium"
                 >
@@ -357,10 +357,10 @@ export default function Home() {
 
             <SpotlightCard className="rounded-2xl p-6 sm:p-7"
               style={{
-                background: isDark 
+                background: isDark
                   ? "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.9) 100%)"
                   : "linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(99,102,241,0.11) 100%)",
-                border: isDark 
+                border: isDark
                   ? "1px solid rgba(99,102,241,0.25)"
                   : "1px solid rgba(99,102,241,0.18)",
               }}>
@@ -423,7 +423,7 @@ export default function Home() {
         <div className="flex justify-center">
           <button onClick={() => setRoadmapOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full
-                       border border-border bg-white dark:bg-slate-900/60 shadow-sm
+                       border border-border bg-white dark:bg-slate-950 shadow-sm
                        text-sm text-muted-foreground hover:text-foreground
                        hover:border-indigo-400/50 hover:shadow-md transition-all duration-200 cursor-target">
             <Zap size={13} className="text-indigo-500" />
@@ -456,9 +456,9 @@ export default function Home() {
                 <div className="flex flex-wrap gap-5 justify-center mb-8">
                   {[
                     { icon: Shield, label: "Free to join" },
-                    { icon: Bell,   label: "No ads, no tracking" },
-                    { icon: Zap,    label: "Growing every week" },
-                    { icon: Users,  label: "Built by students" },
+                    { icon: Bell, label: "No ads, no tracking" },
+                    { icon: Zap, label: "Growing every week" },
+                    { icon: Users, label: "Built by students" },
                   ].map(({ label }) => (
                     <div key={label} className="flex items-center gap-1.5 text-xs text-white/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400/60 flex-shrink-0" />
