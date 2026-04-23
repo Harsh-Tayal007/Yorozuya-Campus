@@ -17,12 +17,13 @@ import {
 import { getUniversities }       from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram }   from "@/services/university/branchService"
+import Stepper, { Step } from "@/components/ui/Stepper"
 
 // ── Shared ──────────────────────────────────────────────
-const inputCls = `w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10
-  bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white text-sm
-  placeholder:text-slate-400 dark:placeholder:text-slate-600
-  outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition`
+const inputCls = `w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700
+  bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 text-sm
+  placeholder:text-slate-400 dark:placeholder:text-slate-500
+  outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition`
 
 const GoogleIcon = () => (
   <svg width="17" height="17" viewBox="0 0 48 48">
@@ -60,69 +61,44 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
         onClick={() => !disabled && setOpen(o => !o)}
         className={`w-full h-10 px-3.5 flex items-center justify-between gap-2
           rounded-xl border text-sm transition-all duration-150 text-left
-          ${disabled ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5"
-            : "cursor-pointer border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-slate-300 dark:hover:border-white/20"}
-          ${open ? "border-blue-500 ring-2 ring-blue-500/10" : ""}
-          text-slate-900 dark:text-white`}>
-        <span className={selected ? "" : "text-slate-400 dark:text-slate-600"}>
+          ${disabled 
+            ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+            : "cursor-pointer border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600"}
+          ${open ? "border-blue-500 ring-2 ring-blue-500/20" : ""}
+          text-slate-900 dark:text-slate-100`}>
+        <span className={selected ? "" : "text-slate-400 dark:text-slate-500"}>
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown size={14} className={`flex-shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
         <div className="absolute left-0 right-0 top-[calc(100%+4px)] rounded-xl border
-          border-slate-200 dark:border-white/10 bg-white dark:bg-[#0f1b2e]
-          shadow-xl shadow-black/20 overflow-hidden"
-          style={{ zIndex: 99999, maxHeight: `${ITEM_H * VISIBLE}px`,
+          border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800
+          shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+          style={{ 
+            zIndex: 100000, 
+            maxHeight: `${ITEM_H * VISIBLE}px`,
             overflowY: options.length > VISIBLE ? "scroll" : "hidden",
-            scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          {options.map(opt => (
-            <button key={opt.value} type="button" style={{ height: ITEM_H }}
-              onClick={() => { onChange(opt.value); setOpen(false) }}
-              className={`w-full px-3.5 flex items-center gap-2 text-sm text-left transition-colors duration-100
-                ${opt.value === value
-                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
-                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"}`}>
-              {opt.value === value && <Check size={12} className="flex-shrink-0 text-blue-500" />}
-              <span className={opt.value === value ? "ml-0" : "ml-[20px]"}>{opt.label}</span>
-            </button>
-          ))}
+            scrollbarWidth: "none", 
+            msOverflowStyle: "none" 
+          }}>
+          <style>{`.nsel-dd::-webkit-scrollbar { display: none; }`}</style>
+          <div className="nsel-dd">
+            {options.map(opt => (
+              <button key={opt.value} type="button" style={{ height: ITEM_H }}
+                onClick={() => { onChange(opt.value); setOpen(false) }}
+                className={`w-full px-3.5 flex items-center gap-2 text-sm text-left transition-colors duration-100
+                  ${opt.value === value
+                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
+                {opt.value === value && <Check size={12} className="flex-shrink-0 text-blue-500" />}
+                <span className={opt.value === value ? "ml-0" : "ml-[20px]"}>{opt.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
-    </div>
-  )
-}
-
-// ── Step Indicator ────────────────────────────────────────
-const STEP_LABELS = ["Account", "Academic", "Confirm"]
-function StepIndicator({ step }) {
-  return (
-    <div className="flex items-center justify-center mb-5">
-      {STEP_LABELS.map((label, idx) => {
-        const s = idx + 1
-        const isActive = step === s
-        const isDone = step > s
-        return (
-          <div key={s} className="flex items-center">
-            <div className="flex flex-col items-center gap-0.5">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-200
-                ${isDone ? "bg-green-500 text-white" : isActive ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-slate-500"}`}>
-                {isDone ? <Check size={12} /> : s}
-              </div>
-              <span className={`text-[9px] font-medium tracking-wide transition-colors duration-200
-                ${isActive ? "text-blue-600 dark:text-blue-400" : isDone ? "text-green-600 dark:text-green-400" : "text-slate-400 dark:text-slate-500"}`}>
-                {label}
-              </span>
-            </div>
-            {s < 3 && (
-              <div className="w-12 mx-1 mb-3 h-px bg-slate-200 dark:bg-white/10 relative overflow-hidden">
-                <div className={`absolute inset-0 bg-green-500 transition-all duration-300 ${isDone ? "opacity-100" : "opacity-0"}`} />
-              </div>
-            )}
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -180,21 +156,16 @@ function AccountStep({ data, setData, onNext }) {
 
   return (
     <div className="space-y-3">
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Create your account</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 1 of 3 - Basic info</p>
-      </div>
-
       <div className="space-y-1">
         <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Full name</label>
         <input className={inputCls} placeholder="John Doe" value={data.name || ""} onChange={handleChange("name")} />
-        {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+        {errors.name && <p className="text-xs text-red-500 dark:text-red-400">{errors.name}</p>}
       </div>
 
       <div className="space-y-1">
         <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Email</label>
         <input className={inputCls} type="email" placeholder="you@example.com" value={data.email || ""} onChange={handleChange("email")} />
-        {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+        {errors.email && <p className="text-xs text-red-500 dark:text-red-400">{errors.email}</p>}
       </div>
 
       <div className="space-y-1">
@@ -203,55 +174,58 @@ function AccountStep({ data, setData, onNext }) {
           <input className={`${inputCls} pr-10`} type={showPassword ? "text" : "password"}
             placeholder="Min. 8 characters" value={data.password || ""} onChange={handleChange("password")} />
           <button type="button" onClick={() => setShowPassword(p => !p)} disabled={!data.password}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition disabled:opacity-30">
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition disabled:opacity-30">
             {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
         </div>
         {data.password && (
-          <div className="flex gap-1 mt-1">
+          <div className="flex gap-1 mt-1.5">
             {[...Array(4)].map((_, i) => (
               <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                 data.password.length >= 8 + i * 4
-                  ? i < 1 ? "bg-red-400" : i < 2 ? "bg-yellow-400" : i < 3 ? "bg-blue-400" : "bg-green-400"
-                  : "bg-slate-200 dark:bg-white/10"
+                  ? i < 1 ? "bg-red-400 dark:bg-red-500" 
+                    : i < 2 ? "bg-yellow-400 dark:bg-yellow-500" 
+                    : i < 3 ? "bg-blue-400 dark:bg-blue-500" 
+                    : "bg-green-400 dark:bg-green-500"
+                  : "bg-slate-200 dark:bg-slate-700"
               }`} />
             ))}
           </div>
         )}
-        {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+        {errors.password && <p className="text-xs text-red-500 dark:text-red-400">{errors.password}</p>}
       </div>
 
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Username</label>
           <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold leading-none
-            bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400
-            border border-amber-200 dark:border-amber-500/25">permanent</span>
+            bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400
+            border border-amber-200 dark:border-amber-700">permanent</span>
         </div>
         <div className="relative">
           <input className={`${inputCls} pr-14 font-mono`} placeholder="your_username"
             value={data.username || ""} onChange={handleUsernameChange} spellCheck={false} />
           <div className="absolute right-8 top-1/2 -translate-y-1/2">
-            {usernameStatus === "checking"  && <Loader2 size={12} className="animate-spin text-slate-400" />}
+            {usernameStatus === "checking"  && <Loader2 size={12} className="animate-spin text-slate-400 dark:text-slate-500" />}
             {usernameStatus === "available" && <Check size={12} className="text-green-500" />}
             {usernameStatus === "taken"     && <X size={12} className="text-red-500" />}
           </div>
           <button type="button" onClick={generateSuggestion}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 transition">
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition">
             <RefreshCw size={12} />
           </button>
         </div>
         {usernameStatus === "available" && !errors.username && (
           <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1"><Check size={10} /> Username available</p>
         )}
-        {errors.username && <p className="text-xs text-red-500">{errors.username}</p>}
+        {errors.username && <p className="text-xs text-red-500 dark:text-red-400">{errors.username}</p>}
         <p className="text-[10px] text-slate-400 dark:text-slate-500">
           Lowercase letters, numbers and underscores only.{" "}
-          <span className="text-amber-500 font-medium">This cannot be changed later.</span>
+          <span className="text-amber-500 dark:text-amber-400 font-medium">This cannot be changed later.</span>
         </p>
       </div>
 
-      <button onClick={() => { if (validate()) onNext() }}
+      <button type="button" onClick={() => { if (validate()) onNext() }}
         className="w-full h-10 mt-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
           hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold
           shadow-lg shadow-blue-600/20 transition-all duration-150 flex items-center justify-center gap-2">
@@ -273,12 +247,10 @@ function ModalAcademicStep({ data, setData, onNext, onBack, accountType }) {
   useEffect(() => {
     if (isTeacher || !data.universityId) { setPrograms([]); return }
     getProgramsByUniversity(data.universityId).then(r => setPrograms(r || [])).catch(() => {})
-    setData(prev => ({ ...prev, programId: "", branchId: "" }))
   }, [data.universityId]) // eslint-disable-line
   useEffect(() => {
     if (isTeacher || !data.programId) { setBranches([]); return }
     getBranchesByProgram(data.programId).then(r => setBranches(r || [])).catch(() => {})
-    setData(prev => ({ ...prev, branchId: "" }))
   }, [data.programId]) // eslint-disable-line
 
   const validate = () => {
@@ -288,29 +260,11 @@ function ModalAcademicStep({ data, setData, onNext, onBack, accountType }) {
     return true
   }
 
-  const handleContinue = () => {
-    if (!validate()) return
-    // For teachers, clear program/branch before continuing
-    if (isTeacher) {
-      setData(prev => ({ ...prev, programId: null, branchId: null }))
-    }
-    onNext()
-  }
-
   return (
     <div className="space-y-4">
-      <div className="mb-2">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-          {isTeacher ? "University details" : "Academic details"}
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Step 2 of 3 - {isTeacher ? "Select your university" : "Help us personalise your experience"}
-        </p>
-      </div>
-
       {isTeacher && (
-        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
-          <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 px-3 py-2.5">
+          <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
             As a teacher, you only need to select your university. An admin will grant you teacher privileges after sign-up.
           </p>
         </div>
@@ -318,7 +272,7 @@ function ModalAcademicStep({ data, setData, onNext, onBack, accountType }) {
 
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-slate-600 dark:text-slate-300">University</label>
-        <NativeSelect value={data.universityId || ""} onChange={val => setData(prev => ({ ...prev, universityId: val }))}
+        <NativeSelect value={data.universityId || ""} onChange={val => setData(prev => ({ ...prev, universityId: val, programId: "", branchId: "" }))}
           options={universities.map(u => ({ value: u.$id, label: u.name }))} placeholder="Select university" />
       </div>
 
@@ -326,7 +280,7 @@ function ModalAcademicStep({ data, setData, onNext, onBack, accountType }) {
         <>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Program</label>
-            <NativeSelect value={data.programId || ""} onChange={val => setData(prev => ({ ...prev, programId: val }))}
+            <NativeSelect value={data.programId || ""} onChange={val => setData(prev => ({ ...prev, programId: val, branchId: "" }))}
               options={programs.map(p => ({ value: p.$id, label: p.name }))} placeholder="Select program" disabled={!data.universityId} />
           </div>
           <div className="space-y-1.5">
@@ -337,16 +291,18 @@ function ModalAcademicStep({ data, setData, onNext, onBack, accountType }) {
         </>
       )}
 
-      {error && <p className="text-xs text-red-500 text-center">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-white/10
-          text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 transition-all duration-150">
-          Back
-        </button>
-        <button onClick={handleContinue} className="flex-1 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
-          hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold
-          shadow-lg shadow-blue-600/20 transition-all duration-150 flex items-center justify-center gap-2">
+      {error && <p className="text-xs text-red-500 dark:text-red-400 text-center">{error}</p>}
+      
+      <div className="pt-2 flex flex-col gap-3">
+        <button type="button" onClick={() => { if (validate()) onNext() }}
+          className="w-full h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
+            hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold
+            shadow-lg shadow-blue-600/20 transition-all duration-150 flex items-center justify-center gap-2">
           Continue <ChevronRight size={14} />
+        </button>
+
+        <button type="button" onClick={onBack} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 p-0 h-auto cursor-pointer transition">
+          ← Back to account details
         </button>
       </div>
     </div>
@@ -372,10 +328,10 @@ function ConfirmStep({ data, universityName, programName, branchName, isTeacher,
   return (
     <div className="space-y-4">
       <div className="mb-2">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Almost there!</h3>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Almost there!</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 - Confirm and create</p>
       </div>
-      <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3.5 space-y-2">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3.5 space-y-2">
         {rows.map(({ label, value }) => (
           <div key={label} className="flex items-center justify-between">
             <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
@@ -384,49 +340,36 @@ function ConfirmStep({ data, universityName, programName, branchName, isTeacher,
         ))}
       </div>
       {isTeacher && (
-        <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5">
-          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5">
+          <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             <strong>Note:</strong> Teacher accounts start with standard access. An administrator must approve your teacher privileges before you can manage classes.
           </p>
         </div>
       )}
       <label className="flex items-start gap-2.5 cursor-pointer">
         <div onClick={() => { setPrivacyAccepted(p => !p); setPrivacyError(false) }}
-          className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center transition-colors duration-150 cursor-pointer
-            ${privacyAccepted ? "bg-blue-600 border-blue-600"
-              : privacyError ? "border-red-400 bg-white dark:bg-white/5"
-              : "border-slate-300 dark:border-white/20 bg-white dark:bg-white/5"}`}>
+          className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors duration-150 cursor-pointer
+            ${privacyAccepted 
+              ? "bg-blue-600 border-blue-600"
+              : privacyError 
+                ? "border-red-500 bg-white dark:bg-slate-800"
+                : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"}`}>
           {privacyAccepted && <Check size={10} className="text-white" />}
         </div>
         <span className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           We use cookies and local storage for login sessions, preferences and app features. No tracking or ads.{" "}
-          <Link to="/privacy" className="text-blue-500 hover:text-blue-600 underline underline-offset-2">Privacy Policy</Link>
+          <Link to="/privacy" className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 underline underline-offset-2 transition">Privacy Policy</Link>
         </span>
       </label>
-      {privacyError && <p className="text-xs text-red-500">Please accept the Privacy Policy to continue.</p>}
+      {privacyError && <p className="text-xs text-red-500 dark:text-red-400">Please accept the Privacy Policy to continue.</p>}
       {error && (
-        <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
+        <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 px-3 py-2.5">
           <p className="text-xs text-red-600 dark:text-red-400 text-center">{error}</p>
         </div>
       )}
-      <div className="flex gap-2 pt-1">
-        <button onClick={onBack} disabled={loading}
-          className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-white/10 text-sm text-slate-600 dark:text-slate-300
-            bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 transition-all duration-150 disabled:opacity-50">
-          Back
-        </button>
-        <button disabled={loading} onClick={() => { if (!privacyAccepted) { setPrivacyError(true); return } onSubmit() }}
-          className="flex-1 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500
-            text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all duration-150 disabled:opacity-60
-            flex items-center justify-center gap-2">
-          {loading
-            ? <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-              </svg>Creating account</>
-            : <>Create account <Check size={13} /></>}
-        </button>
-      </div>
+      {loading && (
+        <p className="text-xs text-blue-500 dark:text-blue-400 text-center animate-pulse">Creating account...</p>
+      )}
     </div>
   )
 }
@@ -543,15 +486,15 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="w-full max-w-sm max-h-[90vh] overflow-y-auto
+            className="w-full max-w-[420px] max-h-[90vh] overflow-y-auto
                        [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
-                       bg-white dark:bg-[#0f1b2e] rounded-2xl
-                       border border-slate-200 dark:border-white/[0.07] shadow-2xl p-6 relative">
+                       bg-white dark:bg-slate-900 rounded-2xl
+                       border border-slate-200 dark:border-slate-700 shadow-2xl p-6 relative">
 
             <button onClick={onClose}
               className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center
-                justify-center border border-slate-200 dark:border-white/10 text-slate-400
-                hover:text-slate-700 dark:hover:text-white bg-slate-50 dark:bg-white/5 transition-colors">
+                justify-center border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500
+                hover:text-slate-700 dark:hover:text-slate-200 bg-slate-50 dark:bg-slate-800 transition-colors">
               <X size={13} />
             </button>
 
@@ -566,10 +509,10 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
             {success && (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                 className="text-center space-y-3 py-4">
-                <div className="mx-auto w-14 h-14 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
+                <div className="mx-auto w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                   <Check size={28} className="text-green-500" />
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Account created!</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Account created!</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Taking you to your dashboard...</p>
               </motion.div>
             )}
@@ -577,18 +520,18 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
             {/* Login */}
             {!success && mode === "login" && (
               <>
-                <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-1">Welcome back</h2>
+                <h2 className="text-xl font-bold text-center text-slate-900 dark:text-slate-100 mb-1">Welcome back</h2>
                 <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-5">Sign in to your account</p>
                 <button onClick={loginWithGoogle}
                   className="w-full flex items-center justify-center gap-2.5 h-10 mb-4
-                    border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-50
-                    dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-all shadow-sm">
+                    border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50
+                    dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-all shadow-sm">
                   <GoogleIcon /> Continue with Google
                 </button>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                   <span className="text-xs text-slate-400 font-medium">OR</span>
-                  <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                 </div>
                 <form onSubmit={handleLogin} className="space-y-3">
                   <input className={inputCls} placeholder="Email or username" value={loginForm.identifier}
@@ -598,23 +541,23 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
                       placeholder="Password" value={loginForm.password}
                       onChange={e => { setLoginForm(f => ({ ...f, password: e.target.value })); setError(null) }} />
                     <button type="button" onClick={() => setShowPass(p => !p)} disabled={!loginForm.password}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition disabled:opacity-30">
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition disabled:opacity-30">
                       {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                   <div className="text-right">
-                    <Link to="/forgot-password" onClick={onClose} className="text-xs text-blue-500 hover:text-blue-600 transition">
+                    <Link to="/forgot-password" onClick={onClose} className="text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition">
                       Forgot password?
                     </Link>
                   </div>
                   <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
                     We use cookies and local storage for login sessions, preferences and app features. No tracking or ads.{" "}
-                    <Link to="/privacy" onClick={onClose} className="text-blue-500 hover:text-blue-600 underline underline-offset-2">
+                    <Link to="/privacy" onClick={onClose} className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 underline underline-offset-2 transition">
                       Privacy Policy
                     </Link>
                   </p>
                   {error && (
-                    <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
+                    <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 px-3 py-2.5">
                       <p className="text-xs text-red-600 dark:text-red-400 text-center">{error}</p>
                     </div>
                   )}
@@ -630,7 +573,7 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
                       : "Sign in"}
                   </button>
                 </form>
-                <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-400">
                   Don't have an account?{" "}
                   <button onClick={() => onSwitch("signup")}
                     className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
@@ -643,103 +586,136 @@ export default function AuthModal({ open, mode, onClose, onSwitch }) {
             {/* Signup */}
             {!success && mode === "signup" && (
               <>
-                {/* ── Role Selection Gateway ── */}
-                {!role && (
-                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    className="space-y-4 text-center">
+                {!role ? (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 text-center">
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">Join Unizuya</h2>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Join Unizuya</h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">How will you use the platform?</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <button onClick={() => selectRole("student")}
-                        className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
-                          bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-500/40
-                          hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-200">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center
-                          group-hover:bg-blue-500/20 transition-colors">
-                          <GraduationCap size={18} className="text-blue-500" />
+                        className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-slate-700
+                          bg-white dark:bg-slate-800/50 hover:border-blue-400 dark:hover:border-blue-500/60
+                          hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all duration-200">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 dark:group-hover:bg-blue-500/30 transition-colors">
+                          <GraduationCap size={18} className="text-blue-500 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Student</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Student</p>
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Access notes, PYQs & more</p>
                         </div>
                       </button>
                       <button onClick={() => selectRole("teacher")}
-                        className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
-                          bg-white dark:bg-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/40
-                          hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-200">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center
-                          group-hover:bg-emerald-500/20 transition-colors">
-                          <BookOpen size={18} className="text-emerald-500" />
+                        className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-slate-700
+                          bg-white dark:bg-slate-800/50 hover:border-emerald-400 dark:hover:border-emerald-500/60
+                          hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10 transition-all duration-200">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 dark:group-hover:bg-emerald-500/30 transition-colors">
+                          <BookOpen size={18} className="text-emerald-500 dark:text-emerald-400" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Teacher</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Teacher</p>
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Manage classes & attendance</p>
                         </div>
                       </button>
                     </div>
-                    <p className="mt-3 pt-4 border-t border-slate-100 dark:border-white/[0.06]
-                                  text-center text-sm text-slate-500 dark:text-slate-400">
+                    <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-400">
                       Already have an account?{" "}
-                      <button onClick={() => onSwitch("login")}
-                        className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
+                      <button onClick={() => onSwitch("login")} className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
                         Sign in
                       </button>
                     </p>
                   </motion.div>
-                )}
-
-                {/* ── Signup Flow (only when role is selected) ── */}
-                {role && (
-                  <>
-                    {step === 1 && (
-                      <>
-                        <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-1">Join Unizuya</h2>
-                        <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-4">
-                          Create your free {isTeacher ? "teacher" : "student"} account
-                        </p>
+                ) : (
+                  <Stepper
+                    initialStep={step}
+                    onStepChange={setStep}
+                    onFinalStepCompleted={handleFinalSubmit}
+                    backButtonText="Back"
+                    nextButtonText="Continue"
+                    stepCircleContainerClassName="!border-none !shadow-none !bg-transparent"
+                    stepContainerClassName="!p-0 !mb-6 justify-center"
+                    contentClassName="!px-0"
+                    footerClassName={step === 3 ? "!px-0 !pb-0" : "hidden"}
+                    renderStepIndicator={({ step: s, currentStep, onStepClick }) => {
+                      const isActive = currentStep === s
+                      const isCompleted = currentStep > s
+                      const labels = ["Account", "Academic", "Confirm"]
+                      return (
+                        <div className="flex flex-col items-center gap-1.5 group cursor-pointer" onClick={() => onStepClick(s)}>
+                          <motion.div
+                            animate={{ scale: isActive ? 1.1 : 1 }}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all border-2
+                              ${isCompleted 
+                                ? "bg-green-500 border-green-500 text-white" 
+                                : isActive 
+                                  ? "bg-[#5227FF] border-[#5227FF] text-white" 
+                                  : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500"}`}
+                          >
+                            {isCompleted ? <Check size={14} /> : s}
+                          </motion.div>
+                          <span className={`text-[10px] font-medium transition-colors ${isActive ? "text-[#5227FF]" : "text-slate-400 dark:text-slate-500"}`}>
+                            {labels[s-1]}
+                          </span>
+                        </div>
+                      )
+                    }}
+                    backButtonProps={{ className: "text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300" }}
+                    nextButtonProps={{ className: "!h-10 !px-6 !rounded-xl !bg-gradient-to-r !from-blue-600 !to-indigo-600 !shadow-lg !shadow-blue-600/20 !text-sm !font-semibold !text-white" }}
+                  >
+                    <Step>
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">Join Unizuya</h2>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                            Create your free {isTeacher ? "teacher" : "student"} account
+                          </p>
+                        </div>
                         <button onClick={loginWithGoogle}
-                          className="w-full flex items-center justify-center gap-2.5 h-10 mb-4
-                            border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-50
-                            dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-all shadow-sm">
+                          className="w-full flex items-center justify-center gap-2 h-9 mb-4
+                            border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50
+                            dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-xl transition-all shadow-sm">
                           <GoogleIcon /> Continue with Google
                         </button>
                         <div className="flex items-center gap-3 mb-4">
-                          <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
-                          <span className="text-xs text-slate-400 font-medium">OR</span>
-                          <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                          <span className="text-[10px] text-slate-400 font-medium">OR</span>
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                         </div>
-                      </>
-                    )}
-                    {step > 1 && <StepIndicator step={step} />}
-                    <AnimatePresence mode="wait">
-                      <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }}>
-                        {step === 1 && <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />}
-                        {step === 2 && (
-                          <ModalAcademicStep data={signupData} setData={setSignupData}
-                            onBack={() => setStep(1)} onNext={() => setStep(3)}
-                            accountType={signupData.accountType} />
+                        <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />
+                        {step === 1 && (
+                          <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+                            Already have an account?{" "}
+                            <button onClick={() => onSwitch("login")} className="font-semibold text-blue-500 dark:text-blue-400 hover:opacity-80 transition">
+                              Sign in
+                            </button>
+                          </p>
                         )}
-                        {step === 3 && (
-                          <ConfirmStep data={signupData}
-                            universityName={universityName} programName={programName} branchName={branchName}
-                            isTeacher={isTeacher}
-                            onBack={() => setStep(2)} onSubmit={handleFinalSubmit} loading={loading} error={error} />
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
-                    {step === 1 && (
-                      <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                        Already have an account?{" "}
-                        <button onClick={() => onSwitch("login")}
-                          className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition">
-                          Sign in
-                        </button>
-                      </p>
-                    )}
-                  </>
+                      </div>
+                    </Step>
+
+                    <Step>
+                      <div className="space-y-3">
+                        <div className="mb-2">
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                            {isTeacher ? "University details" : "Academic details"}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Step 2 of 3 - {isTeacher ? "Select your university" : "Help us personalise your experience"}
+                          </p>
+                        </div>
+                        <ModalAcademicStep data={signupData} setData={setSignupData}
+                          onBack={() => setStep(1)} onNext={() => setStep(3)}
+                          accountType={signupData.accountType} />
+                      </div>
+                    </Step>
+
+                    <Step>
+                      <ConfirmStep data={signupData}
+                        universityName={universityName} programName={programName} branchName={branchName}
+                        isTeacher={isTeacher}
+                        onBack={() => setStep(2)} onSubmit={handleFinalSubmit} loading={loading} error={error} />
+                    </Step>
+                  </Stepper>
                 )}
               </>
             )}

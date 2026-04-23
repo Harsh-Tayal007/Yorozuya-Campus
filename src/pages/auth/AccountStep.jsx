@@ -1,5 +1,5 @@
-﻿import { useState, useEffect, useRef } from "react"
-import { Eye, EyeOff, RefreshCw, Check, X, Loader2 } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Eye, EyeOff, RefreshCw, Check, X, Loader2, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -98,7 +98,7 @@ const AccountStep = ({ data, setData, onNext }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Create your account</h2>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Create your account</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Step 1 of 3 - Basic info</p>
       </div>
 
@@ -115,10 +115,10 @@ const AccountStep = ({ data, setData, onNext }) => {
             onChange={handleChange("name")}
             className="
               h-10
-              bg-slate-50 dark:bg-white/5
-              border-slate-200 dark:border-white/10
-              text-slate-900 dark:text-white
-              placeholder:text-slate-400 dark:placeholder:text-slate-600
+              bg-slate-50 dark:bg-slate-800/50
+              border-slate-200 dark:border-slate-700
+              text-slate-900 dark:text-slate-100
+              placeholder:text-slate-400 dark:placeholder:text-slate-500
               focus:border-blue-500 focus:ring-blue-500/20
             "
           />
@@ -138,10 +138,10 @@ const AccountStep = ({ data, setData, onNext }) => {
             onChange={handleChange("email")}
             className="
               h-10
-              bg-slate-50 dark:bg-white/5
-              border-slate-200 dark:border-white/10
-              text-slate-900 dark:text-white
-              placeholder:text-slate-400 dark:placeholder:text-slate-600
+              bg-slate-50 dark:bg-slate-800/50
+              border-slate-200 dark:border-slate-700
+              text-slate-900 dark:text-slate-100
+              placeholder:text-slate-400 dark:placeholder:text-slate-500
               focus:border-blue-500 focus:ring-blue-500/20
             "
           />
@@ -162,10 +162,10 @@ const AccountStep = ({ data, setData, onNext }) => {
               onChange={handleChange("password")}
               className="
                 h-10 pr-10
-                bg-slate-50 dark:bg-white/5
-                border-slate-200 dark:border-white/10
-                text-slate-900 dark:text-white
-                placeholder:text-slate-400 dark:placeholder:text-slate-600
+                bg-slate-50 dark:bg-slate-800/50
+                border-slate-200 dark:border-slate-700
+                text-slate-900 dark:text-slate-100
+                placeholder:text-slate-400 dark:placeholder:text-slate-500
                 focus:border-blue-500 focus:ring-blue-500/20
               "
             />
@@ -173,7 +173,7 @@ const AccountStep = ({ data, setData, onNext }) => {
               type="button"
               onClick={() => setShowPassword((p) => !p)}
               disabled={!data.password}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition disabled:opacity-30"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition disabled:opacity-30"
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -187,11 +187,11 @@ const AccountStep = ({ data, setData, onNext }) => {
                   key={i}
                   className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                     data.password.length >= 8 + i * 4
-                      ? i < 1 ? "bg-red-400"
-                        : i < 2 ? "bg-yellow-400"
-                        : i < 3 ? "bg-blue-400"
-                        : "bg-green-400"
-                      : "bg-slate-200 dark:bg-white/10"
+                      ? i < 1 ? "bg-red-400 dark:bg-red-500"
+                        : i < 2 ? "bg-yellow-400 dark:bg-yellow-500"
+                        : i < 3 ? "bg-blue-400 dark:bg-blue-500"
+                        : "bg-green-400 dark:bg-green-500"
+                      : "bg-slate-200 dark:bg-slate-700"
                   }`}
                 />
               ))}
@@ -206,8 +206,8 @@ const AccountStep = ({ data, setData, onNext }) => {
               Username
             </Label>
             <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none
-              bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400
-              border border-amber-200 dark:border-amber-500/25">
+              bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400
+              border border-amber-200 dark:border-amber-700">
               permanent
             </span>
           </div>
@@ -220,10 +220,10 @@ const AccountStep = ({ data, setData, onNext }) => {
               spellCheck={false}
               className="
                 h-10 pr-16 font-mono text-sm
-                bg-slate-50 dark:bg-white/5
-                border-slate-200 dark:border-white/10
-                text-slate-900 dark:text-white
-                placeholder:text-slate-400 dark:placeholder:text-slate-600
+                bg-slate-50 dark:bg-slate-800/50
+                border-slate-200 dark:border-slate-700
+                text-slate-900 dark:text-slate-100
+                placeholder:text-slate-400 dark:placeholder:text-slate-500
                 focus:border-blue-500 focus:ring-blue-500/20
                 transition
               "
@@ -232,7 +232,7 @@ const AccountStep = ({ data, setData, onNext }) => {
             {/* Status icon */}
             <div className="absolute right-9 top-1/2 -translate-y-1/2 flex items-center">
               {usernameStatus === "checking" && (
-                <Loader2 size={13} className="animate-spin text-slate-400" />
+                <Loader2 size={13} className="animate-spin text-slate-400 dark:text-slate-500" />
               )}
               {usernameStatus === "available" && (
                 <Check size={13} className="text-green-500" />
@@ -248,7 +248,7 @@ const AccountStep = ({ data, setData, onNext }) => {
               onClick={generateSuggestion}
               title="Generate new username"
               className="absolute right-2.5 top-1/2 -translate-y-1/2
-                text-slate-400 hover:text-blue-500 dark:hover:text-blue-400
+                text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400
                 transition-colors duration-150"
             >
               <RefreshCw size={13} />
@@ -285,9 +285,10 @@ const AccountStep = ({ data, setData, onNext }) => {
             text-white font-semibold
             shadow-lg shadow-blue-600/25
             transition-all duration-200
+            flex items-center justify-center gap-2
           "
         >
-          Continue
+          Continue <ChevronRight size={14} />
         </Button>
       </form>
     </div>

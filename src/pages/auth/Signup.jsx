@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Check, Link as LinkIcon, GraduationCap, BookOpen } from "lucide-react"
@@ -11,6 +11,7 @@ import AcademicStep from "./AcademicStep"
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import Stepper, { Step } from "@/components/ui/Stepper"
 
 import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
@@ -44,7 +45,7 @@ const Signup = () => {
 
   const [step, setStep] = useState(1)
   const [signupData, setSignupData] = useState({
-    name: "", email: "", password: "",
+    name: "", email: "", password: "", username: "",
     universityId: "", programId: "", branchId: "",
     accountType: roleParam || "student",
   })
@@ -111,25 +112,25 @@ const Signup = () => {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-6
       bg-gradient-to-br from-slate-100 via-white to-slate-200
-      dark:from-[#080e1a] dark:via-[#0d1628] dark:to-[#080e1a]">
-      <div className="pointer-events-none absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-40
-        bg-blue-400 dark:bg-blue-600 top-[-160px] left-[-160px]" />
-      <div className="pointer-events-none absolute w-[400px] h-[400px] rounded-full blur-3xl opacity-30
-        bg-indigo-400 dark:bg-violet-700 bottom-[-120px] right-[-120px]" />
+      dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="pointer-events-none absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-30
+        bg-blue-400 dark:bg-blue-600/20 top-[-160px] left-[-160px]" />
+      <div className="pointer-events-none absolute w-[400px] h-[400px] rounded-full blur-3xl opacity-20
+        bg-indigo-400 dark:bg-violet-700/20 bottom-[-120px] right-[-120px]" />
 
       <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-md">
-        <Card className="bg-white/90 dark:bg-[#0f1b2e]/80 backdrop-blur-2xl
-          border border-slate-200/80 dark:border-white/[0.07]
+        className="relative z-10 w-full max-w-[460px]">
+        <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl
+          border border-slate-200/80 dark:border-slate-700/50
           shadow-2xl shadow-slate-200/60 dark:shadow-black/60">
           <CardContent className="p-6">
 
             {/* Logo */}
             <div className="flex justify-center mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600
                 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
                   <path d="M6 12v5c3 3 9 3 12 0v-5" />
                 </svg>
@@ -143,39 +144,39 @@ const Signup = () => {
                 className="space-y-4 text-center"
               >
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Join Unizuya</h2>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Join Unizuya</h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">How will you use the platform?</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={() => selectRole("student")}
-                    className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
-                      bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-500/40
-                      hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-200">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center
-                      group-hover:bg-blue-500/20 transition-colors">
-                      <GraduationCap size={18} className="text-blue-500" />
+                    className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-slate-700
+                      bg-white dark:bg-slate-800/50 hover:border-blue-400 dark:hover:border-blue-500/60
+                      hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all duration-200">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center
+                      group-hover:bg-blue-500/20 dark:group-hover:bg-blue-500/30 transition-colors">
+                      <GraduationCap size={18} className="text-blue-500 dark:text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">Student</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Student</p>
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Access notes, PYQs & more</p>
                     </div>
                   </button>
                   <button onClick={() => selectRole("teacher")}
-                    className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-white/10
-                      bg-white dark:bg-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/40
-                      hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-200">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center
-                      group-hover:bg-emerald-500/20 transition-colors">
-                      <BookOpen size={18} className="text-emerald-500" />
+                    className="group flex flex-col items-center gap-2.5 p-5 rounded-xl border border-slate-200 dark:border-slate-700
+                      bg-white dark:bg-slate-800/50 hover:border-emerald-400 dark:hover:border-emerald-500/60
+                      hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10 transition-all duration-200">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center
+                      group-hover:bg-emerald-500/20 dark:group-hover:bg-emerald-500/30 transition-colors">
+                      <BookOpen size={18} className="text-emerald-500 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">Teacher</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Teacher</p>
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Manage classes & attendance</p>
                     </div>
                   </button>
                 </div>
 
-                <p className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06]
+                <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800
                               text-center text-sm text-slate-500 dark:text-slate-400">
                   Already have an account?{" "}
                   <button onClick={() => navigate("/login")}
@@ -190,202 +191,162 @@ const Signup = () => {
             {/* ── Signup Flow (only when role is selected) ── */}
             {roleParam && (
               <>
-
-            {/* Step Indicator */}
-
-            <div className="flex items-center justify-center mb-5">
-              {STEP_LABELS.map((label, idx) => {
-                const s = idx + 1
-                const isActive    = step === s
-                const isCompleted = step > s
-                return (
-                  <div key={s} className="flex items-center">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <motion.div
-                        animate={{ scale: isActive ? 1.08 : 1 }}
-                        transition={{ duration: 0.2 }}
-                        className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-semibold
-                          ${isCompleted ? "bg-green-500 text-white"
-                            : isActive   ? "bg-blue-600 text-white"
-                            : "bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-slate-500"}`}>
-                        {isCompleted ? <Check size={14} /> : s}
-                      </motion.div>
-                      <span className={`text-[9px] font-medium tracking-wide
-                        ${isActive    ? "text-blue-600 dark:text-blue-400"
-                          : isCompleted ? "text-green-600 dark:text-green-400"
-                          : "text-slate-400 dark:text-slate-600"}`}>
-                        {label}
-                      </span>
-                    </div>
-                    {s < 3 && (
-                      <div className="w-14 mx-1 mb-3.5">
-                        <div className="h-px bg-slate-200 dark:bg-white/10 relative overflow-hidden">
-                          <motion.div className="absolute inset-y-0 left-0 bg-green-500"
-                            initial={{ width: 0 }}
-                            animate={{ width: isCompleted ? "100%" : "0%" }}
-                            transition={{ duration: 0.3 }} />
+                {!signupSuccess ? (
+                  <Stepper
+                    initialStep={step}
+                    onStepChange={setStep}
+                    onFinalStepCompleted={handleFinalSubmit}
+                    backButtonText="Back"
+                    nextButtonText="Continue"
+                    stepCircleContainerClassName="!border-none !shadow-none !bg-transparent"
+                    stepContainerClassName="!p-0 !mb-6 justify-center"
+                    contentClassName="!px-0"
+                    footerClassName={step === 3 ? "!px-0 !pb-0" : "hidden"}
+                    renderStepIndicator={({ step: s, currentStep, onStepClick }) => {
+                      const isActive = currentStep === s
+                      const isCompleted = currentStep > s
+                      return (
+                        <div className="flex flex-col items-center gap-1.5 group cursor-pointer" onClick={() => onStepClick(s)}>
+                          <motion.div
+                            animate={{ scale: isActive ? 1.1 : 1 }}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all border-2
+                              ${isCompleted 
+                                ? "bg-green-500 border-green-500 text-white" 
+                                : isActive 
+                                  ? "bg-[#5227FF] border-[#5227FF] text-white" 
+                                  : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500"}`}
+                          >
+                            {isCompleted ? <Check size={14} /> : s}
+                          </motion.div>
+                          <span className={`text-[10px] font-medium transition-colors ${isActive ? "text-[#5227FF]" : "text-slate-400 dark:text-slate-500"}`}>
+                            {STEP_LABELS[s-1]}
+                          </span>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Google OAuth - step 1 only */}
-            <AnimatePresence mode="wait">
-              {step === 1 && (
-                <motion.div key="oauth"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden">
-                  <button type="button" onClick={signupWithGoogle}
-                    className="w-full flex items-center justify-center gap-2.5 h-9 mb-3
-                      border border-slate-200 dark:border-white/10
-                      bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10
-                      text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg
-                      transition-all duration-200 shadow-sm">
-                    <GoogleIcon /> Continue with Google
-                  </button>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
-                    <span className="text-xs text-slate-400 font-medium tracking-wide">OR</span>
-                    <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Step content */}
-            <AnimatePresence mode="wait">
-              <motion.div key={step}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.22 }}>
-
-                {step === 1 && (
-                  <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />
-                )}
-
-                {step === 2 && (
-                  <AcademicStep data={signupData} setData={setSignupData}
-                    onBack={() => setStep(1)} onNext={() => setStep(3)}
-                    accountType={signupData.accountType} />
-                )}
-
-                {step === 3 && !signupSuccess && (
-                  <div className="space-y-3.5">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Almost there!</h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 - Confirm and create</p>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="rounded-xl border border-slate-200 dark:border-white/10
-                                    bg-slate-50 dark:bg-white/5 px-3.5 py-3 space-y-2">
-                      <SummaryRow label="Name"     value={signupData.name} />
-                      <SummaryRow label="Email"    value={signupData.email} />
-                      <SummaryRow label="Password" value="••••••••" />
-                      {isTeacher && <SummaryRow label="Account Type" value="Teacher" />}
-                      {universityName && <SummaryRow label="University" value={universityName} />}
-                      {!isTeacher && programName && <SummaryRow label="Program" value={programName} />}
-                      {!isTeacher && branchName  && <SummaryRow label="Branch"  value={branchName} />}
-                    </div>
-
-                    {/* Teacher notice */}
-                    {isTeacher && (
-                      <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5">
-                        <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                          <strong>Note:</strong> Teacher accounts start with standard access. An administrator must approve your teacher privileges before you can manage classes.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Privacy Policy */}
-                    <div className="space-y-1">
-                      <label className="flex items-start gap-2.5 cursor-pointer">
-                        <div onClick={() => { setPrivacyAccepted(p => !p); setPrivacyError(false) }}
-                          className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center
-                            transition-colors duration-150 cursor-pointer
-                            ${privacyAccepted
-                              ? "bg-blue-600 border-blue-600"
-                              : privacyError
-                                ? "border-red-400 bg-white dark:bg-white/5"
-                                : "border-slate-300 dark:border-white/20 bg-white dark:bg-white/5"
-                            }`}>
-                          {privacyAccepted && <Check size={10} className="text-white" />}
+                      )
+                    }}
+                    backButtonProps={{
+                      className: "text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"
+                    }}
+                    nextButtonProps={{
+                      className: `!h-10 !px-6 !rounded-xl !bg-gradient-to-r !from-blue-600 !to-indigo-600 !hover:from-blue-500 !hover:to-indigo-500 !shadow-lg !shadow-blue-600/25 !text-sm !font-semibold !text-white !transition ${loading ? 'opacity-60 pointer-events-none' : ''}`
+                    }}
+                  >
+                    <Step>
+                      <div className="space-y-4">
+                        {/* Google OAuth - step 1 only */}
+                        <div className="overflow-hidden">
+                          <button type="button" onClick={signupWithGoogle}
+                            className="w-full flex items-center justify-center gap-2.5 h-9 mb-3
+                              border border-slate-200 dark:border-slate-700
+                              bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50
+                              text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl
+                              transition-all duration-200 shadow-sm">
+                            <GoogleIcon /> Continue with Google
+                          </button>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium tracking-wide">OR</span>
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                          </div>
                         </div>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                          We use cookies and local storage for sessions and preferences. No tracking or ads.{" "}
-                          <Link to="/privacy"
-                            className="text-blue-500 hover:text-blue-600 underline underline-offset-2 transition">
-                            Privacy Policy
-                          </Link>
-                        </span>
-                      </label>
-                      {privacyError && (
-                        <p className="text-xs text-red-500 ml-6">Please accept the Privacy Policy to continue.</p>
-                      )}
-                    </div>
-
-                    {error && (
-                      <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2.5">
-                        <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+                        <AccountStep data={signupData} setData={setSignupData} onNext={() => setStep(2)} />
                       </div>
-                    )}
+                    </Step>
 
-                    <Button onClick={handleFinalSubmit} disabled={loading}
-                      className="w-full h-10 bg-gradient-to-r from-blue-600 to-indigo-600
-                        hover:from-blue-500 hover:to-indigo-500 text-white font-semibold
-                        shadow-lg shadow-blue-600/25 transition-all duration-200 disabled:opacity-60">
-                      {loading ? (
-                        <span className="flex items-center gap-2">
-                          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                          </svg>
-                          Creating account…
-                        </span>
-                      ) : "Create Account"}
-                    </Button>
+                    <Step>
+                      <AcademicStep data={signupData} setData={setSignupData}
+                        onBack={() => setStep(1)} onNext={() => setStep(3)}
+                        accountType={signupData.accountType} />
+                    </Step>
 
-                    <Button variant="outline" onClick={() => setStep(2)}
-                      className="w-full h-9 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 text-sm">
-                      Back
-                    </Button>
-                  </div>
-                )}
+                    <Step>
+                      <div className="space-y-3.5">
+                        <div>
+                          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Almost there!</h2>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Step 3 of 3 - Confirm and create</p>
+                        </div>
 
-                {signupSuccess && (
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700
+                                        bg-slate-50 dark:bg-slate-800/50 px-3.5 py-3 space-y-2">
+                          <SummaryRow label="Name"     value={signupData.name} />
+                          <SummaryRow label="Email"    value={signupData.email} />
+                          <SummaryRow label="Password" value="••••••••" />
+                          <SummaryRow label="Username" value={`@${signupData.username}`} />
+                          {isTeacher && <SummaryRow label="Account Type" value="Teacher" />}
+                          {universityName && <SummaryRow label="University" value={universityName} />}
+                          {!isTeacher && programName && <SummaryRow label="Program" value={programName} />}
+                          {!isTeacher && branchName  && <SummaryRow label="Branch"  value={branchName} />}
+                        </div>
+
+                        {isTeacher && (
+                          <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2.5">
+                            <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                              <strong>Note:</strong> Teacher accounts start with standard access. An administrator must approve your teacher privileges before you can manage classes.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="space-y-1">
+                          <label className="flex items-start gap-2.5 cursor-pointer">
+                            <div onClick={() => { setPrivacyAccepted(p => !p); setPrivacyError(false) }}
+                              className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center
+                                transition-colors duration-150 cursor-pointer
+                                ${privacyAccepted
+                                  ? "bg-blue-600 border-blue-600"
+                                  : privacyError
+                                    ? "border-red-500 bg-white dark:bg-slate-800"
+                                    : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
+                                }`}>
+                              {privacyAccepted && <Check size={10} className="text-white" />}
+                            </div>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                              We use cookies and local storage for sessions and preferences. No tracking or ads.{" "}
+                              <Link to="/privacy"
+                                className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 underline underline-offset-2 transition">
+                                Privacy Policy
+                              </Link>
+                            </span>
+                          </label>
+                          {privacyError && (
+                            <p className="text-xs text-red-500 dark:text-red-400 ml-6">Please accept the Privacy Policy to continue.</p>
+                          )}
+                        </div>
+
+                        {error && (
+                          <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 px-3 py-2.5">
+                            <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+                          </div>
+                        )}
+                        {loading && (
+                          <p className="text-xs text-blue-500 dark:text-blue-400 text-center animate-pulse">Creating account...</p>
+                        )}
+                      </div>
+                    </Step>
+                  </Stepper>
+                ) : (
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                    className="text-center space-y-4 py-4">
-                    <div className="mx-auto w-14 h-14 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
-                      <Check className="text-green-500" size={28} />
+                    className="text-center space-y-4 py-8">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <Check className="text-green-500" size={32} />
                     </div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Account created!</h2>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Account created!</h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Redirecting you to dashboard…</p>
                   </motion.div>
                 )}
-              </motion.div>
-            </AnimatePresence>
 
-            {/* Bottom link - separated with border, not cramped */}
-            {!signupSuccess && roleParam && (
-              <p className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06]
-                            text-center text-sm text-slate-500 dark:text-slate-400">
-                Already have an account?{" "}
-                <button onClick={() => navigate("/login")}
-                  className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500
-                    bg-clip-text text-transparent hover:opacity-80 transition">
-                  Sign in
-                </button>
-              </p>
-            )}
-
-            {/* Close role-selected block */}
-            </>
+                {/* Bottom link - separated with border, not cramped */}
+                {!signupSuccess && roleParam && (
+                  <p className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800
+                                text-center text-sm text-slate-500 dark:text-slate-400">
+                    Already have an account?{" "}
+                    <button onClick={() => navigate("/login")}
+                      className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500
+                        bg-clip-text text-transparent hover:opacity-80 transition">
+                      Sign in
+                    </button>
+                  </p>
+                )}
+              </>
             )}
 
           </CardContent>

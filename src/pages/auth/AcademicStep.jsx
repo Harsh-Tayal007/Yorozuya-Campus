@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { ChevronDown, Check } from "lucide-react"
+import { ChevronDown, ChevronRight, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { getUniversities } from "@/services/university/universityService"
@@ -48,15 +48,15 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
         disabled={disabled}
         onClick={() => !disabled && setOpen(o => !o)}
         className={`w-full h-10 px-3.5 flex items-center justify-between gap-2
-          rounded-lg border text-sm transition-all duration-150 text-left
+          rounded-xl border text-sm transition-all duration-150 text-left
           ${disabled
-            ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5"
-            : "cursor-pointer border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-slate-300 dark:hover:border-white/20"
+            ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+            : "cursor-pointer border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600"
           }
-          ${open ? "border-blue-500 ring-2 ring-blue-500/10" : ""}
-          text-slate-900 dark:text-white`}
+          ${open ? "border-blue-500 ring-2 ring-blue-500/20" : ""}
+          text-slate-900 dark:text-slate-100`}
       >
-        <span className={selected ? "" : "text-slate-400 dark:text-slate-600"}>
+        <span className={selected ? "" : "text-slate-400 dark:text-slate-500"}>
           {selected ? selected.label : placeholder}
         </span>
         <ChevronDown
@@ -70,12 +70,12 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
       {open && (
         <div
           className="absolute left-0 right-0 top-[calc(100%+4px)]
-            rounded-xl border border-slate-200 dark:border-white/10
-            bg-white dark:bg-[#0f1b2e]
-            shadow-xl shadow-black/20
+            rounded-xl border border-slate-200 dark:border-slate-700
+            bg-white dark:bg-slate-800
+            shadow-xl shadow-black/10 dark:shadow-black/30
             overflow-hidden"
           style={{
-            zIndex: 99999,
+            zIndex: 100000,
             maxHeight: `${ITEM_H * VISIBLE}px`,
             overflowY: options.length > VISIBLE ? "scroll" : "hidden",
             scrollbarWidth: "none",
@@ -96,7 +96,7 @@ function NativeSelect({ value, onChange, options, placeholder, disabled }) {
                   transition-colors duration-100
                   ${opt.value === value
                     ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
-                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                   }`}
               >
                 {opt.value === value && <Check size={12} className="flex-shrink-0 text-blue-500" />}
@@ -130,10 +130,10 @@ const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
     getBranchesByProgram(data.programId).then(res => setBranches(res || [])).catch(() => {})
   }, [data.programId]) // eslint-disable-line
 
-  const validate = (step) => {
-    if (step === 1 && !data.universityId) { setError("Please select a university"); return false }
-    if (step === 2 && !data.programId) { setError("Please select a program"); return false }
-    if (step === 3 && !data.branchId) { setError("Please select a branch"); return false }
+  const validate = () => {
+    if (!data.universityId) { setError("Please select a university"); return false }
+    if (!isTeacher && !data.programId) { setError("Please select a program"); return false }
+    if (!isTeacher && !data.branchId) { setError("Please select a branch"); return false }
     setError(null)
     return true
   }
@@ -141,7 +141,7 @@ const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
   return (
     <div className="space-y-4">
       <div className="mb-2">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
           {isTeacher ? "University details" : "Academic details"}
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -149,93 +149,81 @@ const AcademicStep = ({ data, setData, onNext, onBack, accountType }) => {
         </p>
       </div>
 
-      <Stepper
-        initialStep={1}
-        disableStepIndicators={true} // Force sequential flow
-        onBeforeNext={validate}
-        onStepChange={(step) => {
-          // You could add logic here if needed
-        }}
-        onFinalStepCompleted={() => {
-          onNext()
-        }}
-        backButtonProps={{
-          className: "hidden" // We'll handle back to AccountStep via custom button if needed, or use Stepper's Back
-        }}
-        nextButtonText="Next"
-      >
-        <Step>
-          <div className="space-y-3.5 py-2">
+      <div className="space-y-4 py-2">
+        {/* University Selection */}
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">University</Label>
+          <NativeSelect
+            value={data.universityId || ""}
+            onChange={val => {
+              setData(prev => ({ ...prev, universityId: val, programId: "", branchId: "" }))
+              setError(null)
+            }}
+            options={universities.map(u => ({ value: u.$id, label: u.name }))}
+            placeholder="Select university"
+          />
+        </div>
+
+        {isTeacher && (
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 px-3 py-2.5">
+            <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+              As a teacher, you only need to select your university.
+            </p>
+          </div>
+        )}
+
+        {!isTeacher && (
+          <>
+            {/* Program Selection */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">University</Label>
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Program</Label>
               <NativeSelect
-                value={data.universityId || ""}
+                value={data.programId || ""}
                 onChange={val => {
-                  setData(prev => ({ ...prev, universityId: val, programId: "", branchId: "" }))
+                  setData(prev => ({ ...prev, programId: val, branchId: "" }))
                   setError(null)
                 }}
-                options={universities.map(u => ({ value: u.$id, label: u.name }))}
-                placeholder="Select university"
+                options={programs.map(p => ({ value: p.$id, label: p.name }))}
+                placeholder="Select program"
+                disabled={!data.universityId}
               />
             </div>
-            {isTeacher && (
-              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-2.5">
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                  As a teacher, you only need to select your university.
-                </p>
-              </div>
-            )}
-            {error && <p className="text-xs text-red-500">{error}</p>}
-            <div className="pt-2">
-               <Button variant="ghost" onClick={onBack} className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 p-0 h-auto">
-                 ← Back to account details
-               </Button>
-            </div>
-          </div>
-        </Step>
 
-        {!isTeacher && (
-          <Step>
-            <div className="space-y-3.5 py-2">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Program</Label>
-                <NativeSelect
-                  value={data.programId || ""}
-                  onChange={val => {
-                    setData(prev => ({ ...prev, programId: val, branchId: "" }))
-                    setError(null)
-                  }}
-                  options={programs.map(p => ({ value: p.$id, label: p.name }))}
-                  placeholder="Select program"
-                  disabled={!data.universityId}
-                />
-              </div>
-              {error && <p className="text-xs text-red-500">{error}</p>}
+            {/* Branch Selection */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Branch</Label>
+              <NativeSelect
+                value={data.branchId || ""}
+                onChange={val => {
+                  setData(prev => ({ ...prev, branchId: val }))
+                  setError(null)
+                }}
+                options={branches.map(b => ({ value: b.$id, label: b.name }))}
+                placeholder="Select branch"
+                disabled={!data.programId}
+              />
             </div>
-          </Step>
+          </>
         )}
 
-        {!isTeacher && (
-          <Step>
-            <div className="space-y-3.5 py-2">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Branch</Label>
-                <NativeSelect
-                  value={data.branchId || ""}
-                  onChange={val => {
-                    setData(prev => ({ ...prev, branchId: val }))
-                    setError(null)
-                  }}
-                  options={branches.map(b => ({ value: b.$id, label: b.name }))}
-                  placeholder="Select branch"
-                  disabled={!data.programId}
-                />
-              </div>
-              {error && <p className="text-xs text-red-500">{error}</p>}
-            </div>
-          </Step>
-        )}
-      </Stepper>
+        {error && <p className="text-xs text-red-500 dark:text-red-400 mt-2">{error}</p>}
+
+        <div className="pt-2 flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => { if (validate()) onNext() }}
+            className="w-full h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
+              hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold
+              shadow-lg shadow-blue-600/20 transition-all duration-150 flex items-center justify-center gap-2"
+          >
+            Continue <ChevronRight size={14} />
+          </button>
+          
+          <button type="button" onClick={onBack} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 p-0 h-auto cursor-pointer transition">
+            ← Back to account details
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
