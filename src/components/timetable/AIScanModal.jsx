@@ -1,8 +1,9 @@
-﻿// src/components/timetable/AIScanModal.jsx
+// src/components/timetable/AIScanModal.jsx
 import { useState, useRef } from "react"
 import { createPortal } from "react-dom"
 import { Sparkles, Image as ImageIcon, AlertCircle, Loader2, Check } from "lucide-react"
 import { fileToBase64 } from "@/utils/timetableHelpers"
+import { statsBatcher } from "@/services/shared/statsBatcher"
 
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`
@@ -154,10 +155,7 @@ export function AIScanModal({ onClose, onApply, onIncrement, quota, userId }) {
 
       // ── Track tokens for admin dashboard stats ────────────────────────────
       const tokens = data.usageMetadata?.totalTokenCount || 0
-      navigator.sendBeacon(
-        "https://unizuya-stats.harshtayal710.workers.dev/track/gemini",
-        JSON.stringify({ tool: "timetable", tokens, userId: userId ?? null })
-      )
+      statsBatcher.push({ type: "gemini", tool: "timetable", tokens, userId: userId ?? null })
       // ─────────────────────────────────────────────────────────────────────
 
       const text  = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? ""

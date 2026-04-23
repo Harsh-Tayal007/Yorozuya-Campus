@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { databases, account } from "@/lib/appwrite";
 import { ID } from "appwrite";
 import {
@@ -7,6 +7,7 @@ import {
   FileDown, ImageDown, Loader2, X,
 } from "lucide-react";
 import { useAIScanQuota } from "@/hooks/useAIScanQuota";
+import { statsBatcher } from "@/services/shared/statsBatcher";
 
 // ─── Appwrite ─────────────────────────────────────────────────────────────────
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -489,10 +490,7 @@ Rules:
 
       // ── For admin dashboard stats ──────────────────────────────────────────
       const tokens = data.usageMetadata?.totalTokenCount || 0;
-      navigator.sendBeacon(
-        "https://unizuya-stats.harshtayal710.workers.dev/track/gemini",
-        JSON.stringify({ tool: "cgpa", tokens, userId })
-      );
+      statsBatcher.push({ type: "gemini", tool: "cgpa", tokens, userId });
       // ────────────────────────────────────────────────────────────
 
       const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() ?? "";

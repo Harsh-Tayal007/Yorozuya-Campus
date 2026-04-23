@@ -392,8 +392,11 @@ export default function AdminStats() {
 
   // External service quota stats — loaded in one batched Promise.all
   const [resendStats, setResendStats] = useState({ monthly: 0, daily: 0, monthlyLimit: 3000, dailyLimit: 100, live: false })
-  const [improvMxStats, setImprovMxStats] = useState({ dailyLimit: 25, dailyUsed: 0, live: false })
-  const [cfWorkerStats, setCfWorkerStats] = useState({ today: 0, monthly: 0, dailyLimit: 100_000, live: false })
+  // FIX: ImprovMX free plan allows 500 forwards/day, not 25.
+  //      The worker already returns the correct live limit; this default is only
+  //      shown for a brief moment before the live data arrives.
+  const [improvMxStats, setImprovMxStats] = useState({ dailyLimit: 500, dailyUsed: 0, live: false })
+  const [cfWorkerStats, setCfWorkerStats] = useState({ today: 0, monthly: 0, dailyLimit: 100_000, live: false, kv: null })
   const [appwriteExecs, setAppwriteExecs] = useState({ count: 0, limit: 750_000, live: false })
   const [quotasLoading, setQuotasLoading] = useState(true)
 
@@ -1051,7 +1054,7 @@ export default function AdminStats() {
                 <QuotaBar
                   label="Used Capacity"
                   used={storageStats.cloudflare.totalSize / (1024 * 1024 * 1024)}
-                  limit={10} // Cloudflare R2 Free Tier: 10GB
+                  limit={10}
                   color="#f59e0b"
                   note={formatFileSize(storageStats.cloudflare.totalSize)}
                 />
@@ -1066,15 +1069,22 @@ export default function AdminStats() {
       </Section>
 
       {/* ── SERVICE QUOTAS ── */}
+      {/*
+        FIX: CF GraphQL token is consumed server-side inside the Cloudflare Worker.
+             The correct secret name is CF_API_TOKEN (set via `wrangler secret put CF_API_TOKEN`).
+             VITE_ prefixed vars are browser-only and have no effect here.
+      */}
       <Section
         title="Service quotas - free tier limits"
-        hint="Worker requests via CF GraphQL Analytics (falls back to page-view proxy if VITE_CF_API_TOKEN is absent). Resend + ImprovMX via live API. Appwrite shows real function execution count."
+        hint="Worker requests via CF GraphQL Analytics (falls back to page-view proxy if CF_API_TOKEN Worker secret is absent). Resend + ImprovMX via live API. Appwrite shows real function execution count."
       >
         <div className="rounded-xl border border-border bg-card px-5 py-5 space-y-5">
 
           <QuotaBar
             label="Cloudflare Worker requests (today)"
-            note={cfWorkerStats.live ? "(live · CF GraphQL Analytics)" : "(est. from page views · add VITE_CF_API_TOKEN for live)"}
+            note={cfWorkerStats.live
+              ? "(live · CF GraphQL Analytics)"
+              : "(est. from page views · set CF_API_TOKEN Worker secret for live)"}
             used={cfTodayReal} limit={100_000} color="#3b82f6"
           />
           <QuotaBar
@@ -1082,6 +1092,27 @@ export default function AdminStats() {
             note={cfWorkerStats.live ? "(live · resets monthly)" : "(est. from page views history)"}
             used={cfMonthlyReal} limit={1_000_000} color="#60a5fa"
           />
+
+          {cfWorkerStats.kv && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 pt-2 border-t border-border/40">
+              <QuotaBar
+                label="CF KV Reads (today)"
+                used={cfWorkerStats.kv.today.read} limit={100_000} color="#10b981"
+              />
+              <QuotaBar
+                label="CF KV Writes (today)"
+                used={cfWorkerStats.kv.today.write} limit={1_000} color="#f59e0b"
+              />
+              <QuotaBar
+                label="CF KV Lists (today)"
+                used={cfWorkerStats.kv.today.list} limit={1_000} color="#3b82f6"
+              />
+              <QuotaBar
+                label="CF KV Deletes (today)"
+                used={cfWorkerStats.kv.today.delete} limit={1_000} color="#ef4444"
+              />
+            </div>
+          )}
 
           {quotasLoading ? (
             <div className="flex items-center gap-2 py-1">
@@ -1102,7 +1133,7 @@ export default function AdminStats() {
               />
               <QuotaBar
                 label="ImprovMX forwards — daily limit"
-                note={improvMxStats.dailyUsed !== null ? "(live)" : "(plan limit · daily used unavailable via API)"}
+                note={improvMxStats.live ? "(live)" : "(plan limit · daily used unavailable via API)"}
                 used={improvMxStats.dailyUsed ?? 0} limit={improvMxStats.dailyLimit} color="#34d399"
               />
             </>
