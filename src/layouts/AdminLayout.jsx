@@ -32,7 +32,7 @@ const adminNav = [
   { label: "Updates", to: "/admin/updates", icon: Megaphone, permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
   { label: "Attendance", to: "/admin/attendance", icon: ClipboardCheck, permission: PERMISSIONS.VIEW_ATTENDANCE_REPORTS },
   { label: "Contact Messages", to: "/admin/contact-messages", icon: Mail, permission: PERMISSIONS.VIEW_CONTACT_MESSAGES },
-  { label: "UI Config", to: "/admin/ui-config", icon: Palette, permission: PERMISSIONS.MANAGE_UI_CONFIG },
+  { label: "Platform Settings", to: "/admin/ui-config", icon: Palette, permission: PERMISSIONS.MANAGE_UI_CONFIG },
 ]
 
 function AdminTopBar({ sidebarOpen, setSidebarOpen }) {

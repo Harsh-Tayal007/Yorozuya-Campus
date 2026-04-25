@@ -1,0 +1,445 @@
+﻿:root {
+  --mascot-panel-bg: rgba(255, 255, 255, 0.76);
+  --mascot-panel-border: rgba(15, 23, 42, 0.09);
+  --mascot-panel-shadow: 0 24px 55px rgba(15, 23, 42, 0.2);
+  --mascot-bubble-bg: rgba(15, 23, 42, 0.9);
+  --mascot-bubble-fg: #f8fafc;
+  --mascot-accent: #fb7185;
+  --mascot-accent-soft: rgba(251, 113, 133, 0.18);
+
+  /* Dynamic sizing — driven by JS via inline style on .mascot-shell */
+  --mascot-shell-width: 300px;
+  --mascot-stage-width: 300px;
+  --mascot-stage-height: 480px;
+}
+
+.dark {
+  --mascot-panel-bg: rgba(15, 23, 42, 0.78);
+  --mascot-panel-border: rgba(148, 163, 184, 0.18);
+  --mascot-panel-shadow: 0 26px 60px rgba(2, 6, 23, 0.46);
+  --mascot-bubble-bg: rgba(226, 232, 240, 0.94);
+  --mascot-bubble-fg: #0f172a;
+  --mascot-accent: #fda4af;
+  --mascot-accent-soft: rgba(253, 164, 175, 0.18);
+}
+
+/* ─── Shell ──────────────────────────────────────────────────────────────────
+   Transparent shell. Width driven by --mascot-shell-width (set by JS).
+   Smooth size transitions so scaling feels organic.
+────────────────────────────────────────────────────────────────────────────── */
+.mascot-shell,
+.mascot-launcher {
+  position: fixed;
+  z-index: 55;
+}
+
+.mascot-shell {
+  /* Width follows the CSS variable — JS updates this on scale change */
+  width: var(--mascot-shell-width, 300px);
+
+  user-select: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+
+  /* Click-through by default; children opt-in with pointer-events: auto */
+  pointer-events: none;
+  cursor: grab;
+
+  /* Smooth size transitions */
+  transition:
+    width 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    visibility 0ms;
+  will-change: width;
+}
+
+.mascot-shell.mascot-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mascot-shell.is-dragging {
+  cursor: grabbing;
+  /* Disable size transition while dragging to prevent jank */
+  transition: none;
+}
+
+.mascot-shell.is-dragging .mascot-stage {
+  pointer-events: none;
+}
+
+/* ─── Speech bubble ──────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────── */
+.mascot-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  /* Never wider than the shell itself, never narrower than needed */
+  max-width: min(220px, var(--mascot-shell-width, 300px));
+  padding: 11px 14px;
+  border-radius: 18px;
+  background: var(--mascot-bubble-bg);
+  color: var(--mascot-bubble-fg);
+  font-size: 0.83rem;
+  font-weight: 600;
+  line-height: 1.35;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.96);
+  transform-origin: bottom right;
+  transition: opacity 180ms ease, transform 220ms ease;
+  /* Prevent bubble from breaking shell layout */
+  word-break: break-word;
+}
+
+.mascot-bubble::after {
+  content: "";
+  position: absolute;
+  right: 20px;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 4px;
+}
+
+.mascot-bubble.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ─── Stage ──────────────────────────────────────────────────────────────────
+   Width and height both driven by CSS vars set by JS.
+   overflow: visible so the model is never clipped.
+────────────────────────────────────────────────────────────────────────────── */
+.mascot-stage {
+  position: relative;
+  /*
+    Both dimensions follow JS-driven CSS vars.
+    The shell's width transition pulls this along automatically.
+  */
+  width: var(--mascot-stage-width, 300px);
+  height: var(--mascot-stage-height, 480px);
+
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+
+  pointer-events: auto;
+  cursor: grab;
+
+  /* Size transition synced with shell */
+  transition:
+    width 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 220ms ease,
+    transform 220ms ease;
+  will-change: width, height;
+}
+
+.mascot-shell.is-dragging .mascot-stage {
+  cursor: grabbing;
+  transition: none;
+}
+
+/* Hover-only close button */
+.mascot-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.65);
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 200ms ease, transform 200ms ease, background 160ms ease;
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+
+.dark .mascot-close-btn {
+  background: rgba(15, 23, 42, 0.65);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.mascot-shell.is-hovered .mascot-close-btn,
+.mascot-stage:hover .mascot-close-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mascot-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.mascot-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  filter: drop-shadow(0px 10px 14px rgba(0, 0, 0, 0.45)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.3));
+  background: transparent;
+}
+
+/* ─── Stage overlay (loading / error) ───────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────── */
+.mascot-stage-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 14px;
+  pointer-events: none;
+  background: transparent;
+}
+
+.mascot-status-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+
+.dark .mascot-status-card {
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+}
+
+.mascot-status-card.is-error {
+  display: grid;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.mascot-status-card strong {
+  font-size: 0.8rem;
+}
+
+.mascot-status-card span {
+  overflow-wrap: anywhere;
+}
+
+.mascot-spinner {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 2px solid rgba(15, 23, 42, 0.18);
+  border-top-color: var(--mascot-accent);
+  border-radius: 999px;
+  animation: mascot-spin 800ms linear infinite;
+}
+
+.dark .mascot-spinner {
+  border-color: rgba(226, 232, 240, 0.2);
+  border-top-color: var(--mascot-accent);
+}
+
+/* ─── Minimized state ────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────── */
+.mascot-shell.is-minimized .mascot-stage {
+  /* Override height-based collapse to avoid fighting dynamic var */
+  max-height: 0 !important;
+  height: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.96);
+  overflow: hidden;
+  transition:
+    max-height 240ms ease,
+    height 240ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+/* ─── Launcher (when closed) ─────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────── */
+.mascot-launcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: min(224px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border: 1px solid var(--mascot-panel-border);
+  border-radius: 999px;
+  background: var(--mascot-panel-bg);
+  color: inherit;
+  text-align: left;
+  box-shadow: var(--mascot-panel-shadow);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.mascot-launcher-dot,
+.mascot-pill-dot {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 38%),
+    linear-gradient(135deg, #fb7185, #38bdf8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.mascot-launcher-copy strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.mascot-launcher-copy small {
+  color: var(--muted-foreground);
+  font-size: 0.73rem;
+  line-height: 1.2;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes mascot-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mascot-shell {
+    /* On mobile the JS won't render this at all, but as a safety net: */
+    width: var(--mascot-shell-width, 248px);
+  }
+}
+
+/* ─── Character Picker (settings panel) ────────────────────────────────────── */
+.mascot-char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mascot-char-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px 10px;
+  border-radius: 16px;
+  border: 1.5px solid var(--mascot-panel-border);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+  color: inherit;
+  text-align: center;
+}
+
+.mascot-char-card:hover {
+  border-color: var(--mascot-accent-soft);
+  background: var(--mascot-accent-soft);
+  transform: translateY(-2px);
+}
+
+.mascot-char-card.is-selected {
+  border-color: var(--mascot-accent);
+  background: var(--mascot-accent-soft);
+}
+
+.mascot-char-card.is-selected::after {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mascot-accent);
+}
+
+.mascot-char-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--mascot-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mascot-char-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mascot-char-name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.mascot-char-badge {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--mascot-accent);
+  background: var(--mascot-accent-soft);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.mascot-shortcut-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--mascot-panel-border);
+  background: var(--mascot-accent-soft);
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--mascot-accent);
+  user-select: none;
+}
+
+.mascot-shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--mascot-bubble-bg);
+  color: var(--mascot-bubble-fg);
+  font-size: 0.65rem;
+  font-family: monospace;
+}

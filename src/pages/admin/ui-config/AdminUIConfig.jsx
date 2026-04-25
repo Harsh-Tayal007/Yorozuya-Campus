@@ -4,7 +4,7 @@ import {
   Palette, AlertTriangle, LockKeyhole, Search, RotateCcw,
   Sparkles, LayoutGrid, Orbit, Shapes, Globe, Target,
   MonitorSmartphone, Laptop2, Check, X, Shield, Settings,
-  EyeOff, Sun, Moon
+  EyeOff, Sun, Moon, Cat
 } from "lucide-react"
 import { toast } from "sonner"
 import { useUIPrefs } from "@/context/UIPrefsContext"
@@ -30,7 +30,9 @@ const ICONS = {
   pixelTestimonials: MonitorSmartphone,
   glareHover: Sparkles,
   animatedFaq: Laptop2,
+  animatedFaq: Laptop2,
   darkMode: Moon,
+  mascotEnabled: Cat,
 }
 
 // ── Reusable Toggle ──────────────────────────────────────────────────────────
@@ -195,8 +197,8 @@ export default function AdminUIConfig() {
             <Palette size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">UI Configuration</h1>
-            <p className="text-sm text-muted-foreground">Manage global UI defaults and feature availability</p>
+            <h1 className="text-2xl font-bold text-foreground">Platform Settings</h1>
+            <p className="text-sm text-muted-foreground">Manage global features, mascots, and feature availability</p>
           </div>
         </div>
 
@@ -221,8 +223,8 @@ export default function AdminUIConfig() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-muted/50 p-1 rounded-xl w-fit">
-        {["defaults", "user_control", "complaints"].map(tab => (
+      <div className="flex space-x-1 bg-muted/50 p-1 rounded-xl w-fit overflow-x-auto custom-scrollbar max-w-full">
+        {["defaults", "mascots", "user_control", "complaints"].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -259,8 +261,16 @@ export default function AdminUIConfig() {
                 <ConfigRow label="Pixel Testimonials" prefKey="pixel_testimonials" camelKey="pixelTestimonials" desc="Pixelated flip transition for testimonials." />
                 <ConfigRow label="Animated FAQ" prefKey="animated_faq" camelKey="animatedFaq" desc="Scrollable animated FAQ list." />
                 <ConfigRow label="Default Theme" prefKey="dark_mode" camelKey="darkMode" desc="Initial theme for new users (Dark if enabled)." />
+                <ConfigRow label="3D Mascot" prefKey="mascot_enabled" camelKey="mascotEnabled" desc="Enable the interactive 3D assistant globally." />
               </div>
             </section>
+          </motion.div>
+        )}
+
+        {/* --- MASCOTS TAB --- */}
+        {activeTab === "mascots" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <MascotAssetManager />
           </motion.div>
         )}
 
@@ -312,6 +322,8 @@ export default function AdminUIConfig() {
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
+
+import MascotAssetManager from "./MascotAssetManager"
 
 function PerUserResetControl() {
   const [username, setUsername] = useState("")

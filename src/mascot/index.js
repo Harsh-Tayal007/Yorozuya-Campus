@@ -1,0 +1,6 @@
+export { default } from "./MascotRoot"
+export { default as MascotRoot } from "./MascotRoot"
+export { default as MascotEngine } from "./MascotEngine"
+export { default as InteractionController } from "./InteractionController"
+export { default as AnimationController } from "./AnimationController"
+export { default as UIController } from "./UIController"

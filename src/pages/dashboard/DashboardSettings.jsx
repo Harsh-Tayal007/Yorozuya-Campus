@@ -12,7 +12,7 @@ import {
   Trash2, AtSign, RefreshCw,
   X, Sparkles, Orbit, Shapes, Globe, Target, LayoutGrid,
   Palette, Zap, MonitorSmartphone, Laptop2, LockKeyhole,
-  Wind, Info
+  Wind, Info, Bot, Volume2, VolumeX, Keyboard
 } from "lucide-react"
 import { useUIPrefs } from "@/context/UIPrefsContext"
 import ReportUIIssueButton from "@/components/ui/ReportUIIssueButton"
@@ -44,6 +44,7 @@ const TABS = [
   { key: "academic",       label: "Academic",        icon: GraduationCap },
   { key: "preferences",    label: "Preferences",     icon: Bell },
   { key: "customization",  label: "Customization",   icon: Palette },
+  { key: "mascot",         label: "Mascot",          icon: Bot },
 ]
 
 // ── Reusable primitives ───────────────────────────────────────────────────────
@@ -1015,7 +1016,7 @@ const PreferencesTab = () => {
         <PrefRow
           icon={isDark ? Moon : Sun}
           label="Dark mode"
-          hint="Switch between light and dark theme"
+          hint="Switch between light and dark theme (Ctrl+D)"
         >
           <Toggle checked={isDark} onChange={applyTheme} />
         </PrefRow>
@@ -1472,6 +1473,178 @@ const CustomizationTab = () => {
   )
 }
 
+// =============================================================================
+// TAB: MASCOT
+// =============================================================================
+
+// Available VRM characters (add more later)
+const CHARACTERS = [
+  { id: "assistant.vrm", name: "Yorozuya", emoji: "🌟", badge: "Default" },
+  // More characters will be added here in future updates
+]
+
+const MASCOT_PREFS_KEY = "uz_mascot_prefs_v1"
+
+const readMascotPrefs = () => {
+  try {
+    const raw = localStorage.getItem(MASCOT_PREFS_KEY)
+    if (!raw) return {}
+    return JSON.parse(raw)
+  } catch { return {} }
+}
+
+const writeMascotPref = (key, value) => {
+  try {
+    const prefs = readMascotPrefs()
+    localStorage.setItem(MASCOT_PREFS_KEY, JSON.stringify({ ...prefs, [key]: value }))
+    window.dispatchEvent(new CustomEvent("mascot-prefs-changed", { detail: { key, value } }))
+  } catch { /* ignore */ }
+}
+
+const MascotTab = () => {
+  const { disabled, setUserPref } = useUIPrefs()
+  const prefs = readMascotPrefs()
+
+  const [visible,   setVisible]   = useState(prefs.mascotVisible   !== false)
+  const [minimized, setMinimized] = useState(Boolean(prefs.isMinimized))
+  const [sfx,       setSfx]       = useState(prefs.sfxEnabled      !== false)
+  const [character, setCharacter] = useState(prefs.character ?? "assistant.vrm")
+
+  const apply = (key, setter, value) => {
+    setter(value)
+    writeMascotPref(key, value)
+  }
+
+  const handleVisibleToggle = (v) => {
+    apply("mascotVisible", setVisible, v)
+    // Also write to the UIPrefs system so resolved.mascotEnabled updates.
+    // This is what actually mounts/unmounts the MascotRoot component.
+    setUserPref("mascot_enabled", v)
+    window.dispatchEvent(new CustomEvent("mascot-toggle-visibility"))
+    toast.success(v ? "Mascot companion shown" : "Mascot companion hidden")
+  }
+
+  const handleMinimizedToggle = (v) => {
+    apply("isMinimized", setMinimized, v)
+    toast.success(v ? "Mascot will start minimized" : "Mascot will start expanded")
+  }
+
+  const handleSfxToggle = (v) => {
+    apply("sfxEnabled", setSfx, v)
+    toast.success(v ? "Mascot sounds enabled" : "Mascot sounds muted")
+  }
+
+  const handleCharacterSelect = (id) => {
+    setCharacter(id)
+    writeMascotPref("character", id)
+    toast.success("Character changed — reload to apply")
+  }
+
+  return (
+    <div>
+      {/* ── Admin rollback notice ──────────────────────────────────────── */}
+      {disabled.mascotEnabled && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200
+                     dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-4 py-3"
+        >
+          <LockKeyhole size={15} className="text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+              Feature temporarily unavailable
+            </p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5 leading-relaxed">
+              The 3D Mascot companion has been temporarily disabled by an administrator.
+              Your settings are saved and will resume when the feature is restored.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+        className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200
+                   dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 px-4 py-3"
+      >
+        <Bot size={15} className="text-blue-500 mt-0.5 shrink-0" />
+        <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+          <span className="font-semibold">Desktop companion only.</span>{" "}
+          Yorozuya Mate is a 3D desktop mascot and is not available on mobile or touch devices.
+        </p>
+      </motion.div>
+
+
+      <Section title="Companion">
+        <PrefRow icon={Bot} label="Show companion" hint="Display the 3D mascot on screen. Press Ctrl+M anytime to toggle.">
+          <div className="flex items-center gap-2.5">
+            <span className="mascot-shortcut-pill hidden sm:inline-flex">
+              <span className="mascot-shortcut-key">Ctrl</span>
+              <span className="mascot-shortcut-key">M</span>
+            </span>
+            <Toggle checked={visible} onChange={handleVisibleToggle} />
+          </div>
+        </PrefRow>
+        <PrefRow icon={Bot} label="Start minimized" hint="Mascot loads collapsed to just the pill on each page visit.">
+          <Toggle checked={minimized} onChange={handleMinimizedToggle} />
+        </PrefRow>
+        <PrefRow
+          icon={sfx ? Volume2 : VolumeX}
+          label="Sound effects"
+          hint="Play sounds when the mascot reacts to taps and speech bubbles."
+        >
+          <Toggle checked={sfx} onChange={handleSfxToggle} />
+        </PrefRow>
+      </Section>
+
+      <Section title="Character">
+        <div className="py-3">
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Select your companion character. More VRM models coming soon.
+          </p>
+          <div className="mascot-char-grid">
+            {CHARACTERS.map((char) => (
+              <button
+                key={char.id}
+                type="button"
+                className={`mascot-char-card ${character === char.id ? "is-selected" : ""}`}
+                onClick={() => handleCharacterSelect(char.id)}
+              >
+                <div className="mascot-char-thumb"><span>{char.emoji}</span></div>
+                <span className="mascot-char-name">{char.name}</span>
+                {char.badge && <span className="mascot-char-badge">{char.badge}</span>}
+              </button>
+            ))}
+            <div className="mascot-char-card" style={{ opacity: 0.45, cursor: "not-allowed", pointerEvents: "none" }}>
+              <div className="mascot-char-thumb">✨</div>
+              <span className="mascot-char-name">More soon</span>
+              <span className="mascot-char-badge">Coming</span>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Quick Actions">
+        <div className="py-3.5">
+          <div className="flex items-start gap-3">
+            <Keyboard size={15} className="text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground mb-1">Keyboard shortcut</p>
+              <p className="text-xs text-muted-foreground mb-2">Toggle the mascot companion from anywhere on the site.</p>
+              <div className="mascot-shortcut-pill">
+                <span className="mascot-shortcut-key">Ctrl</span>
+                <span style={{ fontSize: "0.7rem" }}>+</span>
+                <span className="mascot-shortcut-key">M</span>
+                <span>Toggle mascot</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
 const SettingsTabButton = ({ tab, isActive, onClick }) => {
   const Icon = tab.icon
   
@@ -1533,6 +1706,7 @@ const DashboardSettings = () => {
           {activeTab === "academic"       && <AcademicTab user={user} completeAcademicProfile={completeAcademicProfile} queryClient={queryClient} />}
           {activeTab === "preferences"    && <PreferencesTab />}
           {activeTab === "customization"  && <CustomizationTab />}
+          {activeTab === "mascot"         && <MascotTab />}
         </motion.div>
       </AnimatePresence>
     </div>

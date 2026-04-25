@@ -28,6 +28,7 @@ export const PREF_KEYS = [
   "glare_hover",
   "animated_faq",
   "dark_mode",
+  "mascot_enabled",
 ]
 
 // localStorage key for when a user preference was last written
@@ -138,6 +139,7 @@ export function UIPrefsProvider({ children }) {
       glareHover:        resolvePref("glare_hover",        ctx),
       animatedFaq:       resolvePref("animated_faq",       ctx),
       darkMode:          resolvePref("dark_mode",          ctx),
+      mascotEnabled:     resolvePref("mascot_enabled",     ctx),
       minimalist:        isMinimalist,
     }
   })() // re-runs when tick changes (storage events)
@@ -170,6 +172,7 @@ export function UIPrefsProvider({ children }) {
     glareHover:        !!siteConfig.disabled_glare_hover,
     animatedFaq:       !!siteConfig.disabled_animated_faq,
     darkMode:          !!siteConfig.disabled_dark_mode,
+    mascotEnabled:     !!siteConfig.disabled_mascot_enabled,
   }
 
   // ── User's raw localStorage prefs (for the Settings UI toggles) ──────────
