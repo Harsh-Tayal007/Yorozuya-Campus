@@ -50,6 +50,12 @@ export const SITE_CONFIG_FALLBACK = {
   default_character:       "/mascot/assistant.vrm",
   default_animations:      "[]",
   max_loop_animations:     5,
+  interaction_head:        "/mascot/Angry.vrma",
+  interaction_chest:       "/mascot/Clapping.vrma",
+  interaction_belly:       "/mascot/Relax.vrma",
+  interaction_crotch:      "/mascot/Angry.vrma",
+  interaction_legs:        "/mascot/Jump.vrma",
+  interaction_hide:        "/mascot/Goodbye.vrma",
   // Rollback flags — all features available by default
   disabled_animated_bg:        false,
   disabled_dot_field:          false,

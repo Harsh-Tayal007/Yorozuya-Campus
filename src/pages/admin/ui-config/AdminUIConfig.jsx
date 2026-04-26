@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useQuery } from "@tanstack/react-query"
 import {
   Palette, AlertTriangle, LockKeyhole, Search, RotateCcw,
   Sparkles, LayoutGrid, Orbit, Shapes, Globe, Target,
   MonitorSmartphone, Laptop2, Check, X, Shield, Settings,
-  EyeOff, Sun, Moon, Cat
+  EyeOff, Sun, Moon, Cat, Zap
 } from "lucide-react"
 import { toast } from "sonner"
 import { useUIPrefs } from "@/context/UIPrefsContext"
@@ -295,6 +296,7 @@ export default function AdminUIConfig() {
             </section>
 
             <MascotAssetManager />
+            <MascotInteractionConfig />
           </motion.div>
         )}
 
@@ -348,6 +350,104 @@ export default function AdminUIConfig() {
 // ── Sub-components ───────────────────────────────────────────────────────────
 
 import MascotAssetManager from "./MascotAssetManager"
+
+// ── MascotInteractionConfig ───────────────────────────────────────────────────
+function MascotInteractionConfig() {
+  const { adminDefaults, refreshSiteConfig } = useUIPrefs()
+  const [saving, setSaving] = useState(false)
+
+  const { data: assets } = useQuery({
+    queryKey: ["mascot-assets"],
+    queryFn: async () => {
+      try {
+        const { databases: db } = await import("@/lib/appwrite")
+        const { Query: Q } = await import("@/lib/appwrite")
+        const { DATABASE_ID: DB, MASCOT_ASSETS_COLLECTION_ID: MAC } = await import("@/config/appwrite")
+        const res = await db.listDocuments(DB, MAC, [Q.limit(100)])
+        return res.documents
+      } catch { return [] }
+    },
+    staleTime: 60_000,
+  })
+
+  const animations = assets?.filter(a => a.type === "animation") ?? []
+
+  const ZONES = [
+    { key: "interaction_head",   label: "Head / Face",     emoji: "😠", hint: "e.g. Angry, Blush, Surprised" },
+    { key: "interaction_chest",  label: "Chest",            emoji: "👏", hint: "e.g. Clapping, Thinking" },
+    { key: "interaction_belly",  label: "Belly",            emoji: "😌", hint: "e.g. Relax, Sad, Sleepy" },
+    { key: "interaction_crotch", label: "Crotch",           emoji: "💢", hint: "e.g. Angry (between torso/legs)" },
+    { key: "interaction_legs",   label: "Legs",             emoji: "🦵", hint: "e.g. Jump, LookAround" },
+    { key: "interaction_hide",   label: "Goodbye (Hide)",   emoji: "👋", hint: "Plays when mascot is dismissed" },
+  ]
+
+  const handleChange = async (key, url) => {
+    try {
+      setSaving(true)
+      await updateSiteConfig({ [key]: url || null })
+      refreshSiteConfig()
+      toast.success("Interaction updated!")
+    } catch (err) {
+      toast.error(err?.message || "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="p-5 rounded-2xl border border-border bg-card space-y-4">
+      <div className="flex items-center gap-3 mb-1">
+        <div className="w-8 h-8 rounded-lg bg-violet-500/15 text-violet-400 flex items-center justify-center shrink-0">
+          <Zap size={16} />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-foreground">Interactive Behaviors</h3>
+          <p className="text-xs text-muted-foreground">
+            Assign animations to body-zone clicks. Assigned animations are automatically hidden from the user's Poses menu.
+          </p>
+        </div>
+      </div>
+
+      {animations.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">
+          No animations uploaded yet. Upload .vrma files in the Mascot Assets section above.
+        </p>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {ZONES.map(({ key, label, emoji, hint }) => {
+            const current = adminDefaults?.[key] ?? ""
+            return (
+              <div key={key} className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base leading-none">{emoji}</span>
+                  <span className="text-sm font-semibold text-foreground">{label}</span>
+                  {current && (
+                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 tracking-wider uppercase">
+                      Assigned
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground">{hint}</p>
+                <select
+                  disabled={saving}
+                  value={current}
+                  onChange={e => handleChange(key, e.target.value)}
+                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground
+                             focus:outline-none focus:border-primary disabled:opacity-60 cursor-pointer"
+                >
+                  <option value="">— None —</option>
+                  {animations.map(a => (
+                    <option key={a.$id} value={a.fileUrl}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
 
 function PerUserResetControl() {
   const [username, setUsername] = useState("")

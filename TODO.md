@@ -30,7 +30,11 @@
   - Consider a secondary fallback to Appwrite if the primary worker is down
 
 ## Other Features
-<!-- Add future feature TODOs here -->
+- [ ] Tauri Desktop Mascot Architecture
+  - Resolve the "Trapped Mouse" issue where the invisible Tauri window captures all OS-level mouse events.
+  - Implement `@tauri-apps/plugin-window` to dynamically toggle `setIgnoreCursorEvents(true/false)` based on hover state of the mascot.
+  - Refactor dragging logic from React DOM-based dragging to native OS window dragging (`appWindow.startDragging()`).
+  - Configure a clean dual-window architecture if needed (one window for normal web dashboard, one invisible frameless click-through window solely for the mascot).
 
 ## Future TODO
 - [ ] Add teacher-specific dashboard with attendance widgets (option 2)

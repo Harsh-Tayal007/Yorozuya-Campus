@@ -343,8 +343,23 @@ export class MascotEngine {
     this.lookTarget.position.copy(this.currentLookTarget);
   }
 
+  /**
+   * Returns the body zone that was clicked:
+   *   "head" | "chest" | "belly" | "crotch" | "legs" | null
+   *
+   * Zone thresholds (ratio from feet=0 to head=1):
+   *   legs:   0%  – 28%
+   *   crotch: 28% – 40%
+   *   belly:  40% – 58%
+   *   chest:  58% – 80%
+   *   head:   80% – 100%
+   *
+   * IMPORTANT: We recompute the world-space bounding box on every call so
+   * that scale changes (baseScaleFactor × scaleMultiplier) are reflected.
+   * This avoids the stale-bbox bug where head clicks triggered chest.
+   */
   hitTest(clientX, clientY) {
-    if (!this.camera || !this.interactiveObjects.length) return false;
+    if (!this.camera || !this.interactiveObjects.length || !this.vrm) return null;
 
     const rect = this.canvas.getBoundingClientRect();
     if (
@@ -353,7 +368,7 @@ export class MascotEngine {
       clientY < rect.top ||
       clientY > rect.bottom
     ) {
-      return false;
+      return null;
     }
 
     const ndc = new THREE.Vector2(
@@ -363,7 +378,20 @@ export class MascotEngine {
 
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects(this.interactiveObjects, true);
-    return hits.length > 0;
+    if (hits.length === 0) return null;
+
+    // Recompute the CURRENT world-space bounding box of the scaled VRM scene.
+    // This is the only reliable way to get accurate min/max Y after scaling.
+    const worldBox = new THREE.Box3().setFromObject(this.vrm.scene);
+    const minY   = worldBox.min.y;
+    const totalH = (worldBox.max.y - minY) || 1;
+    const ratio  = (hits[0].point.y - minY) / totalH; // 0 = feet, 1 = top of head
+
+    if (ratio >= 0.75) return "head";
+    if (ratio >= 0.50) return "chest";
+    if (ratio >= 0.35) return "belly";
+    if (ratio >= 0.22) return "crotch";
+    return "legs";
   }
 
   setHover(isHovered) {

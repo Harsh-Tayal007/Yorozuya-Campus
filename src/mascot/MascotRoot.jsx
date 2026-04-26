@@ -57,13 +57,18 @@ const MascotRoot = () => {
 
   // ── Global events ──────────────────────────────────────────────────────────
   useEffect(() => {
-    const onToggle  = () => uiController.toggleMascotVisible()
+    // Ctrl+M fires a hide REQUEST so the Goodbye animation plays first
+    const onToggle  = () => window.dispatchEvent(new CustomEvent("mascot-hide-request"))
     const onVrma    = (e) => engineRef.current?.playAnimationUrl(e.detail?.url)
+    // After the Goodbye animation delay, the InteractionController fires this to close
+    const onConfirm = () => uiController.toggleMascotVisible()
     window.addEventListener("mascot-toggle-visibility", onToggle)
     window.addEventListener("mascot-play-vrma", onVrma)
+    window.addEventListener("mascot-hide-confirm", onConfirm)
     return () => {
       window.removeEventListener("mascot-toggle-visibility", onToggle)
       window.removeEventListener("mascot-play-vrma", onVrma)
+      window.removeEventListener("mascot-hide-confirm", onConfirm)
     }
   }, [uiController])
 
@@ -301,6 +306,8 @@ const MascotRoot = () => {
         viewportWidth:  window.innerWidth,
         viewportHeight: window.innerHeight,
       }),
+      // Always returns the latest adminDefaults without needing to re-create the IC
+      getInteractionConfig: () => adminDefaults || {},
     })
     interactionRef.current = ic
 
@@ -411,7 +418,7 @@ const MascotRoot = () => {
         )}
       </div>
 
-      <MascotContextMenu uiState={uiState} uiController={uiController} />
+      <MascotContextMenu uiState={uiState} uiController={uiController} adminDefaults={adminDefaults} />
     </aside>
   )
 }

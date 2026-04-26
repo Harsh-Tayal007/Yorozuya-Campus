@@ -2,6 +2,9 @@ const CLICK_DISTANCE_MOUSE = 8   // slightly tighter — reduces accidental drag
 const CLICK_DISTANCE_TOUCH = 16
 const HOVER_SPEECH_COOLDOWN = 12000
 
+// Delay (ms) to wait for the hide/goodbye animation to finish before closing
+const GOODBYE_ANIM_DURATION = 2600
+
 export class InteractionController {
   constructor(options) {
     this.shell = options.shell
@@ -9,10 +12,13 @@ export class InteractionController {
     this.engine = options.engine
     this.uiController = options.uiController
     this.getShellMetrics = options.getShellMetrics
+    // Returns the current adminDefaults so interaction URLs are always fresh
+    this.getInteractionConfig = options.getInteractionConfig || (() => ({}))
     this.hovered = false
     this.dragSession = null
     this.tapCount = 0
     this.lastHoverSpeechAt = 0
+    this._goodbyeTimer = null
 
     // Bind all handlers once so removeEventListener works correctly
     this._onWindowPointerDown = this._onWindowPointerDown.bind(this)
@@ -21,6 +27,7 @@ export class InteractionController {
     this._onWindowPointerCancel = this._onWindowPointerCancel.bind(this)
     this._onContextMenu = this._onContextMenu.bind(this)
     this._onWheel = this._onWheel.bind(this)
+    this._onHideRequest = this._onHideRequest.bind(this)
 
     // Use capture phase to intercept events before the underlying DOM gets them
     window.addEventListener("pointerdown", this._onWindowPointerDown, { capture: true })
@@ -29,6 +36,7 @@ export class InteractionController {
     window.addEventListener("pointercancel", this._onWindowPointerCancel, { capture: true })
     window.addEventListener("contextmenu", this._onContextMenu, { capture: true })
     window.addEventListener("wheel", this._onWheel, { capture: true, passive: false })
+    window.addEventListener("mascot-hide-request", this._onHideRequest)
   }
 
   destroy() {
@@ -38,6 +46,9 @@ export class InteractionController {
     window.removeEventListener("pointercancel", this._onWindowPointerCancel, { capture: true })
     window.removeEventListener("contextmenu", this._onContextMenu, { capture: true })
     window.removeEventListener("wheel", this._onWheel, { capture: true })
+    window.removeEventListener("mascot-hide-request", this._onHideRequest)
+
+    if (this._goodbyeTimer) { clearTimeout(this._goodbyeTimer); this._goodbyeTimer = null }
 
     // Reset any lingering state
     this.engine?.setHover(false)
@@ -68,8 +79,8 @@ export class InteractionController {
     if (state.contextMenuOpen) return
 
     // Precise pixel-perfect hit test against the 3D mascot mesh
-    const hit = this.engine.hitTest(event.clientX, event.clientY)
-    if (!hit) return
+    const zone = this.engine.hitTest(event.clientX, event.clientY)
+    if (!zone) return
 
     // HIT! We intercept this event so underlying website isn't clicked.
     event.stopPropagation()
@@ -132,12 +143,13 @@ export class InteractionController {
     }
 
     // Not dragging, just hover tracking
-    const hit = this.engine.hitTest(event.clientX, event.clientY)
-    if (hit !== this.hovered) {
-      this.hovered = hit
-      this.engine.setHover(hit)
-      this.uiController.setHovered(hit)
-      if (hit) this._maybeSpeakHover()
+    const zone = this.engine.hitTest(event.clientX, event.clientY)
+    const isHit = zone !== null
+    if (isHit !== this.hovered) {
+      this.hovered = isHit
+      this.engine.setHover(isHit)
+      this.uiController.setHovered(isHit)
+      if (isHit) this._maybeSpeakHover()
     }
   }
 
@@ -166,20 +178,74 @@ export class InteractionController {
 
     // Tap/click interaction
     const isTouch = pointerType === "touch"
+    const zone = this.engine.hitTest(event.clientX, event.clientY)
+    const isHit = zone !== null
+
+    this.engine.setHover(isHit)
+    this.uiController.setHovered(isHit)
+
+    if (!isHit) return
+
     if (isTouch) {
+      // Touch: generic wave fallback
       this.engine.triggerReaction("wave")
       this.uiController.speak(this._getTapReply(), { duration: 2400 })
       return
     }
 
-    const hit = this.engine.hitTest(event.clientX, event.clientY)
-    this.engine.setHover(hit)
-    this.uiController.setHovered(hit)
+    // Mouse click — play the zone-specific interaction animation
+    this._playZoneAnimation(zone)
+  }
 
-    if (hit) {
-      this.engine.triggerReaction("wave")
-      this.uiController.speak(this._getTapReply(), { duration: 2400 })
+  /**
+   * Looks up the admin-configured animation URL for a hit zone and plays it.
+   * Falls back to a generic wave reaction if no URL is configured.
+   */
+  _playZoneAnimation(zone) {
+    const config  = this.getInteractionConfig()
+    const zoneKey = `interaction_${zone}` // e.g. interaction_head
+    const url     = config[zoneKey]
+
+    // Zone-specific speech
+    const speechMap = {
+      head:   "Hey! That tickles!",
+      chest:  "Wah!",
+      belly:  "Stop it~",
+      crotch: "H-HOW DARE YOU!",
+      legs:   "Woah!",
     }
+    this.uiController.speak(speechMap[zone] ?? this._getTapReply(), { duration: 2400 })
+
+    if (url) {
+      window.dispatchEvent(new CustomEvent("mascot-play-vrma", { detail: { url } }))
+    } else {
+      // Graceful fallback to built-in wave
+      this.engine.triggerReaction("wave")
+    }
+  }
+
+  /**
+   * Handles mascot-hide-request events dispatched by MascotRoot.
+   * Plays the goodbye animation then dispatches mascot-hide-confirm after a delay.
+   */
+  _onHideRequest() {
+    const config   = this.getInteractionConfig()
+    const hideUrl  = config.interaction_hide
+
+    if (hideUrl) {
+      window.dispatchEvent(new CustomEvent("mascot-play-vrma", { detail: { url: hideUrl } }))
+    } else {
+      this.engine.triggerReaction("wave")
+    }
+
+    this.uiController.speak("Goodbye! See you soon!", { duration: 2200 })
+
+    // Wait for animation to finish, then confirm the hide
+    if (this._goodbyeTimer) clearTimeout(this._goodbyeTimer)
+    this._goodbyeTimer = setTimeout(() => {
+      this._goodbyeTimer = null
+      window.dispatchEvent(new CustomEvent("mascot-hide-confirm"))
+    }, GOODBYE_ANIM_DURATION)
   }
 
   _onWindowPointerCancel(event) {

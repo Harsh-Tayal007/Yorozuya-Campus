@@ -11,7 +11,7 @@ import AssetCacheManager from "./AssetCacheManager"
 const MENU_W = 256
 const MENU_MAX_H = 380
 
-export default function MascotContextMenu({ uiState, uiController }) {
+export default function MascotContextMenu({ uiState, uiController, adminDefaults }) {
   const [activeTab, setActiveTab] = useState("main")
   const menuRef = useRef(null)
   const [cachedAssets, setCachedAssets] = useState(new Map())
@@ -53,7 +53,15 @@ export default function MascotContextMenu({ uiState, uiController }) {
   })
 
   const characters = assets?.filter((a) => a.type === "character") ?? []
-  const animations = assets?.filter((a) => a.type === "animation") ?? []
+  const allAnimations = assets?.filter((a) => a.type === "animation") ?? []
+
+  // Auto-hide any animation that is currently assigned to an interaction zone
+  const interactionUrls = new Set(
+    ["interaction_head", "interaction_chest", "interaction_belly", "interaction_crotch", "interaction_legs", "interaction_hide"]
+      .map(k => adminDefaults?.[k])
+      .filter(Boolean)
+  )
+  const animations = allAnimations.filter(a => !interactionUrls.has(a.fileUrl))
 
   // Fetch remote sizes for assets that aren't cached
   useEffect(() => {
