@@ -72,6 +72,7 @@ export class UIController {
           typeof parsed.mascotScale === "number"
             ? clamp(parsed.mascotScale, 0.5, 1.6)
             : 1.0,
+        sequenceUrls: Array.isArray(parsed.sequenceUrls) ? parsed.sequenceUrls : [],
       }
     } catch {
       return {}
@@ -93,6 +94,7 @@ export class UIController {
           character: this.state.character,
           position: this.state.position,
           mascotScale: this.state.mascotScale,
+          sequenceUrls: this.state.sequenceUrls,
         }),
       )
     } catch {
@@ -229,6 +231,48 @@ export class UIController {
       y: Math.round(
         clamp(position.y, padding, Math.max(padding, viewportHeight - height - bottomPadding)),
       ),
+    }
+  }
+
+  snapToEdge(metrics = {}) {
+    if (!this.state.position) return
+
+    const viewportWidth = metrics.viewportWidth ?? window.innerWidth
+    const viewportHeight = metrics.viewportHeight ?? window.innerHeight
+    const width = metrics.width ?? 1600
+    const height = metrics.height ?? 1600
+    const padding = metrics.padding ?? -(width / 2) + 50
+    const bottomPadding = metrics.bottomPadding ?? -(height / 2) + 50
+
+    const minX = padding
+    const maxX = Math.max(padding, viewportWidth - width - padding)
+    const maxY = Math.max(padding, viewportHeight - height - bottomPadding)
+
+    const distLeft = this.state.position.x - minX
+    const distRight = maxX - this.state.position.x
+    const distBottom = maxY - this.state.position.y
+
+    const SNAP_THRESHOLD = 150 // pixels
+
+    let newX = this.state.position.x
+    let newY = this.state.position.y
+
+    // Magnetic snap to left/right
+    if (distLeft < SNAP_THRESHOLD && distLeft < distRight) {
+      newX = minX
+    } else if (distRight < SNAP_THRESHOLD) {
+      newX = maxX
+    }
+
+    // Magnetic snap to bottom
+    if (distBottom < SNAP_THRESHOLD) {
+      newY = maxY
+    }
+
+    if (newX !== this.state.position.x || newY !== this.state.position.y) {
+      this.state.position = { x: newX, y: newY }
+      this.persistPrefs()
+      this.emit()
     }
   }
 

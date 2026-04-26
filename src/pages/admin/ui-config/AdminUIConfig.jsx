@@ -80,10 +80,11 @@ export default function AdminUIConfig() {
   }
 
   // --- Actions ---
-  const handleToggleDefault = async (key, val) => {
+  const handleToggleDefault = async (key, val, rawKey = false) => {
     try {
       setLoading(true)
-      await updateSiteConfig({ [`pref_${key}`]: val })
+      const fieldKey = rawKey ? key : `pref_${key}`
+      await updateSiteConfig({ [fieldKey]: val })
       refreshSiteConfig()
       toast.success(`Default for ${key} updated`)
     } catch (err) {
@@ -269,7 +270,30 @@ export default function AdminUIConfig() {
 
         {/* --- MASCOTS TAB --- */}
         {activeTab === "mascots" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            
+            <section className="p-5 rounded-2xl border border-border bg-card">
+              <h3 className="text-base font-semibold text-foreground mb-4">Mascot Configuration</h3>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Max Loop Animations in Sequencer</label>
+                <p className="text-xs text-muted-foreground mb-4 max-w-lg">
+                  Limit the number of custom animations a user can add to their own sequence in Dashboard Settings. Does not limit the Global Default Sequence.
+                </p>
+                <div className="flex items-center gap-4 max-w-[200px]">
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    disabled={loading}
+                    value={adminDefaults?.max_loop_animations || 5}
+                    onChange={(e) => handleToggleDefault('max_loop_animations', parseInt(e.target.value, 10), true)}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-semibold w-6 text-center">{adminDefaults?.max_loop_animations || 5}</span>
+                </div>
+              </div>
+            </section>
+
             <MascotAssetManager />
           </motion.div>
         )}

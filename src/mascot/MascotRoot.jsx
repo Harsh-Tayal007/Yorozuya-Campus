@@ -9,9 +9,10 @@ import "./mascot.css"
 
 const MODEL_URL = "/mascot/assistant.vrm"
 
-// Base dimensions at scale 1.0 — kept conservative so character is never clipped
-const BASE_WIDTH  = 640   // Extra wide for kicks and broad gestures
-const BASE_HEIGHT = 640   // Extra tall for jumps and high kicks
+// Base dimensions — extra large to prevent clipping during wide animations.
+// pointer-events: none on the container means this huge size doesn't block the site.
+const BASE_WIDTH  = 1600   
+const BASE_HEIGHT = 1600   
 
 // How much clearance to leave at the bottom edge (navbar / taskbar)
 const BOTTOM_PADDING = 32
@@ -21,15 +22,21 @@ const isCoarsePointer = () =>
   (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768)
 
 /** Stable metrics object — avoids recreating on every render */
-const makeMetrics = (w, h) => ({
-  width: w,
-  height: h,
-  padding: 12,
-  bottomPadding: BOTTOM_PADDING,
-})
+const makeMetrics = (w, h) => {
+  // Since the canvas is 1600x1600 but the mascot only occupies the center ~300px,
+  // we must use negative padding to allow the transparent container edges to go off-screen.
+  // This allows the actual mascot in the center to reach the edges of the screen.
+  const edgeMargin = 50 // minimum visible pixels before stopping
+  return {
+    width: w,
+    height: h,
+    padding: -(w / 2) + edgeMargin,
+    bottomPadding: -(h / 2) + edgeMargin,
+  }
+}
 
 const MascotRoot = () => {
-  const { disabled, resolved } = useUIPrefs()
+  const { disabled, resolved, adminDefaults, globallyLocked, userLocked, stalePrefs } = useUIPrefs()
   const [uiController] = useState(() => new UIController())
   const [uiState, setUiState]   = useState(uiController.getState())
 
@@ -124,19 +131,27 @@ const MascotRoot = () => {
     canvas.width  = w * Math.min(window.devicePixelRatio, 1.8)
     canvas.height = h * Math.min(window.devicePixelRatio, 1.8)
 
-    const characterUrl = uiState.character || MODEL_URL
-
     uiController.setReady(false)
     uiController.setLoading(true)
     uiController.setError("")
 
+    // ── Compute effective configuration ───────────────────────────────────────
+    const forceAdmin = globallyLocked || userLocked || stalePrefs
+    const adminChar = adminDefaults?.default_character || MODEL_URL
+    let adminAnims = []
+    try { adminAnims = JSON.parse(adminDefaults?.default_animations || "[]") } catch {}
+
+    const effectiveCharacter = forceAdmin ? adminChar : (uiState.character || adminChar)
+    const effectiveSequenceUrls = forceAdmin ? adminAnims : (uiState.sequenceUrls?.length ? uiState.sequenceUrls : adminAnims)
+
     const engine = new MascotEngine({
       canvas,
-      modelUrl: characterUrl,
+      modelUrl: effectiveCharacter,
       isMobile: isCoarsePointer(),
+      sequenceUrls: effectiveSequenceUrls,
     })
     engineRef.current  = engine
-    prevCharRef.current = characterUrl
+    prevCharRef.current = effectiveCharacter
 
     // Initialise on next frame so the canvas has been laid out by the browser
     rafId = requestAnimationFrame(() => {
@@ -186,15 +201,18 @@ const MascotRoot = () => {
   // ── Character hot-swap ────────────────────────────────────────────────────
   useEffect(() => {
     const engine  = engineRef.current
-    const newChar = uiState.character
-    if (!engine || !uiState.isReady || !newChar) return
-    if (newChar === prevCharRef.current) return
+    const forceAdmin = globallyLocked || userLocked || stalePrefs
+    const adminChar = adminDefaults?.default_character || MODEL_URL
+    const effectiveCharacter = forceAdmin ? adminChar : (uiState.character || adminChar)
 
-    prevCharRef.current = newChar
+    if (!engine || !uiState.isReady || !effectiveCharacter) return
+    if (effectiveCharacter === prevCharRef.current) return
+
+    prevCharRef.current = effectiveCharacter
     uiController.setLoading(true)
     uiController.setError("")
 
-    engine.loadModel(newChar)
+    engine.loadModel(effectiveCharacter)
       .then(() => {
         engine.setScaleMultiplier(scale)
         uiController.setLoading(false)
@@ -205,7 +223,26 @@ const MascotRoot = () => {
         uiController.setError("Failed to load character.")
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiState.character, uiState.isReady])
+  }, [uiState.character, uiState.isReady, adminDefaults?.default_character, globallyLocked, userLocked, stalePrefs])
+
+  // ── Sequence hot-swap ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine || !uiState.isReady) return
+
+    const forceAdmin = globallyLocked || userLocked || stalePrefs
+    let adminAnims = []
+    try { adminAnims = JSON.parse(adminDefaults?.default_animations || "[]") } catch {}
+    const effectiveSequenceUrls = forceAdmin ? adminAnims : (uiState.sequenceUrls?.length ? uiState.sequenceUrls : adminAnims)
+
+    if (!effectiveSequenceUrls) return
+
+    // Prevent duplicate loading by storing the last sequence reference
+    if (JSON.stringify(engine.sequenceUrls) === JSON.stringify(effectiveSequenceUrls)) return
+    engine.sequenceUrls = effectiveSequenceUrls
+    engine.loadSequence(effectiveSequenceUrls)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uiState.sequenceUrls, uiState.isReady, adminDefaults?.default_animations, globallyLocked, userLocked, stalePrefs])
 
   // ── Renderer resize — RAF-debounced so CSS transitions don't thrash it ────
   //
@@ -347,11 +384,6 @@ const MascotRoot = () => {
       style={shellStyle}
       aria-live="polite"
     >
-      {/* Speech bubble */}
-      <div className={`mascot-bubble ${uiState.bubble.visible ? "is-visible" : ""}`}>
-        {uiState.bubble.message}
-      </div>
-
       {/* 3D stage — no explicit width/height attrs; CSS vars + WebGL handle it */}
       <div ref={stageRef} className="mascot-stage">
         <canvas
@@ -377,16 +409,6 @@ const MascotRoot = () => {
             </div>
           </div>
         )}
-
-        <button
-          type="button"
-          className="mascot-close-btn"
-          aria-label="Close mascot"
-          data-mascot-ignore-interaction="true"
-          onClick={() => uiController.setClosed(true)}
-        >
-          <X size={12} />
-        </button>
       </div>
 
       <MascotContextMenu uiState={uiState} uiController={uiController} />

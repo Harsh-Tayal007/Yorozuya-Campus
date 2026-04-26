@@ -21,7 +21,8 @@ import { getUniversities } from "@/services/university/universityService"
 import { getProgramsByUniversity } from "@/services/university/programService"
 import { getBranchesByProgram } from "@/services/university/branchService"
 import { uploadAvatar } from "@/services/user/profileService"
-import { account, functions } from "@/lib/appwrite"
+import { account, functions, databases, Query } from "@/lib/appwrite"
+import { DATABASE_ID, MASCOT_ASSETS_COLLECTION_ID } from "@/config/appwrite"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { usePush } from "@/context/PushNotificationContext"
 import DeleteAccountModal from "@/components/modals/DeleteAccountModal"
@@ -31,6 +32,16 @@ import { deleteAccountPermanently } from "@/services/user/deleteAccountService"
 import { changeUsername } from "@/services/user/changeUsernameService"
 import { generateUsernameCandidate, isUsernameAvailable } from "@/services/admin/authService"
 import { upsertSavedAccount } from "@/lib/savedAccounts"
+import AssetCacheManager from "@/mascot/AssetCacheManager"
+
+const formatBytes = (bytes, decimals = 2) => {
+  if (!+bytes) return '0 Bytes'
+  const k = 1024
+  const dm = decimals < 0 ? 0 : decimals
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
+}
 
 const YEAR_OPTIONS = [
   { value: "1", label: "1st Year" }, { value: "2", label: "2nd Year" },
@@ -1502,13 +1513,59 @@ const writeMascotPref = (key, value) => {
 }
 
 const MascotTab = () => {
-  const { disabled, setUserPref } = useUIPrefs()
+  const { disabled, setUserPref, adminDefaults } = useUIPrefs()
+  const maxLoopAnimations = adminDefaults?.max_loop_animations || 5
   const prefs = readMascotPrefs()
 
   const [visible,   setVisible]   = useState(prefs.mascotVisible   !== false)
   const [minimized, setMinimized] = useState(Boolean(prefs.isMinimized))
   const [sfx,       setSfx]       = useState(prefs.sfxEnabled      !== false)
-  const [character, setCharacter] = useState(prefs.character ?? "assistant.vrm")
+  const [sequenceUrls, setSequenceUrls] = useState(prefs.sequenceUrls ?? [])
+
+  const { data: assets } = useQuery({
+    queryKey: ["mascot-assets"],
+    queryFn: async () => {
+      try {
+        const res = await databases.listDocuments(DATABASE_ID, MASCOT_ASSETS_COLLECTION_ID, [Query.limit(100)])
+        return res.documents
+      } catch (err) {
+        return []
+      }
+    },
+    staleTime: 0,
+  })
+
+  const animations = assets?.filter((a) => a.type === "animation") ?? []
+
+  const [cachedAssets, setCachedAssets] = useState([])
+  const [cacheLoading, setCacheLoading] = useState(true)
+
+  useEffect(() => {
+    loadCache()
+  }, [])
+
+  const loadCache = async () => {
+    setCacheLoading(true)
+    const assets = await AssetCacheManager.getCachedAssets()
+    setCachedAssets(assets)
+    setCacheLoading(false)
+  }
+
+  const handleDeleteAsset = async (url) => {
+    await AssetCacheManager.deleteAsset(url)
+    loadCache()
+    toast.success("Asset removed from local storage")
+  }
+
+  const handleClearCache = async () => {
+    if (window.confirm("Clear all downloaded mascot assets from local storage? They will be downloaded again when needed.")) {
+      await AssetCacheManager.clearAll()
+      loadCache()
+      toast.success("Mascot cache cleared")
+    }
+  }
+
+  const totalCacheSize = cachedAssets.reduce((acc, curr) => acc + (curr.size || 0), 0)
 
   const apply = (key, setter, value) => {
     setter(value)
@@ -1532,12 +1589,6 @@ const MascotTab = () => {
   const handleSfxToggle = (v) => {
     apply("sfxEnabled", setSfx, v)
     toast.success(v ? "Mascot sounds enabled" : "Mascot sounds muted")
-  }
-
-  const handleCharacterSelect = (id) => {
-    setCharacter(id)
-    writeMascotPref("character", id)
-    toast.success("Character changed — reload to apply")
   }
 
   return (
@@ -1597,28 +1648,151 @@ const MascotTab = () => {
         </PrefRow>
       </Section>
 
-      <Section title="Character">
+      <Section title="Downloads & Storage">
         <div className="py-3">
-          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Select your companion character. More VRM models coming soon.
-          </p>
-          <div className="mascot-char-grid">
-            {CHARACTERS.map((char) => (
-              <button
-                key={char.id}
-                type="button"
-                className={`mascot-char-card ${character === char.id ? "is-selected" : ""}`}
-                onClick={() => handleCharacterSelect(char.id)}
-              >
-                <div className="mascot-char-thumb"><span>{char.emoji}</span></div>
-                <span className="mascot-char-name">{char.name}</span>
-                {char.badge && <span className="mascot-char-badge">{char.badge}</span>}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">Local Asset Cache</p>
+              <p className="text-xs text-muted-foreground mt-0.5 max-w-sm leading-relaxed">
+                Downloaded characters and animations are saved locally to speed up loading and save bandwidth.
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-xs font-semibold text-foreground mb-1">Total Used: {formatBytes(totalCacheSize)}</p>
+              <button onClick={handleClearCache} disabled={cachedAssets.length === 0}
+                className="text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                Clear All
               </button>
-            ))}
-            <div className="mascot-char-card" style={{ opacity: 0.45, cursor: "not-allowed", pointerEvents: "none" }}>
-              <div className="mascot-char-thumb">✨</div>
-              <span className="mascot-char-name">More soon</span>
-              <span className="mascot-char-badge">Coming</span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/50 bg-background overflow-hidden overflow-x-auto custom-scrollbar">
+            {cacheLoading ? (
+              <div className="py-8 flex justify-center"><Loader2 size={16} className="animate-spin text-muted-foreground" /></div>
+            ) : cachedAssets.length === 0 ? (
+              <div className="py-8 text-center text-xs text-muted-foreground">No assets currently cached.</div>
+            ) : (
+              <div className="min-w-[400px]">
+                {cachedAssets.map(asset => (
+                  <div key={asset.url} className="flex items-center justify-between p-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                    <div className="flex flex-col min-w-0 pr-4">
+                      <span className="text-sm font-medium text-foreground truncate">{asset.name || "Unknown Asset"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">
+                        {asset.type} • {new Date(asset.cachedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                        {formatBytes(asset.size)}
+                      </span>
+                      <button onClick={() => handleDeleteAsset(asset.url)}
+                        className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                        title="Delete from cache">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Animation Sequencer">
+        <div className="py-3">
+          <p className="text-sm font-medium text-foreground mb-1">Custom Loop Sequence</p>
+          <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+            Select the animations you want your companion to loop through when idle. Drag to reorder.
+          </p>
+
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Available Animations */}
+            <div className="flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex justify-between">
+                <span>Available Poses</span>
+                <span className="font-mono text-[10px] bg-muted/50 px-1.5 py-0.5 rounded">{sequenceUrls.length} / {maxLoopAnimations}</span>
+              </p>
+              <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                {animations.map(anim => {
+                  const isAdded = sequenceUrls.includes(anim.fileUrl)
+                  const atLimit = !isAdded && sequenceUrls.length >= maxLoopAnimations
+                  return (
+                    <div key={anim.$id} className={`flex items-center justify-between p-2.5 rounded-lg border text-sm transition-colors ${isAdded ? 'border-primary/30 bg-primary/5 text-foreground/70' : 'border-border/50 bg-background hover:border-border'}`}>
+                      <span className="truncate pr-2">{anim.name}</span>
+                      <button
+                        disabled={isAdded || atLimit}
+                        title={atLimit ? "Maximum animations reached" : ""}
+                        onClick={() => {
+                          const newSeq = [...sequenceUrls, anim.fileUrl]
+                          apply("sequenceUrls", setSequenceUrls, newSeq)
+                        }}
+                        className="text-xs font-medium px-2 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-30 disabled:hover:bg-muted transition-colors shrink-0"
+                      >
+                        {isAdded ? "Added" : atLimit ? "Full" : "Add"}
+                      </button>
+                    </div>
+                  )
+                })}
+                {animations.length === 0 && <p className="text-xs text-muted-foreground py-4 text-center">No animations available.</p>}
+              </div>
+            </div>
+
+            {/* Sequence */}
+            <div className="flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex justify-between items-center">
+                <span>Your Sequence</span>
+                {sequenceUrls.length > 0 && (
+                  <button onClick={() => apply("sequenceUrls", setSequenceUrls, [])} className="text-[10px] text-red-400 hover:text-red-500 hover:underline">Clear</button>
+                )}
+              </p>
+              <div className="space-y-1.5 min-h-[100px] p-3 rounded-xl border border-dashed border-border/60 bg-muted/20">
+                {sequenceUrls.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-6 text-muted-foreground">
+                    <span className="text-xs">Sequence is empty.</span>
+                    <span className="text-[10px] mt-1">Default random idle poses will play instead.</span>
+                  </div>
+                ) : (
+                  sequenceUrls.map((url, index) => {
+                    const anim = animations.find(a => a.fileUrl === url)
+                    const name = anim ? anim.name : "Unknown Pose"
+                    return (
+                      <div
+                        key={`${url}-${index}`}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData("text/plain", index.toString())}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10)
+                          if (fromIdx === index) return
+                          const newSeq = [...sequenceUrls]
+                          const [moved] = newSeq.splice(fromIdx, 1)
+                          newSeq.splice(index, 0, moved)
+                          apply("sequenceUrls", setSequenceUrls, newSeq)
+                        }}
+                        className="flex items-center justify-between p-2.5 rounded-lg border border-primary/20 bg-primary/10 text-sm cursor-grab active:cursor-grabbing hover:bg-primary/15 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <span className="text-[10px] font-mono text-primary bg-background/50 px-1.5 py-0.5 rounded">{index + 1}</span>
+                          <span className="truncate font-medium">{name}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const newSeq = [...sequenceUrls]
+                            newSeq.splice(index, 1)
+                            apply("sequenceUrls", setSequenceUrls, newSeq)
+                          }}
+                          className="text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0"
+                          title="Remove from sequence"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
           </div>
         </div>

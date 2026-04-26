@@ -3,12 +3,14 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { VRMAnimationLoaderPlugin } from "@pixiv/three-vrm-animation";
 import AnimationController from "./AnimationController";
+import AssetCacheManager from "./AssetCacheManager";
 
 export class MascotEngine {
   constructor(options) {
     this.canvas = options.canvas;
     this.modelUrl = options.modelUrl;
     this.isMobile = options.isMobile ?? false;
+    this.sequenceUrls = options.sequenceUrls || [];
 
     this.renderer = null;
     this.scene = null;
@@ -97,8 +99,15 @@ export class MascotEngine {
     );
     this.loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
 
+    // Get local blob URL via cache manager if it's a remote URL
+    let localUrl = url;
+    if (url && url.startsWith("http")) {
+      // We pass generic name since the manager can extract info from URL
+      localUrl = await AssetCacheManager.getOrDownload(url, "Character", "character");
+    }
+
     const gltf = await new Promise((resolve, reject) => {
-      this.loader.load(url, resolve, undefined, reject);
+      this.loader.load(localUrl, resolve, undefined, reject);
     });
 
     if (this.disposed) {
@@ -157,34 +166,48 @@ export class MascotEngine {
     this.vrm = vrm;
     this.animationController.attach(vrm);
 
+    // Load Sequence Animations if available
+    if (this.sequenceUrls && this.sequenceUrls.length > 0) {
+      this.loadSequence(this.sequenceUrls);
+    }
+  }
+
+  async loadSequence(urls) {
     try {
-      const vrmaFiles = ["idle.vrma", "kiss_fox.vrma", "kawaii_kaiwai.vrma", "countach.vrma"];
-      const loadedAnimations = [];
-      for (const file of vrmaFiles) {
-        try {
-          const animGltf = await new Promise((resolve, reject) => {
-            this.loader.load(`/mascot/animations/${file}`, resolve, undefined, reject);
-          });
-          if (animGltf.userData.vrmAnimations && animGltf.userData.vrmAnimations.length > 0) {
-            loadedAnimations.push(animGltf.userData.vrmAnimations[0]);
-          }
-        } catch (err) {
-          console.warn(`Could not load VRMA: ${file}`, err);
+      const vrmAnimations = [];
+      for (const url of urls) {
+        if (!url) continue;
+        let localUrl = url;
+        if (url.startsWith("http")) {
+          localUrl = await AssetCacheManager.getOrDownload(url, "Animation", "animation");
+        }
+        const animGltf = await new Promise((resolve, reject) => {
+          this.loader.load(localUrl, resolve, undefined, reject);
+        });
+        if (animGltf.userData.vrmAnimations && animGltf.userData.vrmAnimations.length > 0) {
+          vrmAnimations.push(animGltf.userData.vrmAnimations[0]);
         }
       }
-      if (loadedAnimations.length > 0) {
-        this.animationController.loadVRMAs(loadedAnimations);
+      if (vrmAnimations.length > 0) {
+        this.animationController.loadVRMAs(vrmAnimations);
+      } else {
+        // Fallback to procedural if sequence is empty or fails
+        this.animationController._disposeMixer();
       }
-    } catch (e) {
-      console.error("Failed to load VRMAs", e);
+    } catch (err) {
+      console.error("Failed to load animation sequence:", err);
     }
   }
 
   async playAnimationUrl(url) {
     if (!url) return;
     try {
+      let localUrl = url;
+      if (url.startsWith("http")) {
+        localUrl = await AssetCacheManager.getOrDownload(url, "Animation", "animation");
+      }
       const animGltf = await new Promise((resolve, reject) => {
-        this.loader.load(url, resolve, undefined, reject);
+        this.loader.load(localUrl, resolve, undefined, reject);
       });
       if (animGltf.userData.vrmAnimations && animGltf.userData.vrmAnimations.length > 0) {
         const vrma = animGltf.userData.vrmAnimations[0];

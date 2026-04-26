@@ -46,6 +46,10 @@ export const SITE_CONFIG_FALLBACK = {
   pref_glare_hover:        true,
   pref_animated_faq:       true,
   pref_dark_mode:          true, // Default to dark mode
+  pref_mascot_enabled:     true,
+  default_character:       "/mascot/assistant.vrm",
+  default_animations:      "[]",
+  max_loop_animations:     5,
   // Rollback flags — all features available by default
   disabled_animated_bg:        false,
   disabled_dot_field:          false,
@@ -57,6 +61,7 @@ export const SITE_CONFIG_FALLBACK = {
   disabled_glare_hover:        false,
   disabled_animated_faq:       false,
   disabled_dark_mode:          false,
+  disabled_mascot_enabled:     false,
   // Locks
   user_prefs_globally_locked: false,
 }
