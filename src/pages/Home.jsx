@@ -149,8 +149,8 @@ export default function Home() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["public-stats"],
     queryFn: getPublicStats,
-    staleTime: 1000 * 60 * 60,
-    gcTime: 1000 * 60 * 60 * 24,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   })
 
   const openAuth = (mode = "signup") => setAuthModal({ open: true, mode })

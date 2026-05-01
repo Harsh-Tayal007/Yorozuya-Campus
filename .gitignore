@@ -27,3 +27,8 @@ dist-ssr
 .env.*
 
 .vercel
+
+# Reference Files
+.caveman.md
+mascot_plan.md
+public/mascot/README.md

@@ -1,20 +1,20 @@
 import { databases } from "@/lib/appwrite"
-import { DATABASE_ID } from "@/config/appwrite"
-
-const collections = {
-  syllabus: "syllabus",
-  units: "units",
-  resources: "resources",
-  pyqs: "pyqs",
-}
+import { Query } from "appwrite"
+import {
+  DATABASE_ID,
+  SYLLABUS_COLLECTION_ID,
+  UNITS_COLLECTION_ID,
+  RESOURCES_COLLECTION_ID,
+  PYQS_COLLECTION_ID
+} from "@/config/appwrite"
 
 export async function getPublicStats() {
   try {
     const [syllabus, units, resources, pyqs] = await Promise.all([
-      databases.listDocuments(DATABASE_ID, collections.syllabus),
-      databases.listDocuments(DATABASE_ID, collections.units),
-      databases.listDocuments(DATABASE_ID, collections.resources),
-      databases.listDocuments(DATABASE_ID, collections.pyqs),
+      databases.listDocuments(DATABASE_ID, SYLLABUS_COLLECTION_ID, [Query.limit(1)]),
+      databases.listDocuments(DATABASE_ID, UNITS_COLLECTION_ID, [Query.limit(1)]),
+      databases.listDocuments(DATABASE_ID, RESOURCES_COLLECTION_ID, [Query.limit(1)]),
+      databases.listDocuments(DATABASE_ID, PYQS_COLLECTION_ID, [Query.limit(1)]),
     ])
 
     return {
