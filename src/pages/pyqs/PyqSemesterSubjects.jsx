@@ -89,7 +89,7 @@ const PyqSemesterSubjects = ({ programId: propProgramId, branchName: propBranchN
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground group-hover:text-red-400 transition-colors truncate">{subject.subjectName}</p>
-                      {subject.description && <p className="text-[11px] text-muted-foreground truncate">{subject.description}</p>}
+                      {subject.description && <p className="text-[11px] text-muted-foreground/80 line-clamp-2 mt-0.5">{subject.description}</p>}
                     </div>
                   </div>
                   <ArrowUpRight size={14} className="text-muted-foreground/40 group-hover:text-red-400 transition-all shrink-0" />

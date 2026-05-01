@@ -180,7 +180,7 @@ export default function SyllabusUserView({
                       <p className="text-sm font-semibold text-foreground truncate">{subject.subjectName}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {subject.description && (
-                          <span className="text-[11px] text-muted-foreground truncate">{subject.description}</span>
+                          <p className="text-[11px] text-muted-foreground/80 line-clamp-2 mt-0.5">{subject.description}</p>
                         )}
                         {fileSizes[subject.pdfFileId] > 0 && (
                           <span className="hidden sm:inline-block text-[11px] text-muted-foreground/60 shrink-0">

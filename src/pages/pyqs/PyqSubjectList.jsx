@@ -133,6 +133,11 @@ const PyqSubjectList = ({ programId: propProgramId, branchName: propBranchName, 
                           </span>
                         )}
                       </div>
+                      {pyq.description && (
+                        <p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 max-w-xl">
+                          {pyq.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
