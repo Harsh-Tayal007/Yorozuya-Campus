@@ -56,6 +56,7 @@ export const SITE_CONFIG_FALLBACK = {
   interaction_crotch:      "/mascot/Angry.vrma",
   interaction_legs:        "/mascot/Jump.vrma",
   interaction_hide:        "/mascot/Goodbye.vrma",
+  interaction_config:      "{}", // JSON string replacing the individual interaction fields
   // Rollback flags — all features available by default
   disabled_animated_bg:        false,
   disabled_dot_field:          false,

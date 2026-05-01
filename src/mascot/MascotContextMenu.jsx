@@ -56,11 +56,20 @@ export default function MascotContextMenu({ uiState, uiController, adminDefaults
   const allAnimations = assets?.filter((a) => a.type === "animation") ?? []
 
   // Auto-hide any animation that is currently assigned to an interaction zone
-  const interactionUrls = new Set(
-    ["interaction_head", "interaction_chest", "interaction_belly", "interaction_crotch", "interaction_legs", "interaction_hide"]
+  const currentAsset = assets?.find(a => a.fileUrl === uiState.character)
+  
+  let configStr = currentAsset?.interaction_config || adminDefaults?.interaction_config || "{}"
+  let parsedConfig = {}
+  try {
+    parsedConfig = JSON.parse(configStr)
+  } catch (e) {}
+
+  const interactionUrls = new Set([
+    ...Object.values(parsedConfig).map(v => v.animation),
+    ...["interaction_head", "interaction_chest", "interaction_belly", "interaction_crotch", "interaction_legs", "interaction_hide"]
       .map(k => adminDefaults?.[k])
-      .filter(Boolean)
-  )
+  ].filter(Boolean))
+
   const animations = allAnimations.filter(a => !interactionUrls.has(a.fileUrl))
 
   // Fetch remote sizes for assets that aren't cached
@@ -138,10 +147,21 @@ export default function MascotContextMenu({ uiState, uiController, adminDefaults
   }, [uiState.contextMenuOpen])
 
   const handleSfxToggle = () => {
-    toast("Sound integration coming soon!", {
-      description: "Interactive voice and SFX are still in development.",
-      icon: <VolumeX className="text-muted-foreground w-4 h-4" />,
-    })
+    uiController.setSfxEnabled(!uiState.sfxEnabled)
+  }
+
+  const handleVolumeChange = (e) => {
+    const uiVal = parseFloat(e.target.value)
+    uiController.setSfxVolume(uiVal / 100)
+  }
+
+  const handleWheelOnVolume = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const step = 0.05
+    const delta = e.deltaY > 0 ? -step : step
+    const newVal = Math.min(Math.max((uiState.sfxVolume ?? 1.0) + delta, 0), 1)
+    uiController.setSfxVolume(newVal)
   }
 
   const handleScaleChange = (e) => {
@@ -248,22 +268,36 @@ export default function MascotContextMenu({ uiState, uiController, adminDefaults
                 </div>
 
                 {/* Sound */}
-                <button
-                  onClick={handleSfxToggle}
-                  className="p-2.5 rounded-lg hover:bg-muted/30 transition-colors flex items-center justify-between text-sm font-medium text-left"
-                >
-                  <span className="flex items-center gap-2">
-                    {uiState.sfxEnabled ? (
-                      <Volume2 size={14} className="text-primary" />
-                    ) : (
-                      <VolumeX size={14} className="text-muted-foreground" />
-                    )}
-                    Sound Effects
-                  </span>
-                  <span className="text-[10px] uppercase tracking-wide bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                    Soon
-                  </span>
-                </button>
+                <div className="p-2.5 rounded-lg hover:bg-muted/30 transition-colors flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <button
+                      onClick={handleSfxToggle}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                      {uiState.sfxEnabled ? (
+                        <Volume2 size={14} className="text-primary" />
+                      ) : (
+                        <VolumeX size={14} className="text-muted-foreground" />
+                      )}
+                      Sound Effects
+                    </button>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {Math.round((uiState.sfxVolume ?? 1.0) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={Math.round((uiState.sfxVolume ?? 1.0) * 100)}
+                    onChange={handleVolumeChange}
+                    onWheel={handleWheelOnVolume}
+                    className="w-full accent-primary"
+                    disabled={!uiState.sfxEnabled}
+                    style={{ opacity: uiState.sfxEnabled ? 1 : 0.5 }}
+                  />
+                </div>
 
                 <div className="h-px bg-border/40 my-0.5" />
 

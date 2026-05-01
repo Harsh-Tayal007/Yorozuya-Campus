@@ -101,6 +101,14 @@ class AssetCacheManager {
   async getOrDownload(url, name = "Unknown Asset", type = "character", onProgress = null) {
     const key = this._getKey(url)
     const metaKey = this._getMetaKey(url)
+    
+    // Improve generic names
+    let finalName = name
+    if (name === "Character" || name === "Animation" || name === "Unknown Asset") {
+      finalName = url.split('/').pop().split('?')[0].replace(/\.[^/.]+$/, "")
+      // format clean name
+      finalName = finalName.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    }
 
     try {
       // 1. Try cache
@@ -145,7 +153,7 @@ class AssetCacheManager {
       // Store metadata for the settings page
       await set(metaKey, {
         url,
-        name,
+        name: finalName,
         type,
         size: blob.size,
         cachedAt: Date.now()

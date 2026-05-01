@@ -5,7 +5,7 @@ import {
   Palette, AlertTriangle, LockKeyhole, Search, RotateCcw,
   Sparkles, LayoutGrid, Orbit, Shapes, Globe, Target,
   MonitorSmartphone, Laptop2, Check, X, Shield, Settings,
-  EyeOff, Sun, Moon, Cat, Zap
+  EyeOff, Sun, Moon, Cat, Zap, Play, Save
 } from "lucide-react"
 import { toast } from "sonner"
 import { useUIPrefs } from "@/context/UIPrefsContext"
@@ -371,22 +371,84 @@ function MascotInteractionConfig() {
   })
 
   const animations = assets?.filter(a => a.type === "animation") ?? []
+  const audioFiles = assets?.filter(a => a.type === "audio") ?? []
+  const characters = assets?.filter(a => a.type === "character") ?? []
+
+  const [selectedTarget, setSelectedTarget] = useState("global")
 
   const ZONES = [
-    { key: "interaction_head",   label: "Head / Face",     emoji: "😠", hint: "e.g. Angry, Blush, Surprised" },
-    { key: "interaction_chest",  label: "Chest",            emoji: "👏", hint: "e.g. Clapping, Thinking" },
-    { key: "interaction_belly",  label: "Belly",            emoji: "😌", hint: "e.g. Relax, Sad, Sleepy" },
-    { key: "interaction_crotch", label: "Crotch",           emoji: "💢", hint: "e.g. Angry (between torso/legs)" },
-    { key: "interaction_legs",   label: "Legs",             emoji: "🦵", hint: "e.g. Jump, LookAround" },
-    { key: "interaction_hide",   label: "Goodbye (Hide)",   emoji: "👋", hint: "Plays when mascot is dismissed" },
+    { key: "head",   label: "Head / Face",     emoji: "😠", hint: "e.g. Angry, Blush, Surprised" },
+    { key: "chest",  label: "Chest",            emoji: "👏", hint: "e.g. Clapping, Thinking" },
+    { key: "belly",  label: "Belly",            emoji: "😌", hint: "e.g. Relax, Sad, Sleepy" },
+    { key: "crotch", label: "Crotch",           emoji: "💢", hint: "e.g. Angry (between torso/legs)" },
+    { key: "legs",   label: "Legs",             emoji: "🦵", hint: "e.g. Jump, LookAround" },
+    { key: "welcome",label: "Welcome (Show)",   emoji: "✨", hint: "Plays when mascot appears" },
+    { key: "hide",   label: "Goodbye (Hide)",   emoji: "👋", hint: "Plays when mascot is dismissed" },
   ]
 
-  const handleChange = async (key, url) => {
+  const targetAsset = selectedTarget === "global" ? null : characters.find(c => c.$id === selectedTarget)
+  
+  // Base configuration loaded from DB
+  const getBaseConfig = () => {
+    try {
+      const rawConfig = selectedTarget === "global" 
+        ? (adminDefaults?.interaction_config || "{}")
+        : (targetAsset?.interaction_config || "{}")
+      return JSON.parse(rawConfig)
+    } catch (e) {
+      return {}
+    }
+  }
+
+  const [draftConfig, setDraftConfig] = useState(getBaseConfig())
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  // Sync state when external config loads or target changes
+  useEffect(() => {
+    const base = getBaseConfig()
+    setDraftConfig(base)
+    setHasUnsavedChanges(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminDefaults?.interaction_config, targetAsset?.interaction_config, selectedTarget])
+
+  // Warn on unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const handleUpdateDraft = (zoneKey, field, value) => {
+    setDraftConfig(prev => {
+      const newConfig = { ...prev }
+      if (!newConfig[zoneKey]) newConfig[zoneKey] = {}
+      newConfig[zoneKey] = { ...newConfig[zoneKey], [field]: value }
+      return newConfig
+    })
+    setHasUnsavedChanges(true)
+  }
+
+  const handleSave = async () => {
     try {
       setSaving(true)
-      await updateSiteConfig({ [key]: url || null })
-      refreshSiteConfig()
-      toast.success("Interaction updated!")
+      const configStr = JSON.stringify(draftConfig)
+
+      if (selectedTarget === "global") {
+        await updateSiteConfig({ interaction_config: configStr })
+        refreshSiteConfig()
+      } else {
+        const { databases: db } = await import("@/lib/appwrite")
+        const { DATABASE_ID: DB, MASCOT_ASSETS_COLLECTION_ID: MAC } = await import("@/config/appwrite")
+        await db.updateDocument(DB, MAC, selectedTarget, { interaction_config: configStr })
+      }
+      
+      toast.success("Interactions saved successfully!")
+      setHasUnsavedChanges(false)
     } catch (err) {
       toast.error(err?.message || "Failed to save")
     } finally {
@@ -394,46 +456,128 @@ function MascotInteractionConfig() {
     }
   }
 
+  const handleTestInteraction = (zoneKey) => {
+    const cfg = draftConfig[zoneKey] || {}
+    const animation = cfg.animation || adminDefaults?.[`interaction_${zoneKey}`]
+    const audio = cfg.audio
+    const text = cfg.text
+    
+    // Dispatch custom event to InteractionController
+    window.dispatchEvent(new CustomEvent("mascot-test-interaction", { 
+      detail: { animation, audio, text } 
+    }))
+  }
+
+  const handleCloneGlobal = async () => {
+    if (selectedTarget === "global") return
+    if (!window.confirm("Overwrite this character's interactions with the Global Default settings?")) return
+    
+    try {
+      setSaving(true)
+      const globalConfig = adminDefaults?.interaction_config || "{}"
+      const { databases: db } = await import("@/lib/appwrite")
+      const { DATABASE_ID: DB, MASCOT_ASSETS_COLLECTION_ID: MAC } = await import("@/config/appwrite")
+      await db.updateDocument(DB, MAC, selectedTarget, { interaction_config: globalConfig })
+      toast.success("Copied Global Default!")
+    } catch (err) {
+      toast.error(err?.message || "Failed to clone")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <section className="p-5 rounded-2xl border border-border bg-card space-y-4">
-      <div className="flex items-center gap-3 mb-1">
-        <div className="w-8 h-8 rounded-lg bg-violet-500/15 text-violet-400 flex items-center justify-center shrink-0">
-          <Zap size={16} />
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-violet-500/15 text-violet-400 flex items-center justify-center shrink-0">
+            <Zap size={16} />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Interactive Behaviors & Audio</h3>
+            <p className="text-xs text-muted-foreground">
+              Assign animations, audio (.wav/.mp3), and text responses to body-zone clicks.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Interactive Behaviors</h3>
-          <p className="text-xs text-muted-foreground">
-            Assign animations to body-zone clicks. Assigned animations are automatically hidden from the user's Poses menu.
-          </p>
-        </div>
+        
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={saving || !hasUnsavedChanges}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
+        >
+          <Save size={16} />
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
       </div>
 
-      {animations.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4">
-          No animations uploaded yet. Upload .vrma files in the Mascot Assets section above.
-        </p>
-      ) : (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {ZONES.map(({ key, label, emoji, hint }) => {
-            const current = adminDefaults?.[key] ?? ""
-            return (
-              <div key={key} className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 border border-border/50">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base leading-none">{emoji}</span>
-                  <span className="text-sm font-semibold text-foreground">{label}</span>
-                  {current && (
-                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 tracking-wider uppercase">
-                      Assigned
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] text-muted-foreground">{hint}</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/40 p-3 rounded-xl border border-border/50">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">Configure Target:</label>
+          <select
+            value={selectedTarget}
+            onChange={e => {
+              if (hasUnsavedChanges && !window.confirm("You have unsaved changes. Discard them?")) return
+              setSelectedTarget(e.target.value)
+            }}
+            className="text-sm px-3 py-1.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary flex-1 sm:flex-none cursor-pointer"
+          >
+            <option value="global">🌍 Global Default</option>
+            {characters.map(c => (
+              <option key={c.$id} value={c.$id}>👤 {c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedTarget !== "global" && (
+          <button
+            onClick={handleCloneGlobal}
+            disabled={saving}
+            className="text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <Check size={14} /> Clone from Global
+          </button>
+        )}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        {ZONES.map(({ key, label, emoji, hint }) => {
+          const currentData = draftConfig[key] || {}
+          // Also fallback to legacy string attributes if JSON is missing during migration
+          const animValue = currentData.animation || adminDefaults?.[`interaction_${key}`] || ""
+          const audioValue = currentData.audio || ""
+          const textValue = currentData.text || ""
+
+          return (
+            <div key={key} className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/30 border border-border/50 transition-colors focus-within:border-primary/50 relative">
+              <div className="flex items-center gap-1.5 border-b border-border/50 pb-2 mb-1 pr-16">
+                <span className="text-lg leading-none">{emoji}</span>
+                <span className="text-sm font-semibold text-foreground">{label}</span>
+                {animValue && (
+                  <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 tracking-wider uppercase">
+                    Assigned
+                  </span>
+                )}
+              </div>
+              
+              {/* Play / Test Button */}
+              <button
+                onClick={() => handleTestInteraction(key)}
+                className="absolute top-3.5 right-3.5 flex items-center gap-1.5 text-xs font-semibold bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md transition-colors"
+                title="Test this interaction on the live Mascot"
+              >
+                <Play size={12} className="fill-current" /> Test
+              </button>
+              
+              {/* Animation Dropdown */}
+              <div className="space-y-1 mt-1">
+                <label className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Animation</label>
                 <select
                   disabled={saving}
-                  value={current}
-                  onChange={e => handleChange(key, e.target.value)}
-                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground
-                             focus:outline-none focus:border-primary disabled:opacity-60 cursor-pointer"
+                  value={animValue}
+                  onChange={e => handleUpdateDraft(key, "animation", e.target.value)}
+                  className="w-full text-xs px-2.5 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="">— None —</option>
                   {animations.map(a => (
@@ -441,10 +585,42 @@ function MascotInteractionConfig() {
                   ))}
                 </select>
               </div>
-            )
-          })}
-        </div>
-      )}
+
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {/* Audio Dropdown */}
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Voice / SFX</label>
+                  <select
+                    disabled={saving}
+                    value={audioValue}
+                    onChange={e => handleUpdateDraft(key, "audio", e.target.value)}
+                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">— Use Browser TTS —</option>
+                    {audioFiles.map(a => (
+                      <option key={a.$id} value={a.fileUrl}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Text Input */}
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Display Text / TTS</label>
+                  <input
+                    type="text"
+                    disabled={saving}
+                    value={textValue}
+                    placeholder="E.g. Hello there!"
+                    onChange={e => handleUpdateDraft(key, "text", e.target.value)}
+                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+            </div>
+          )
+        })}
+      </div>
     </section>
   )
 }

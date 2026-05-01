@@ -12,7 +12,7 @@ import {
   Trash2, AtSign, RefreshCw,
   X, Sparkles, Orbit, Shapes, Globe, Target, LayoutGrid,
   Palette, Zap, MonitorSmartphone, Laptop2, LockKeyhole,
-  Wind, Info, Bot, Volume2, VolumeX, Keyboard
+  Wind, Info, Bot, Volume2, VolumeX, Keyboard, Mic, FileBox
 } from "lucide-react"
 import { useUIPrefs } from "@/context/UIPrefsContext"
 import ReportUIIssueButton from "@/components/ui/ReportUIIssueButton"
@@ -1542,6 +1542,25 @@ const MascotTab = () => {
 
   useEffect(() => {
     loadCache()
+    
+    // Sync local toggle UI with global UIController state (e.g. when Ctrl+M is pressed)
+    const onSync = () => {
+      const p = readMascotPrefs()
+      setVisible(p.mascotVisible !== false)
+      setMinimized(Boolean(p.isMinimized))
+      setSfx(p.sfxEnabled !== false)
+    }
+    const onPermanentDisable = () => {
+      setUserPref("mascot_enabled", false)
+      toast.success("Mascot companion disabled", { id: "mascot-bye" })
+    }
+
+    window.addEventListener("mascot-state-sync", onSync)
+    window.addEventListener("mascot-permanent-disable", onPermanentDisable)
+    return () => {
+      window.removeEventListener("mascot-state-sync", onSync)
+      window.removeEventListener("mascot-permanent-disable", onPermanentDisable)
+    }
   }, [])
 
   const loadCache = async () => {
@@ -1567,27 +1586,25 @@ const MascotTab = () => {
 
   const totalCacheSize = cachedAssets.reduce((acc, curr) => acc + (curr.size || 0), 0)
 
-  const apply = (key, setter, value) => {
-    setter(value)
-    writeMascotPref(key, value)
-  }
-
   const handleVisibleToggle = (v) => {
-    apply("mascotVisible", setVisible, v)
-    // Also write to the UIPrefs system so resolved.mascotEnabled updates.
-    // This is what actually mounts/unmounts the MascotRoot component.
-    setUserPref("mascot_enabled", v)
-    window.dispatchEvent(new CustomEvent("mascot-toggle-visibility"))
-    toast.success(v ? "Mascot companion shown" : "Mascot companion hidden")
+    if (!v) {
+      setVisible(false) // Visually turn off the toggle switch instantly
+      toast.loading("Saying goodbye...", { duration: 2500, id: "mascot-bye" })
+      window.dispatchEvent(new CustomEvent("mascot-hide-request", { detail: { permanent: true } }))
+    } else {
+      window.dispatchEvent(new CustomEvent("mascot-set-visible", { detail: { visible: true } }))
+      setUserPref("mascot_enabled", true)
+      toast.success("Mascot companion enabled")
+    }
   }
 
   const handleMinimizedToggle = (v) => {
-    apply("isMinimized", setMinimized, v)
+    window.dispatchEvent(new CustomEvent("mascot-set-minimized", { detail: { minimized: v } }))
     toast.success(v ? "Mascot will start minimized" : "Mascot will start expanded")
   }
 
   const handleSfxToggle = (v) => {
-    apply("sfxEnabled", setSfx, v)
+    window.dispatchEvent(new CustomEvent("mascot-set-sfx", { detail: { enabled: v } }))
     toast.success(v ? "Mascot sounds enabled" : "Mascot sounds muted")
   }
 
@@ -1666,34 +1683,80 @@ const MascotTab = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-background overflow-hidden overflow-x-auto custom-scrollbar">
+          <div className="space-y-6">
             {cacheLoading ? (
-              <div className="py-8 flex justify-center"><Loader2 size={16} className="animate-spin text-muted-foreground" /></div>
+              <div className="py-8 flex justify-center border border-border/50 rounded-xl bg-background"><Loader2 size={16} className="animate-spin text-muted-foreground" /></div>
             ) : cachedAssets.length === 0 ? (
-              <div className="py-8 text-center text-xs text-muted-foreground">No assets currently cached.</div>
+              <div className="py-8 text-center text-xs text-muted-foreground border border-border/50 rounded-xl bg-background">No assets currently cached.</div>
             ) : (
-              <div className="min-w-[400px]">
-                {cachedAssets.map(asset => (
-                  <div key={asset.url} className="flex items-center justify-between p-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                    <div className="flex flex-col min-w-0 pr-4">
-                      <span className="text-sm font-medium text-foreground truncate">{asset.name || "Unknown Asset"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">
-                        {asset.type} • {new Date(asset.cachedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
-                        {formatBytes(asset.size)}
-                      </span>
-                      <button onClick={() => handleDeleteAsset(asset.url)}
-                        className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
-                        title="Delete from cache">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <>
+                {(() => {
+                  const chars = cachedAssets.filter(a => a.type.toLowerCase() === "character")
+                  const anims = cachedAssets.filter(a => a.type.toLowerCase() === "animation")
+                  const audio = cachedAssets.filter(a => a.type.toLowerCase() === "audio" || a.type.toLowerCase() === "voice/sfx")
+                  const others = cachedAssets.filter(a => !["character", "animation", "audio", "voice/sfx"].includes(a.type.toLowerCase()))
+
+                  const renderGroup = (title, items, Icon) => {
+                    if (!items.length) return null
+                    const groupSize = items.reduce((acc, curr) => acc + curr.size, 0)
+                    return (
+                      <div className="mb-4 last:mb-0">
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            <Icon size={13} />
+                            {title} ({items.length})
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                            {formatBytes(groupSize)}
+                          </span>
+                        </div>
+                        <div className="rounded-xl border border-border/50 bg-background overflow-x-auto overflow-y-auto max-h-[220px] overscroll-contain custom-scrollbar">
+                          <div className="min-w-[400px]">
+                            {items.map(asset => {
+                              // Handle legacy assets that were saved with generic names
+                              let displayName = asset.name || "Unknown Asset"
+                              if (displayName === "Character" || displayName === "Animation") {
+                                displayName = asset.url.split('/').pop().split('?')[0].replace(/\.[^/.]+$/, "")
+                                displayName = displayName.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+                              }
+                              
+                              return (
+                                <div key={asset.url} className="flex items-center justify-between p-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                                  <div className="flex flex-col min-w-0 pr-4">
+                                    <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">
+                                      {asset.type} • {new Date(asset.cachedAt).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                                    {formatBytes(asset.size)}
+                                  </span>
+                                  <button onClick={() => handleDeleteAsset(asset.url)}
+                                    className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                                    title="Delete from cache">
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <>
+                      {renderGroup("Characters", chars, User)}
+                      {renderGroup("Animations", anims, FileBox)}
+                      {renderGroup("Audio & Voice", audio, Mic)}
+                      {renderGroup("Other Assets", others, Bot)}
+                    </>
+                  )
+                })()}
+              </>
             )}
           </div>
         </div>

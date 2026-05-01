@@ -387,10 +387,10 @@ export class MascotEngine {
     const totalH = (worldBox.max.y - minY) || 1;
     const ratio  = (hits[0].point.y - minY) / totalH; // 0 = feet, 1 = top of head
 
-    if (ratio >= 0.75) return "head";
-    if (ratio >= 0.50) return "chest";
-    if (ratio >= 0.35) return "belly";
-    if (ratio >= 0.22) return "crotch";
+    if (ratio >= 0.85) return "head";
+    if (ratio >= 0.72) return "chest";
+    if (ratio >= 0.62) return "belly";
+    if (ratio >= 0.52) return "crotch";
     return "legs";
   }
 

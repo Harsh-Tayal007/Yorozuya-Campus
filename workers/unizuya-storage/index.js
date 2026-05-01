@@ -130,7 +130,7 @@ export default {
       const deleteMatch = path.match(/^\/file\/([^/]+)\/([^/]+)$/)
       if (request.method === "DELETE" && deleteMatch) {
         if (!isAuthed(request, env)) return err("Unauthorized", 401)
-        const objectKey = `${deleteMatch[1]}/${deleteMatch[2]}`
+        const objectKey = decodeURIComponent(`${deleteMatch[1]}/${deleteMatch[2]}`)
         await env.R2_BUCKET.delete(objectKey)
         return json({ deleted: objectKey })
       }
@@ -141,7 +141,7 @@ export default {
       }
       const getMatch = path.match(/^\/file\/([^/]+)\/([^/]+)$/)
       if (request.method === "GET" && getMatch) {
-        const objectKey = `${getMatch[1]}/${getMatch[2]}`
+        const objectKey = decodeURIComponent(`${getMatch[1]}/${getMatch[2]}`)
         const object = await env.R2_BUCKET.get(objectKey)
         if (!object) return err("File not found", 404)
 
@@ -164,7 +164,7 @@ export default {
       const metaMatch = path.match(/^\/file-meta\/([^/]+)\/([^/]+)$/)
       if (request.method === "GET" && metaMatch) {
         if (!isAuthed(request, env)) return err("Unauthorized", 401)
-        const objectKey = `${metaMatch[1]}/${metaMatch[2]}`
+        const objectKey = decodeURIComponent(`${metaMatch[1]}/${metaMatch[2]}`)
         const head = await env.R2_BUCKET.head(objectKey)
         if (!head) return err("File not found", 404)
         return json({

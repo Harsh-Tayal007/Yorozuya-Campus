@@ -15,6 +15,7 @@ const DEFAULT_STATE = {
   },
   mascotVisible: true,
   sfxEnabled: true,
+  sfxVolume: 1.0,
   character: "/mascot/assistant.vrm",
   mascotScale: 1.0,
   contextMenuOpen: false,
@@ -56,6 +57,7 @@ export class UIController {
         isMinimized: Boolean(parsed.isMinimized),
         mascotVisible: parsed.mascotVisible !== false,
         sfxEnabled: parsed.sfxEnabled !== false,
+        sfxVolume: typeof parsed.sfxVolume === "number" ? clamp(parsed.sfxVolume, 0, 1) : 1.0,
         character:
           typeof parsed.character === "string"
             ? parsed.character === "assistant.vrm"
@@ -91,6 +93,7 @@ export class UIController {
           isMinimized: this.state.isMinimized,
           mascotVisible: this.state.mascotVisible,
           sfxEnabled: this.state.sfxEnabled,
+          sfxVolume: this.state.sfxVolume,
           character: this.state.character,
           position: this.state.position,
           mascotScale: this.state.mascotScale,
@@ -113,6 +116,9 @@ export class UIController {
   emit() {
     const nextState = this.snapshot()
     this.listeners.forEach((listener) => listener(nextState))
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mascot-state-sync"))
+    }
   }
 
   getState() {
@@ -189,7 +195,7 @@ export class UIController {
       window.clearTimeout(this.speechTimer)
       this.speechTimer = null
     }
-    this.state.bubble = { message: "", visible: false }
+    this.state.bubble = { ...this.state.bubble, visible: false }
   }
 
   speak(message, options = {}) {
@@ -342,6 +348,12 @@ export class UIController {
 
   setSfxEnabled(enabled) {
     this.state.sfxEnabled = Boolean(enabled)
+    this.persistPrefs()
+    this.emit()
+  }
+
+  setSfxVolume(volume) {
+    this.state.sfxVolume = clamp(volume, 0, 1)
     this.persistPrefs()
     this.emit()
   }

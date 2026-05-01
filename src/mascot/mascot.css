@@ -104,7 +104,8 @@
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: flex-end;
+  justify-content: center;
+  align-items: center;
   padding: 14px;
   pointer-events: none;
   background: transparent;
@@ -246,6 +247,81 @@
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 10px;
   margin-top: 8px;
+}
+
+/* ── Speech Bubble ── */
+.mascot-bubble {
+  position: absolute;
+  top: 15%;
+  right: 50%;
+  margin-right: 30px;
+  width: max-content;
+  max-width: 260px;
+  background: var(--mascot-bubble-bg);
+  color: var(--mascot-bubble-fg);
+  padding: 12px 18px;
+  border-radius: 16px 16px 2px 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(10px) scale(0.95);
+  transition: opacity 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mascot-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -10px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 16px 0 0 14px;
+  border-color: transparent transparent transparent var(--mascot-bubble-bg);
+}
+
+.mascot-bubble.bubble-flip-right {
+  right: auto;
+  left: 50%;
+  margin-right: 0;
+  margin-left: 30px;
+  border-radius: 16px 16px 16px 2px;
+}
+
+.mascot-bubble.bubble-flip-right::after {
+  right: auto;
+  left: -10px;
+  border-width: 16px 14px 0 0;
+  border-color: transparent var(--mascot-bubble-bg) transparent transparent;
+}
+
+.mascot-bubble.bubble-flip-bottom {
+  top: auto;
+  bottom: 25%;
+  border-radius: 2px 16px 16px 16px;
+}
+
+.mascot-bubble.bubble-flip-bottom::after {
+  bottom: auto;
+  top: -10px;
+  border-width: 0 0 16px 14px;
+}
+
+.mascot-bubble.bubble-flip-right.bubble-flip-bottom {
+  border-radius: 16px 2px 16px 16px;
+}
+
+.mascot-bubble.bubble-flip-right.bubble-flip-bottom::after {
+  border-width: 0 14px 16px 0;
+}
+
+.mascot-bubble.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .mascot-char-card {

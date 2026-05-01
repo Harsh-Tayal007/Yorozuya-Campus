@@ -37,6 +37,10 @@ import {
   Linkedin,
   Instagram,
   Palette,
+  Cpu,
+  Sparkles,
+  Move,
+  Volume2,
 } from "lucide-react"
 import useSeoMeta from "@/hooks/useSeoMeta"
 import SpotlightCard from "@/components/ui/SpotlightCard"
@@ -189,6 +193,13 @@ const FEATURE_CARDS = [
     title: "Changelog and Updates",
     description:
       "A public changelog page lets you follow platform improvements, new features, bug fixes, and breaking changes in a clean timeline format.",
+  },
+  {
+    icon: Bot,
+    color: "bg-purple-500/10 text-purple-500",
+    title: "3D Companion Mascot",
+    description:
+      "A fully interactive WebGL VRM companion powered by Three.js and @pixiv/three-vrm. Features procedural animations, hit-zone raycasting, TTS-synced speech bubbles, admin-configurable interactions, and a 7-layer global config guard.",
   },
 ]
 
@@ -585,6 +596,124 @@ function UICustomizationDiagram() {
           </div>
         ))}
       </div>
+    </Card>
+  )
+}
+
+// ─── Mascot Engine Architecture Diagram ──────────────────────────────────────
+function MascotArchitectureDiagram() {
+  return (
+    <Card>
+      <div className="mb-1 flex items-center gap-2">
+        <Bot size={15} className="text-purple-500" />
+        <p className="text-base font-semibold text-slate-900 dark:text-white">Mascot Engine Architecture</p>
+      </div>
+      <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
+        Five decoupled layers from WebGL rendering to admin config. Each layer communicates through custom window events, with no direct coupling between them.
+      </p>
+      <ScrollDiagram minWidth={560}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 dark:border-purple-400/20 dark:bg-purple-500/10">
+            <Cpu size={14} className="text-purple-500" />
+            <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">MascotEngine.js: Three.js WebGL, VRM Loader, RAF Loop, Raycaster</span>
+          </div>
+          <ArrowDown />
+          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+            <DiagBox color="violet" icon={Sparkles} label="AnimationController" sub="Procedural poses · VRMA clips · Breathing" />
+            <DiagBox color="blue" icon={Move} label="InteractionController" sub="Drag · HitTest · Audio · TTS" />
+            <DiagBox color="emerald" icon={Layers} label="UIController" sub="Pub/sub state · localStorage prefs" />
+            <DiagBox color="amber" icon={Volume2} label="AssetCacheManager" sub="IndexedDB · Cloudflare R2 cache" />
+          </div>
+          <ArrowDown />
+          <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-400/20 dark:bg-blue-500/10">
+            <Monitor size={14} className="text-blue-500" />
+            <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">MascotRoot.jsx: React shell, CSS variable sizing, ResizeObserver</span>
+          </div>
+          <ArrowDown />
+          <div className="grid w-full grid-cols-2 gap-3">
+            <DiagBox color="orange" icon={Settings} label="DashboardSettings" sub="Toggle · Scale · SFX · Character" />
+            <DiagBox color="emerald" icon={Shield} label="Admin Panel" sub="Asset CRUD · Interaction config · Rollback" />
+          </div>
+          <ArrowDown />
+          <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-400/20 dark:bg-emerald-500/10">
+            <Database size={14} className="text-emerald-500" />
+            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Appwrite · mascot_assets collection · mascot-assets bucket · site_config flags</span>
+          </div>
+        </div>
+      </ScrollDiagram>
+    </Card>
+  )
+}
+
+// ─── Mascot Lifecycle Diagram ─────────────────────────────────────────────────
+function MascotLifecycleDiagram() {
+  const steps = [
+    { label: "Page Load", desc: "UIPrefsContext resolves 7-layer priority chain", pill: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300", role: "system" },
+    { label: "Guard Check", desc: "disabled.mascotEnabled? → null. resolved.mascotEnabled? → mount", pill: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300", role: "gate" },
+    { label: "Engine Init", desc: "WebGL context → VRM load → RAF starts → Welcome interaction", pill: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300", role: "engine" },
+    { label: "Idle Running", desc: "Procedural breathing · poses · blink · look-at cursor", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300", role: "loop" },
+    { label: "User Interaction", desc: "Raycaster hit-test → zone-specific animation + TTS bubble", pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300", role: "user" },
+    { label: "Hide Request", desc: "mascot-hide-request event → Goodbye anim + audio plays fully", pill: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300", role: "event" },
+    { label: "Confirm & Unmount", desc: "mascot-hide-confirm fires after audio ends → component unmounts", pill: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300", role: "teardown" },
+  ]
+  return (
+    <Card>
+      <div className="mb-1 flex items-center gap-2">
+        <Activity size={15} className="text-purple-500" />
+        <p className="text-base font-semibold text-slate-900 dark:text-white">Mascot Lifecycle</p>
+      </div>
+      <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
+        Event-driven teardown ensures goodbye animations and audio play to completion before the WebGL canvas unmounts.
+      </p>
+      <div className="flex flex-col gap-2.5">
+        {steps.map((step, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-bold text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
+              {i + 1}
+            </div>
+            <div className="flex flex-1 items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 dark:border-white/5 dark:bg-white/5">
+              <div>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{step.label}</span>
+                <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">{step.desc}</span>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${step.pill}`}>{step.role}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+// ─── Mascot Hit Zone Diagram ──────────────────────────────────────────────────
+function MascotHitZoneDiagram() {
+  const zones = [
+    { zone: "Head", range: "85 – 100%", color: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300", pill: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" },
+    { zone: "Chest", range: "72 – 85%", color: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-300", pill: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300" },
+    { zone: "Belly", range: "62 – 72%", color: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300", pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" },
+    { zone: "Crotch", range: "52 – 62%", color: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300", pill: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" },
+    { zone: "Legs", range: "0 – 52%", color: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-300", pill: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300" },
+  ]
+  return (
+    <Card>
+      <div className="mb-1 flex items-center gap-2">
+        <ScanLine size={15} className="text-purple-500" />
+        <p className="text-base font-semibold text-slate-900 dark:text-white">3D Raycaster Hit Zones</p>
+      </div>
+      <p className="mb-5 text-xs text-slate-500 dark:text-slate-400">
+        World-space bounding box is recomputed on every click, then the Y-ratio determines the interaction zone. Calibrated for anime-proportion VRM models with long legs (~60% of total height).
+      </p>
+      <div className="flex flex-col gap-2">
+        {zones.map((z) => (
+          <div key={z.zone} className={`flex items-center justify-between rounded-xl border px-4 py-2.5 ${z.color}`}>
+            <span className="text-xs font-semibold">{z.zone}</span>
+            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${z.pill}`}>{z.range} of model height</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+        Ratio = (hit.y − minY) / totalHeight. 0 = feet, 1 = top of head.
+      </p>
     </Card>
   )
 }
@@ -1244,10 +1373,58 @@ export default function About() {
           </div>
         </section>
 
-        {/* 06 Productivity Tools */}
+        {/* 06 3D Companion Mascot */}
         <section>
           <SectionHeading
             number="06"
+            title="3D Companion Mascot"
+            color="violet"
+            subtitle="A fully interactive WebGL VRM companion with procedural animation, admin-configurable interactions, and an event-driven lifecycle."
+          />
+          <div className="space-y-4">
+            <Card>
+              <div className="mb-4 flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-purple-500/10">
+                  <Bot size={20} className="text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-slate-900 dark:text-white">Yorozuya, The Campus AI Companion</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    A draggable, interactive 3D VRM character that lives on the dashboard. Built from scratch on Three.js with a fully custom engine, it features procedural breathing and blinking, zone-specific tap reactions, TTS-synced speech bubbles, magnetic edge snapping, and full admin configurability. No third-party mascot SDK was used.
+                  </p>
+                </div>
+              </div>
+              <ScrollDiagram minWidth={480}>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { icon: Cpu, label: "Three.js WebGL", desc: "MToon VRM renderer", color: "text-purple-500", bg: "bg-purple-500/10" },
+                    { icon: Sparkles, label: "Procedural Anim", desc: "6 poses · VRMA clips · crossfade", color: "text-blue-500", bg: "bg-blue-500/10" },
+                    { icon: Move, label: "Drag & Hit-Test", desc: "5 body zones · raycasting", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                    { icon: Volume2, label: "TTS + Audio", desc: "Bubble synced to voice end", color: "text-amber-500", bg: "bg-amber-500/10" },
+                  ].map(({ icon: Icon, label, desc, color, bg }) => (
+                    <div key={label} className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center dark:border-white/10 dark:bg-white/5">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${bg}`}>
+                        <Icon size={15} className={color} />
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">{label}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">{desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </ScrollDiagram>
+            </Card>
+            <MascotArchitectureDiagram />
+            <div className="grid gap-4 md:grid-cols-2">
+              <MascotLifecycleDiagram />
+              <MascotHitZoneDiagram />
+            </div>
+          </div>
+        </section>
+
+        {/* 07 Productivity Tools */}
+        <section>
+          <SectionHeading
+            number="07"
             title="Productivity Tools"
             color="rose"
             subtitle="Three tools built specifically for student academic management, each with AI assistance and export options."
@@ -1259,10 +1436,10 @@ export default function About() {
           </div>
         </section>
 
-        {/* 07 User Guide */}
+        {/* 08 User Guide */}
         <section>
           <SectionHeading
-            number="07"
+            number="08"
             title="User Guide"
             color="sky"
             subtitle="New to Unizuya? This guide walks through every major feature so you get up to speed without getting lost."
@@ -1270,10 +1447,10 @@ export default function About() {
           <GuideAccordion items={GUIDE_ITEMS} />
         </section>
 
-        {/* 08 Tech Stack */}
+        {/* 09 Tech Stack */}
         <section>
           <SectionHeading
-            number="08"
+            number="09"
             title="Technology Stack"
             color="teal"
             subtitle="Built with modern, production-ready tools selected for scalability and developer experience."
@@ -1305,9 +1482,9 @@ export default function About() {
           </div>
         </section>
 
-        {/* 09 Mission and Vision */}
+        {/* 10 Mission and Vision */}
         <section>
-          <SectionHeading number="09" title="Mission and Vision" color="indigo" />
+          <SectionHeading number="10" title="Mission and Vision" color="indigo" />
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <h3 className="mb-2 text-base font-semibold text-slate-900 dark:text-white">
@@ -1328,7 +1505,7 @@ export default function About() {
           </div>
         </section>
 
-        {/* 10 Developer */}
+        {/* 11 Developer */}
         <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 dark:border-white/10 dark:from-blue-500/10 dark:to-indigo-500/10">
           {/* Primary builder */}
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-indigo-400">

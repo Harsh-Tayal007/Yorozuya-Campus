@@ -38,3 +38,4 @@
 
 ## Future TODO
 - [ ] Add teacher-specific dashboard with attendance widgets (option 2)
+- [ ] Allow users to configure custom audios, text, and animations for each character, similar to the admin panel.

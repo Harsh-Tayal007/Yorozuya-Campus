@@ -4,7 +4,9 @@ import MascotEngine from "./MascotEngine"
 import InteractionController from "./InteractionController"
 import UIController from "./UIController"
 import MascotContextMenu from "./MascotContextMenu"
+import AssetCacheManager from "./AssetCacheManager"
 import { useUIPrefs } from "@/context/UIPrefsContext"
+import { useQueryClient } from "@tanstack/react-query"
 import "./mascot.css"
 
 const MODEL_URL = "/mascot/assistant.vrm"
@@ -39,6 +41,7 @@ const MascotRoot = () => {
   const { disabled, resolved, adminDefaults, globallyLocked, userLocked, stalePrefs } = useUIPrefs()
   const [uiController] = useState(() => new UIController())
   const [uiState, setUiState]   = useState(uiController.getState())
+  const queryClient = useQueryClient()
 
   const shellRef      = useRef(null)
   const stageRef      = useRef(null)
@@ -57,18 +60,39 @@ const MascotRoot = () => {
 
   // ── Global events ──────────────────────────────────────────────────────────
   useEffect(() => {
-    // Ctrl+M fires a hide REQUEST so the Goodbye animation plays first
-    const onToggle  = () => window.dispatchEvent(new CustomEvent("mascot-hide-request"))
+    const onToggle  = () => {
+      const currentUiState = uiController.getState()
+      if (!currentUiState.mascotVisible) {
+        uiController.setMascotVisible(true) // Triggers Welcome by showing
+      } else {
+        window.dispatchEvent(new CustomEvent("mascot-hide-request")) // Triggers Goodbye
+      }
+    }
     const onVrma    = (e) => engineRef.current?.playAnimationUrl(e.detail?.url)
     // After the Goodbye animation delay, the InteractionController fires this to close
-    const onConfirm = () => uiController.toggleMascotVisible()
+    const onConfirm = (e) => {
+      uiController.setMascotVisible(false)
+      if (e?.detail?.permanent) {
+        window.dispatchEvent(new CustomEvent("mascot-permanent-disable"))
+      }
+    }
+    const onSetVisible = (e) => uiController.setMascotVisible(e.detail?.visible)
+    const onSetMinimized = (e) => uiController.setMinimized(e.detail?.minimized)
+    const onSetSfx = (e) => uiController.setSfxEnabled(e.detail?.enabled)
+
     window.addEventListener("mascot-toggle-visibility", onToggle)
     window.addEventListener("mascot-play-vrma", onVrma)
     window.addEventListener("mascot-hide-confirm", onConfirm)
+    window.addEventListener("mascot-set-visible", onSetVisible)
+    window.addEventListener("mascot-set-minimized", onSetMinimized)
+    window.addEventListener("mascot-set-sfx", onSetSfx)
     return () => {
       window.removeEventListener("mascot-toggle-visibility", onToggle)
       window.removeEventListener("mascot-play-vrma", onVrma)
       window.removeEventListener("mascot-hide-confirm", onConfirm)
+      window.removeEventListener("mascot-set-visible", onSetVisible)
+      window.removeEventListener("mascot-set-minimized", onSetMinimized)
+      window.removeEventListener("mascot-set-sfx", onSetSfx)
     }
   }, [uiController])
 
@@ -84,7 +108,7 @@ const MascotRoot = () => {
   // Runs on mount, on resize, and when dimensions change.
   // Does NOT depend on isReady/isLoading — position is view-layer concern only.
   useEffect(() => {
-    if (uiState.isClosed) return
+    if (uiState.mascotVisible === false) return
 
     const sync = () => {
       uiController.ensurePosition({
@@ -98,11 +122,11 @@ const MascotRoot = () => {
     window.addEventListener("resize", sync, { passive: true })
     return () => window.removeEventListener("resize", sync)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiController, uiState.isClosed])
+  }, [uiController, uiState.mascotVisible])
 
   // Re-clamp whenever scale changes so mascot never ends up off-screen
   useEffect(() => {
-    if (uiState.isClosed) return
+    if (uiState.mascotVisible === false) return
     uiController.ensurePosition({
       ...makeMetrics(dynamicWidth, dynamicHeight),
       viewportWidth:  window.innerWidth,
@@ -113,15 +137,6 @@ const MascotRoot = () => {
 
   // ── Engine init / teardown ─────────────────────────────────────────────────
   useEffect(() => {
-    if (uiState.isClosed) {
-      interactionRef.current?.destroy()
-      interactionRef.current = null
-      engineRef.current?.dispose()
-      engineRef.current = null
-      prevCharRef.current = null
-      return
-    }
-
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -170,10 +185,8 @@ const MascotRoot = () => {
           const rect = canvas.getBoundingClientRect()
           if (rect.width > 0 && rect.height > 0) engine.resize(rect.width, rect.height)
           uiController.setReady(true)
-          const seenKey = "uz_mascot_seen_once"
-          const welcome = window.sessionStorage.getItem(seenKey) ? "Welcome back!" : "Hey!"
-          window.sessionStorage.setItem(seenKey, "1")
-          uiController.speak(welcome, { duration: 2400 })
+          
+          // Note: Welcome interaction is now handled by InteractionController mount
         })
         .catch((err) => {
           if (cancelled) return
@@ -192,9 +205,9 @@ const MascotRoot = () => {
       if (eng) { engineRef.current = null; eng.dispose() }
       prevCharRef.current = null
     }
-  // Only isClosed drives init/teardown — all other changes are handled below
+  // Only mount/unmount of MascotRoot drives init/teardown — all other changes are handled below
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiController, uiState.isClosed])
+  }, [uiController, resolved.mascotEnabled])
 
   // ── Scale → engine ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -288,14 +301,14 @@ const MascotRoot = () => {
     }
   // Intentionally omit dynamicWidth/Height — the ResizeObserver handles those
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiState.isClosed, uiState.isMinimized, uiState.isReady])
+  }, [uiState.mascotVisible, uiState.isMinimized, uiState.isReady])
 
   // ── Interaction controller ────────────────────────────────────────────────
   useEffect(() => {
     const shell  = shellRef.current
     const stage  = stageRef.current
     const engine = engineRef.current
-    if (!shell || !stage || !engine || uiState.isClosed || !uiState.isReady) return
+    if (!shell || !stage || !engine || uiState.mascotVisible === false || !uiState.isReady) return
 
     interactionRef.current?.destroy()
 
@@ -306,28 +319,59 @@ const MascotRoot = () => {
         viewportWidth:  window.innerWidth,
         viewportHeight: window.innerHeight,
       }),
-      // Always returns the latest adminDefaults without needing to re-create the IC
-      getInteractionConfig: () => adminDefaults || {},
+      getInteractionConfig: () => {
+        const assets = queryClient.getQueryData(["mascot-assets"]) || []
+        const currentAsset = assets.find(a => a.fileUrl === uiState.character)
+        
+        if (currentAsset?.interaction_config) {
+          // If character has its own config, override the global one
+          return { ...(adminDefaults || {}), interaction_config: currentAsset.interaction_config }
+        }
+        return adminDefaults || {}
+      },
     })
     interactionRef.current = ic
+    
+    // Trigger welcome interaction when the mascot is shown
+    ic.playWelcome()
 
     return () => {
       if (interactionRef.current === ic) interactionRef.current = null
       ic.destroy()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiController, uiState.isClosed, uiState.isReady])
+  }, [uiController, uiState.mascotVisible, uiState.isReady])
+
+  // ── Preload configured audios so they appear in Asset Cache UI ────────────
+  useEffect(() => {
+    try {
+      const configObj = interactionRef.current?.getInteractionConfig()
+      if (!configObj?.interaction_config) return
+      
+      const parsed = JSON.parse(configObj.interaction_config)
+      const audioUrls = Object.values(parsed)
+        .map(zone => zone.audio)
+        .filter(url => typeof url === "string" && url.length > 5)
+        
+      // Ensure each active audio is locally cached
+      audioUrls.forEach(url => {
+        AssetCacheManager.getOrDownload(url, "Voice/SFX", "audio").catch(() => {})
+      })
+    } catch (err) {
+      // Ignore parsing errors or missing audios
+    }
+  }, [adminDefaults?.interaction_config, uiState.character])
 
   // ── Pause on tab-hide ─────────────────────────────────────────────────────
   useEffect(() => {
     const sync = () =>
       engineRef.current?.setPaused(
-        document.visibilityState !== "visible" || uiState.isClosed,
+        document.visibilityState !== "visible" || uiState.mascotVisible === false,
       )
     sync()
     document.addEventListener("visibilitychange", sync)
     return () => document.removeEventListener("visibilitychange", sync)
-  }, [uiState.isClosed])
+  }, [uiState.mascotVisible])
 
   // ── Admin rollback guard ──────────────────────────────────────────────────
   // Must be AFTER all hooks to comply with React rules-of-hooks.
@@ -356,27 +400,9 @@ const MascotRoot = () => {
   }
 
   // ── Launcher ──────────────────────────────────────────────────────────────
-  if (uiState.isClosed) {
-    return (
-      <button
-        ref={shellRef}
-        type="button"
-        className="mascot-launcher"
-        style={positionStyle}
-        onClick={() => {
-          uiController.reopen()
-          uiController.speak("Welcome back!", { duration: 2400 })
-        }}
-      >
-        <span className="mascot-launcher-dot" aria-hidden="true" />
-        <span className="mascot-launcher-copy">
-          <strong>Open mascot</strong>
-          <small>Bring your assistant back</small>
-        </span>
-      </button>
-    )
-  }
-
+  // Remove the old 'isClosed' button entirely, as it's no longer used.
+  // The mascot will just be hidden when mascotVisible is false.
+  
   // ── Main mascot ───────────────────────────────────────────────────────────
   return (
     <aside
@@ -416,6 +442,17 @@ const MascotRoot = () => {
             </div>
           </div>
         )}
+      </div>
+
+      <div
+        className={[
+          "mascot-bubble",
+          uiState.bubble?.visible ? "is-visible" : "",
+          uiState.position?.x < (typeof window !== "undefined" ? window.innerWidth / 2 : 960) ? "bubble-flip-right" : ""
+        ].filter(Boolean).join(" ")}
+        aria-hidden={!uiState.bubble?.visible}
+      >
+        {uiState.bubble?.message}
       </div>
 
       <MascotContextMenu uiState={uiState} uiController={uiController} adminDefaults={adminDefaults} />

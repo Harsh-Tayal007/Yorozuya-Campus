@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { databases, ID, Query } from "@/lib/appwrite"
 import { DATABASE_ID, MASCOT_ASSETS_COLLECTION_ID } from "@/config/appwrite"
-import { UploadCloud, FileBox, User, Trash2, Edit2, Check, X, Loader2, Star } from "lucide-react"
+import { UploadCloud, FileBox, User, Trash2, Edit2, Check, X, Loader2, Star, Mic } from "lucide-react"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUIPrefs } from "@/context/UIPrefsContext"
@@ -23,6 +23,10 @@ export default function MascotAssetManager() {
       return res.documents
     },
   })
+
+  const characters = assets?.filter(a => a.type === "character") ?? []
+  const animations = assets?.filter(a => a.type === "animation") ?? []
+  const audio      = assets?.filter(a => a.type === "audio") ?? []
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -45,8 +49,9 @@ export default function MascotAssetManager() {
 
   const handleFileUpload = async (file) => {
     const ext = file.name.split(".").pop().toLowerCase()
-    if (ext !== "vrm" && ext !== "vrma") {
-      toast.error("Only .vrm (Characters) and .vrma (Animations) files are allowed.")
+    const allowed = ["vrm", "vrma", "mp3", "wav", "ogg"]
+    if (!allowed.includes(ext)) {
+      toast.error("Only .vrm, .vrma, .mp3, .wav, and .ogg files are allowed.")
       return
     }
 
@@ -70,7 +75,9 @@ export default function MascotAssetManager() {
       if (!uploadRes.ok) throw new Error("Failed to upload to storage bucket")
 
       const fileUrl = `${workerUrl}/file/${key}`
-      const type = ext === "vrma" ? "animation" : "character"
+      let type = "character"
+      if (ext === "vrma") type = "animation"
+      else if (["mp3", "wav", "ogg"].includes(ext)) type = "audio"
       let name = file.name.replace(/\.[^/.]+$/, "")
       name = name.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
 
@@ -125,8 +132,6 @@ export default function MascotAssetManager() {
     onError: (err) => toast.error("Failed to rename: " + err.message),
   })
 
-  const characters = assets.filter((a) => a.type === "character")
-  const animations = assets.filter((a) => a.type === "animation")
 
   const AssetRow = ({ item, Icon }) => {
     const isEditing = editingId === item.$id
@@ -139,7 +144,7 @@ export default function MascotAssetManager() {
     try {
       const defAnims = JSON.parse(adminDefaults?.default_animations || "[]")
       isDefaultAnimation = item.type === "animation" && Array.isArray(defAnims) && defAnims.includes(item.fileUrl)
-    } catch { }
+    } catch (e) { /* ignore */ }
 
     const isDefault = isDefaultCharacter || isDefaultAnimation
 
@@ -154,7 +159,7 @@ export default function MascotAssetManager() {
           let defAnims = []
           try {
             defAnims = JSON.parse(adminDefaults?.default_animations || "[]")
-          } catch { }
+          } catch (e) { /* ignore */ }
           
           if (isDefaultAnimation) {
             defAnims = defAnims.filter(url => url !== item.fileUrl)
@@ -326,29 +331,34 @@ export default function MascotAssetManager() {
             {uploading ? "Uploading…" : "Upload Mascot Asset"}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            Drop a <strong className="text-foreground">.vrm</strong> character or{" "}
-            <strong className="text-foreground">.vrma</strong> animation file here
+            Drop <strong className="text-foreground">.vrm</strong> (Character), <strong className="text-foreground">.vrma</strong> (Anim), or <strong className="text-foreground">.wav/.mp3</strong> (Audio)
           </p>
         </div>
         <label className="cursor-pointer shrink-0 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap">
           Select File
-          <input type="file" accept=".vrm,.vrma" className="hidden" onChange={handleChange} disabled={uploading} />
+          <input type="file" accept=".vrm,.vrma,.mp3,.wav,.ogg" className="hidden" onChange={handleChange} disabled={uploading} />
         </label>
       </div>
 
       {/* ── Side-by-side panels — equal height, independent scroll ── */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <AssetPanel
           items={characters}
           label="Characters"
           Icon={User}
-          emptyLabel="No characters uploaded yet"
+          emptyLabel="No characters uploaded"
         />
         <AssetPanel
           items={animations}
           label="Animations"
           Icon={FileBox}
-          emptyLabel="No animations uploaded yet"
+          emptyLabel="No animations uploaded"
+        />
+        <AssetPanel
+          items={audio}
+          label="Voice & Audio"
+          Icon={Mic}
+          emptyLabel="No audio uploaded"
         />
       </div>
     </div>
