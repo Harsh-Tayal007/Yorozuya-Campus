@@ -2,12 +2,24 @@ import React from "react"
 import ReactDOM from "react-dom/client"
 import App from "./App"
 import "./index.css"
+import { AppErrorBoundary } from "@/components/AppErrorBoundary"
 
 import { AuthProvider }            from "@/context/AuthContext"
 import { UIPrefsProvider }         from "@/context/UIPrefsContext"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster }                 from "sonner"
 import { PushNotificationProvider } from "./context/PushNotificationContext"
+
+// ── Polyfills ──────────────────────────────────────────────────────────────────
+// crypto.randomUUID: added in iOS Safari 15.4. Polyfill for older iPhones.
+if (!crypto.randomUUID) {
+  crypto.randomUUID = () =>
+    "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+      (
+        c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+      ).toString(16)
+    )
+}
 
 // ── QueryClient ───────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -63,15 +75,19 @@ window.addEventListener("beforeinstallprompt", (e) => {
 // ── Render immediately - don't block on persister init ───────────────────────
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <UIPrefsProvider>
-          <PushNotificationProvider>
-            <App />
-          </PushNotificationProvider>
-        </UIPrefsProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    {/* AppErrorBoundary: catches render crashes and shows a recovery UI
+        instead of a blank white screen — critical on iOS Safari where
+        errors are otherwise completely invisible. */}
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <UIPrefsProvider>
+            <PushNotificationProvider>
+              <App />
+            </PushNotificationProvider>
+          </UIPrefsProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     <Toaster 
       position="bottom-right" 
       toastOptions={{ 
@@ -88,6 +104,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         }
       }} 
     />
+    </AppErrorBoundary>
   </React.StrictMode>
 )
 

@@ -46,12 +46,10 @@ function writeLSWithTimestamp(key, value) {
   try {
     localStorage.setItem(`pref_${key}`, value ? "1" : "0")
     localStorage.setItem(LS_WRITE_TS_KEY, new Date().toISOString())
-    // Notify other tabs
-    window.dispatchEvent(new StorageEvent("storage", {
-      key: `pref_${key}`,
-      newValue: value ? "1" : "0",
-      storageArea: localStorage,
-    }))
+    // Use a CustomEvent instead of StorageEvent — the StorageEvent constructor
+    // with `storageArea` in the init dict is unreliable on Safari/WebKit and
+    // can throw on older iOS, crashing the pref-save flow.
+    window.dispatchEvent(new CustomEvent("uz:storage", { detail: { key: `pref_${key}` } }))
   } catch { /* storage full */ }
 }
 
@@ -103,11 +101,17 @@ export function UIPrefsProvider({ children }) {
     return () => clearInterval(id)
   }, [fetchConfig])
 
-  // ── Cross-tab localStorage sync ────────────────────────────────────────────
+  // ── Cross-tab + same-tab localStorage sync ────────────────────────────────
   useEffect(() => {
     const onStorage = () => setTick(t => t + 1)
+    // "storage" fires in OTHER tabs (real browser event)
     window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
+    // "uz:storage" fires in THIS tab via our CustomEvent in writeLSWithTimestamp
+    window.addEventListener("uz:storage", onStorage)
+    return () => {
+      window.removeEventListener("storage", onStorage)
+      window.removeEventListener("uz:storage", onStorage)
+    }
   }, [])
 
   // ── Derive locks from user doc ─────────────────────────────────────────────

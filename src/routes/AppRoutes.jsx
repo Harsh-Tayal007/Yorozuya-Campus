@@ -54,6 +54,7 @@ const OAuthCallback   = lazy(() => import("@/pages/auth/OAuthCallback"))
 const ForgotPassword  = lazy(() => import("@/pages/auth/ForgotPassword"))
 const ResetPassword   = lazy(() => import("@/pages/auth/ResetPassword"))
 const VerifyEmail     = lazy(() => import("@/pages/auth/VerifyEmail"))
+const Logout          = lazy(() => import("@/pages/auth/Logout"))
 
 /* Dashboard / user */
 const CompleteProfile         = lazy(() => import("@/pages/dashboard/CompleteProfile"))
@@ -181,6 +182,7 @@ const AppRoutes = () => (
         {/* ─── Auth routes ─── */}
         <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/signup"         element={<PublicRoute><Signup /></PublicRoute>} />
+        <Route path="/logout"         element={<Logout />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* ─── 🔒 Authenticated user routes ─── */}

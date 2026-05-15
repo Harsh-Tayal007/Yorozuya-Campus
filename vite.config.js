@@ -1,4 +1,4 @@
-﻿import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -58,6 +58,11 @@ export default defineConfig(({ mode }) => {
     ],
 
     build: {
+      // Target Safari 14 / ES2020 so the bundle is transpiled for older iOS.
+      // Without this Vite 7 may emit ES2022+ syntax that crashes JavaScriptCore
+      // on iPhones running iOS 15 or earlier → blank white screen.
+      target: ["es2020", "safari14"],
+
       rollupOptions: {
         output: {
           // Object form is safe - Rollup handles initialization order correctly.
